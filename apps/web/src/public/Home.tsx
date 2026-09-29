@@ -1,16 +1,25 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, MessageCircle, Trophy } from 'lucide-react';
-import type { NewsSummary } from '@palcms/shared';
+import type { NewsSummary, SiteSettings } from '@palcms/shared';
 import { api } from '../lib/api';
 import { useApp } from '../lib/app';
 import { useLiveServer } from '../lib/live';
 import { formatDate } from '../lib/format';
 import { LeaderboardTable, OnlinePlayers, ServerStatusCard } from '../components/live';
 import { Card } from '../components/ui';
+import { Overridable, Slot } from '../lib/extensions';
 
 const MapWidget = lazy(() => import('../features/mapPages').then((m) => ({ default: m.MapWidget })));
 const EventBanner = lazy(() => import('../features/world-public').then((m) => ({ default: m.EventBanner })));
+
+/** Ce que reçoivent l'accueil et son bandeau, y compris ceux d'un thème. */
+export interface HomeProps {
+  site: SiteSettings;
+  modules: Record<string, boolean>;
+  live: ReturnType<typeof useLiveServer>;
+  news: NewsSummary[];
+}
 
 export function Home() {
   const { boot } = useApp();
@@ -22,38 +31,17 @@ export function Home() {
     if (modules.news) api.get<{ items: NewsSummary[] }>('public/news').then((r) => setNews(r.items.slice(0, 3))).catch(() => {});
   }, [modules.news]);
 
+  return <Overridable slot="home" fallback={DefaultHome} props={{ site, modules, live, news }} />;
+}
+
+export function DefaultHome(props: HomeProps) {
+  const { modules, live, news } = props;
   return (
     <>
-      <section className="relative overflow-hidden">
-        {site.bannerUrl ? (
-          <img src={site.bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40 dark:opacity-30" />
-        ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--accent)_0%,transparent_60%)] opacity-25" />
-        )}
-        <div className="relative mx-auto max-w-6xl px-4 py-20 text-center sm:py-28">
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">{site.heroTitle || site.name}</h1>
-          {(site.heroText || site.tagline) && (
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600 dark:text-slate-300">{site.heroText || site.tagline}</p>
-          )}
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link to="/p/rejoindre" className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 font-semibold text-accent-fg shadow-lg hover:brightness-110">
-              Rejoindre le serveur <ArrowRight className="h-4 w-4" />
-            </Link>
-            {site.discordUrl && (
-              <a
-                href={site.discordUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#5865F2] px-6 py-3 font-semibold text-white shadow-lg hover:brightness-110"
-              >
-                <MessageCircle className="h-4 w-4" /> Discord
-              </a>
-            )}
-          </div>
-        </div>
-      </section>
+      <Overridable slot="home.hero" fallback={DefaultHomeHero} props={props} />
 
       <div className="mx-auto max-w-6xl space-y-8 px-4 pb-16">
+        <Slot name="home.top" {...props} />
         {modules.calendar && (
           <Suspense fallback={null}>
             <EventBanner />
@@ -120,7 +108,41 @@ export function Home() {
             </Card>
           )}
         </div>
+        <Slot name="home.bottom" {...props} />
       </div>
     </>
+  );
+}
+
+export function DefaultHomeHero({ site }: HomeProps) {
+  return (
+    <section className="relative overflow-hidden">
+      {site.bannerUrl ? (
+        <img src={site.bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40 dark:opacity-30" />
+      ) : (
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--accent)_0%,transparent_60%)] opacity-25" />
+      )}
+      <div className="relative mx-auto max-w-6xl px-4 py-20 text-center sm:py-28">
+        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">{site.heroTitle || site.name}</h1>
+        {(site.heroText || site.tagline) && (
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600 dark:text-slate-300">{site.heroText || site.tagline}</p>
+        )}
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link to="/p/rejoindre" className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 font-semibold text-accent-fg shadow-lg hover:brightness-110">
+            Rejoindre le serveur <ArrowRight className="h-4 w-4" />
+          </Link>
+          {site.discordUrl && (
+            <a
+              href={site.discordUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#5865F2] px-6 py-3 font-semibold text-white shadow-lg hover:brightness-110"
+            >
+              <MessageCircle className="h-4 w-4" /> Discord
+            </a>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }

@@ -19,7 +19,8 @@ import { authRoutes } from './routes/auth';
 import { adminServerRoutes } from './routes/admin/server';
 import { adminSiteRoutes } from './routes/admin/site';
 import { adminMemberRoutes } from './routes/admin/members';
-import { featureRoutes } from './features/routes';
+import { featureRoutes, pluginRoutes } from './features/routes';
+import { extensionFiles } from './extensions/files';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -68,6 +69,8 @@ export async function buildApp(): Promise<FastifyInstance> {
       await api.register(authRoutes, { prefix: '/api/auth' });
       await api.register(setupRoutes, { prefix: '/api/setup' });
       await api.register(featureRoutes, { prefix: '/api/features' });
+      await api.register(pluginRoutes, { prefix: '/api/plugins' });
+      await api.register(extensionFiles, { prefix: '/extensions' });
 
       await api.register(
         async (admin) => {
@@ -129,7 +132,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   app.setNotFoundHandler((req, reply) => {
     const url = req.url.split('?')[0];
-    const isApi = url.startsWith(`${config.basePath}api/`) || url.startsWith(`${config.basePath}uploads/`);
+    const isApi = ['api/', 'uploads/', 'extensions/'].some((p) => url.startsWith(`${config.basePath}${p}`));
     if (req.method === 'GET' && !isApi && hasWeb && url.startsWith(config.basePath)) {
       return reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-cache').send(indexHtml);
     }

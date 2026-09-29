@@ -7,6 +7,7 @@ import { getServerMode, getSiteSettings, isSetupDone } from '../core/site';
 import { toPublicUser } from '../auth/users';
 import { poller } from '../palworld/poller';
 import { requireModule } from './util';
+import { bootExtensions } from '../extensions/store';
 
 interface NewsRow {
   id: number;
@@ -47,6 +48,7 @@ export async function publicRoutes(app: FastifyInstance) {
       site: getSiteSettings(),
       modules: modules.enabledMap(),
       user: req.user ? toPublicUser(req.user) : null,
+      extensions: isSetupDone() ? bootExtensions() : { theme: null, plugins: [] },
     };
   });
 

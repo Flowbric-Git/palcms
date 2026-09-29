@@ -6,3 +6,4 @@ export * from './permissions';
 export * from './features';
 export * from './mapCoords';
 export * from './paldexData';
+export * from './extensions';

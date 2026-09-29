@@ -11,6 +11,7 @@ import { createEvents } from './events';
 import { createAntiCheat, createSanctions } from './sanctions';
 import { createTickets } from './tickets';
 import { createUpdates } from './updates';
+import { createExtensions } from './extensions';
 
 export { MIGRATIONS as FEATURE_MIGRATIONS, MODULES as FEATURE_MODULES };
 
@@ -43,6 +44,8 @@ export const createFeatures: CreateFeatures = (host) => {
     createRcon(host),
     createDiscord(host, bus),
     createThemes(host),
+    // En dernier : les plugins démarrent une fois toutes les fonctionnalités du CMS en place.
+    createExtensions(host),
   ];
 
   return {

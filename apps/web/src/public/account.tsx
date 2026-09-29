@@ -7,6 +7,7 @@ import { useApp } from '../lib/app';
 import { formatDuration } from '../lib/format';
 import { Alert, Badge, Button, Card, Field, Input } from '../components/ui';
 import { Container, NotFound } from './pages';
+import { Slot } from '../lib/extensions';
 
 const CharacterSection = lazy(() => import('../features/world-public').then((m) => ({ default: m.CharacterSection })));
 
@@ -312,6 +313,8 @@ export function ProfilePage() {
         <Suspense fallback={null}>
           <CharacterSection />
         </Suspense>
+
+        <Slot name="profile" user={user} />
 
         {boot.modules.tickets && (
           <Link to="/signaler" className="text-sm font-medium text-accent">

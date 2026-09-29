@@ -23,6 +23,8 @@ import {
   Newspaper,
   Palette,
   PlugZap,
+  Puzzle,
+  Store,
   ScrollText,
   Settings2,
   Shield,
@@ -39,6 +41,7 @@ import { api } from '../lib/api';
 import { useApp } from '../lib/app';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Badge, cx } from '../components/ui';
+import { registry } from '../lib/extensions';
 
 export { useLoad } from '../lib/useLoad';
 
@@ -92,7 +95,13 @@ export function AdminLayout() {
   // Les thèmes du site public (fond, CSS perso) ne s'appliquent pas au panel.
   useEffect(() => {
     document.body.classList.add('palcms-admin');
-    return () => document.body.classList.remove('palcms-admin');
+    // Le CSS du thème installé ne s'applique pas non plus au panel.
+    const links = [...document.querySelectorAll<HTMLLinkElement>('link[data-palcms-theme]')];
+    links.forEach((link) => (link.disabled = true));
+    return () => {
+      document.body.classList.remove('palcms-admin');
+      links.forEach((link) => (link.disabled = false));
+    };
   }, []);
   useEffect(() => {
     if (!isAdmin || !boot.user?.permissions.includes('site.members')) return;
@@ -178,6 +187,11 @@ export function AdminLayout() {
     { to: '/admin/journal', label: 'Journal des actions', icon: ScrollText, permission: 'admin.audit' },
     { to: '/admin/mises-a-jour', label: 'Mises à jour', icon: Download, permission: 'admin.updates' },
   ]);
+  const extensions = visible([
+    { to: '/admin/market', label: 'Market', icon: Store, permission: 'admin.extensions' },
+    { to: '/admin/plugins', label: 'Plugins', icon: Puzzle, permission: 'admin.extensions' },
+    ...registry.adminPages.filter((p) => !p.path.includes(':')).map((p) => ({ to: `/admin/plugins/${p.ext}/${p.path}`, label: p.label, icon: Puzzle, permission: p.permission })),
+  ]);
 
   const nav = (
     <nav className="flex h-full flex-col gap-6 p-4">
@@ -186,6 +200,7 @@ export function AdminLayout() {
       </Link>
       <Section title="Gestion du serveur">{server.map(render)}</Section>
       {site.length > 0 && <Section title="Gestion du site">{site.map(render)}</Section>}
+      {extensions.length > 0 && <Section title="Extensions">{extensions.map(render)}</Section>}
       <div className="mt-auto space-y-0.5 border-t border-slate-200 pt-4 dark:border-slate-800">
         {admin.map(render)}
         <Item to="/admin/compte" icon={UserCircle}>

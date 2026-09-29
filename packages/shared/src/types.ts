@@ -35,6 +35,8 @@ export interface Bootstrap {
   site: SiteSettings;
   modules: Record<string, boolean>;
   user: PublicUser | null;
+  /** Thème et plugins à charger dans le navigateur (absent dans la démo). */
+  extensions?: import('./extensions').BootExtensions;
 }
 
 export interface ServerStatus {

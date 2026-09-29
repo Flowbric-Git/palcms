@@ -3,6 +3,7 @@ import type { Bootstrap, PublicUser } from '@palcms/shared';
 import { api } from './api';
 import { realtime } from './ws';
 import { applyTheme } from './theme';
+import { loadExtensions } from './extensions';
 
 interface AppState {
   boot: Bootstrap;
@@ -26,6 +27,8 @@ export function AppProvider({ children, fallback }: { children: ReactNode; fallb
   const refresh = useCallback(async () => {
     try {
       const b = await api.get<Bootstrap>('public/bootstrap');
+      // Les plugins ajoutent des pages : ils doivent être chargés avant le premier rendu des routes.
+      if (b.setupDone) await loadExtensions(b.extensions);
       setBoot(b);
       setError(null);
       applyTheme(b.site);

@@ -11,6 +11,7 @@ import { useMapData } from './components';
 import { LiveMap, POI_ICONS, type MapData, type MapPoi } from './map/LiveMap';
 import { gameToWorld, worldToGame } from '@palcms/shared';
 import { applyTheme, FONTS, type ThemeSettings } from './theme';
+import { InstalledThemes } from './admin-extensions';
 
 const { Alert, Badge, Button, Card, Empty, Field, Input, PageHeader, Select, Spinner, Textarea, Toggle, cx } = ui;
 
@@ -270,8 +271,8 @@ export function ThemesPage() {
   return (
     <>
       <PageHeader
-        title="Thèmes avancés"
-        description="S’ajoutent aux couleurs de « Apparence ». L’aperçu est immédiat ; pense à enregistrer."
+        title="Thèmes"
+        description="Choisis un thème installé, puis ajuste les réglages avancés : ils s’ajoutent aux couleurs de « Apparence ». L’aperçu est immédiat ; pense à enregistrer."
         actions={
           <Button onClick={() => void save()}>
             <Save className="h-4 w-4" /> Enregistrer
@@ -279,6 +280,7 @@ export function ThemesPage() {
         }
       />
       {msg && <Alert kind={msg.kind} className="mb-4">{msg.text}</Alert>}
+      <InstalledThemes />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Police et fond">
           <div className="space-y-4">

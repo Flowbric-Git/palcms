@@ -154,6 +154,8 @@ export interface FeatureContext {
   can(permission: Permission): boolean;
   /** Récupère une image envoyée (multipart) et renvoie son URL publique. */
   saveUpload(maxBytes: number): Promise<string>;
+  /** Lit un fichier envoyé (multipart) sans l'enregistrer, ex. un paquet d'extension. */
+  readUpload(maxBytes: number): Promise<{ filename: string; data: Uint8Array }>;
 }
 
 export interface FeatureFile {

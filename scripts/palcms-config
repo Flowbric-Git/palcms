@@ -213,7 +213,7 @@ server {
     listen 80$d80;
     listen [::]:80$d80;
     server_name $PUBLIC_HOST;
-    client_max_body_size 10m;
+    client_max_body_size 25m;
     location /.well-known/acme-challenge/ { root $ACME_ROOT; }
 $(nginx_locations)
 }
@@ -240,7 +240,7 @@ server {
     ssl_certificate $cert;
     ssl_certificate_key $key;
     ssl_protocols TLSv1.2 TLSv1.3;
-    client_max_body_size 10m;
+    client_max_body_size 25m;
     add_header Strict-Transport-Security "max-age=31536000" always;
 $(nginx_locations)
 }

@@ -1,20 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
-import type { FeatureHost } from '@palcms/shared';
+import { compareVersions, type FeatureHost } from '@palcms/shared';
 import type { BackupService } from './operations';
 import { errorText, every, httpError, parseBody, type Feature, type FeatureBus } from './util';
 
-/** Compare deux versions "1.2.3" (le "v" initial est ignoré). */
-export function compareVersions(a: string, b: string): number {
-  const pa = a.replace(/^v/, '').split('.').map(Number);
-  const pb = b.replace(/^v/, '').split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    const d = (pa[i] || 0) - (pb[i] || 0);
-    if (d) return d;
-  }
-  return 0;
-}
+export { compareVersions };
 
 /** Lit la sortie de "palctl check-update" (installed=… / latest=…). */
 export function parseBuildIds(output: string): { installed: string | null; latest: string | null } {

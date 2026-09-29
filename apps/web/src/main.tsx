@@ -1,4 +1,4 @@
-import { StrictMode, Suspense, lazy, useEffect, type ReactNode } from 'react';
+import { StrictMode, Suspense, lazy, useEffect, type ComponentType, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import './index.css';
@@ -11,6 +11,7 @@ import { CmsPage, NewsDetail, NewsList, NotFound } from './public/pages';
 import { LoginPage, ProfilePage, RegisterPage } from './public/account';
 import { LeaderboardPage, PlayerPage } from './features/public';
 import { applyTheme, type ThemeSettings } from './features/theme';
+import { ExtensionBoundary, registry } from './lib/extensions';
 
 // Chargés à la demande : l'assistant ne sert qu'une fois, le panel admin qu'à l'équipe,
 // et la carte (Leaflet) seulement quand on l'ouvre.
@@ -27,6 +28,14 @@ const UptimePage = lazy(() => world().then((m) => ({ default: m.UptimePage })));
 const TicketsPage = lazy(() => world().then((m) => ({ default: m.TicketsPage })));
 
 const lazyPage = (el: ReactNode) => <Suspense fallback={<Spinner />}>{el}</Suspense>;
+
+const extensionPage = (ext: string, Page: ComponentType) => (
+  <ExtensionBoundary ext={ext}>
+    <Suspense fallback={<Spinner />}>
+      <Page />
+    </Suspense>
+  </ExtensionBoundary>
+);
 
 /** Applique le thème avancé (police, fond, CSS personnalisé) choisi dans le panel. */
 function ThemeLoader() {
@@ -81,8 +90,18 @@ function AppRoutes() {
           <Route path="inscription" element={<RegisterPage />} />
           <Route path="profil" element={<ProfilePage />} />
           <Route path="setup" element={<Navigate to="/" replace />} />
+          {registry.pages
+            .filter((p) => p.layout)
+            .map((p) => (
+              <Route key={`${p.ext}:${p.path}`} path={p.path} element={extensionPage(p.ext, p.component)} />
+            ))}
           <Route path="*" element={<NotFound />} />
         </Route>
+        {registry.pages
+          .filter((p) => !p.layout)
+          .map((p) => (
+            <Route key={`${p.ext}:${p.path}`} path={p.path} element={extensionPage(p.ext, p.component)} />
+          ))}
         <Route
           path="admin/*"
           element={

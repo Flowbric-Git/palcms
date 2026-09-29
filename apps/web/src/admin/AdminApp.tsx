@@ -18,6 +18,8 @@ import {
   WorldPage,
   WorldPlayerPage,
 } from '../features/admin-ops';
+import { MarketPage, PluginAdminPage, PluginsPage } from '../features/admin-extensions';
+import { registry } from '../lib/extensions';
 
 /** Panel admin, chargé à la demande : le site public ne télécharge jamais l'éditeur ni les écrans admin. */
 export default function AdminApp() {
@@ -57,6 +59,11 @@ export default function AdminApp() {
         <Route path="site/membres" element={<MembersPage />} />
         <Route path="equipe" element={<TeamPage />} />
         <Route path="journal" element={<AuditPage />} />
+        <Route path="market" element={<MarketPage />} />
+        <Route path="plugins" element={<PluginsPage />} />
+        {registry.adminPages.map((p) => (
+          <Route key={`${p.ext}:${p.path}`} path={`plugins/${p.ext}/${p.path}`} element={<PluginAdminPage page={p} />} />
+        ))}
         <Route path="compte" element={<AccountPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>

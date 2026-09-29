@@ -25,6 +25,7 @@ export const PERMISSIONS = {
   'admin.team': 'Équipe et rôles',
   'admin.audit': 'Journal des actions',
   'admin.updates': 'Mises à jour de PalCMS',
+  'admin.extensions': 'Plugins, thèmes et market',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;

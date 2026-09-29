@@ -1,0 +1,28 @@
+{
+  "id": "aurora",
+  "type": "theme",
+  "name": "Aurora",
+  "version": "1.0.0",
+  "description": "Thème sombre à dégradés façon aurore boréale : en-tête centré, grand bandeau avec le statut du serveur et pied de page en colonnes.",
+  "author": "PalCMS",
+  "palcms": ">=1.0.1",
+  "icon": "assets/icon.png",
+  "settings": [
+    { "key": "from", "type": "color", "label": "Couleur du dégradé (début)", "default": "#22d3ee" },
+    { "key": "to", "type": "color", "label": "Couleur du dégradé (fin)", "default": "#a855f7" },
+    { "key": "heroImage", "type": "image", "label": "Image du bandeau", "description": "Laisse vide pour un fond animé." },
+    { "key": "heroTitle", "type": "text", "label": "Titre du bandeau", "description": "Vide : titre choisi dans Apparence." },
+    { "key": "showStatus", "type": "toggle", "label": "Statut du serveur dans le bandeau", "default": true },
+    {
+      "key": "headerStyle",
+      "type": "select",
+      "label": "Style de l'en-tête",
+      "default": "centered",
+      "options": [
+        { "value": "centered", "label": "Logo centré" },
+        { "value": "classic", "label": "Classique (celui de PalCMS)" }
+      ]
+    },
+    { "key": "footerText", "type": "textarea", "label": "Texte du pied de page", "description": "Vide : texte choisi dans Apparence." }
+  ]
+}

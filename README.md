@@ -6,6 +6,7 @@
 - **un panel admin** en deux espaces :
   - **Gestion du serveur** : tableau de bord, **surveillance** (jauges, alertes, historique), **statistiques de fréquentation**, démarrer / arrêter / redémarrer, éditeur de `PalWorldSettings.ini`, **événements et préréglages**, joueurs, **données du monde** (inventaires, Pals, guildes, recherche d'objets), logs en direct, sauvegardes, redémarrages programmés, **mises à jour automatiques du serveur**, annonces en jeu, modération, **sanctions**, **anti-triche**, console RCON ;
   - **Gestion du site** : pages, actualités, menu, apparence et thèmes, carte, Discord (notifications et alertes), modules, membres, signalements ;
+- **un market de plugins et de thèmes** : installation en un clic, ressources vérifiées et signées, [kit de création](sdk/README.md) pour faire les tiens ;
 - **mise à jour de PalCMS en un clic** depuis le panel ;
 - **une équipe avec des rôles** (Administrateur, Modérateur, Rédacteur, rôles personnalisés) et un **journal des actions**.
 
@@ -88,6 +89,15 @@ sudo cat /var/lib/palcms/setup-token   # retrouver le jeton d'installation
 
 ---
 
+## Plugins et thèmes
+
+Le panel propose un **Market** (*Extensions > Market*) : chaque ressource est validée puis signée sur [palcms.online](https://palcms.online/), et PalCMS vérifie cette signature avant de l’installer. Les plugins s’activent et se désactivent dans *Extensions > Plugins*, les thèmes se choisissent et se personnalisent dans *Gestion du site > Thèmes*. Un fichier `.zip` peut aussi être installé directement ; s’il ne vient pas du market, l’admin doit d’abord autoriser les extensions non vérifiées.
+
+- **Créer un plugin ou un thème** : [sdk/README.md](sdk/README.md), avec un plugin et un thème d’exemple.
+- **Format de l’API du market** : [docs/market-api.md](docs/market-api.md).
+
+---
+
 ## Sécurité
 
 - Le CMS tourne sous l'utilisateur système **`palcms`**, jamais en root. Son code (`/opt/palcms`) appartient à root et ne peut pas être modifié par le CMS.
@@ -110,13 +120,14 @@ pnpm install
 pnpm dev
 ```
 
-`pnpm dev` lance trois processus :
+`pnpm dev` lance quatre processus :
 
 | Processus | Rôle |
 |---|---|
 | `api` | serveur Fastify sur http://127.0.0.1:3000 |
 | `web` | site React (Vite) sur **http://localhost:5173** |
 | `palworld` | faux serveur Palworld : API REST simulée, avec des joueurs qui bougent et gagnent des niveaux |
+| `market` | faux market sur http://127.0.0.1:3100 : les extensions d’exemple, signées avec une clé de dev |
 
 Le jeton d'installation s'affiche dans la console. Le faux `palctl` (`tools/fake-palctl`) simule l'installation et les sauvegardes sans toucher à ta machine.
 
@@ -128,6 +139,7 @@ Le jeton d'installation s'affiche dans la console. Le faux `palctl` (`tools/fake
 | `pnpm release` | construit `release/palcms.tar.gz` et `release/install.sh` |
 | `pnpm --filter @palcms/web dev:demo` | lance la démo (sans serveur) sur http://localhost:5173/ |
 | `pnpm --filter @palcms/web build:demo` | construit la démo dans `apps/web/dist-demo` (fichiers statiques à héberger) |
+| `pnpm ext build <dossier>` | construit une extension (plugin ou thème) en paquet .zip |
 
 La démo (`apps/web/src/demo`) remplace l'API par un faux serveur dans le navigateur. Elle est hébergée sur [demo.palcms.online](https://demo.palcms.online/) et n'est pas incluse dans le site installé sur un VPS.
 
@@ -146,12 +158,14 @@ apps/server                API Fastify + SQLite
   src/palworld             API REST Palworld, suivi en direct, ini, service
   src/routes               API publique, comptes, admin
   src/features             carte, classement, sauvegardes, programmation, modération,
-                           RCON, Discord, équipe et rôles, journal, thèmes
+                           RCON, Discord, équipe et rôles, journal, thèmes, market
+  src/extensions           paquets, signatures, installation et chargement des plugins
 apps/web                   React + Tailwind : assistant, site public, panel admin
   src/features             écrans correspondants
   src/demo                 faux serveur de la démo en ligne
 packages/shared            types, schémas de validation, permissions, conversions de la carte
-tools/                     faux palctl et faux serveur Palworld pour le développement
+sdk/                       kit de création des plugins et thèmes, avec des exemples
+tools/                     faux palctl, faux serveur Palworld et faux market pour le développement
 ```
 
 ---

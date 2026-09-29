@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.1
+
+**Plugins et thèmes**
+- Market dans le panel (*Extensions > Market*) : plugins et thèmes de palcms.online, filtres, recherche, installation et mise à jour en un clic
+- Chaque ressource du market est signée : PalCMS vérifie la signature et l’empreinte avant d’installer
+- Page *Plugins* : activer, désactiver, régler, supprimer, installer un fichier .zip. Les plugins se chargent sans redémarrer le CMS, et une erreur dans un plugin ne casse pas le site
+- Page *Thèmes* : thèmes installés, activation et personnalisation (couleurs, images, textes), en plus des réglages avancés existants
+- Un plugin peut ajouter des routes API, des tables, des pages publiques, des pages dans le panel et des blocs sur le site ; un thème peut remplacer l’en-tête, le pied de page et l’accueil
+- Les fichiers non signés sont refusés, sauf si l’admin autorise les extensions non vérifiées
+- Nouvelle permission « Plugins, thèmes et market »
+- Kit de création (`sdk/`) : construction du paquet avec Tailwind, un plugin d’exemple (Bandeau d’annonce) et un thème d’exemple (Aurora), documentation
+- Format de l’API du market et outils de signature pour palcms.online (`docs/market-api.md`)
+
 ## 1.0.0
 
 Première version.

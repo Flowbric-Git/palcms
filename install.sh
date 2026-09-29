@@ -136,11 +136,19 @@ source /etc/palcms/config.env
 # Node.js, Nginx, pare-feu
 step "Installation de Node.js $NODE_MAJOR, Nginx et du pare-feu"
 node_major=$(node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/' || echo 0)
-if [[ -z $node_major || $node_major -lt 20 ]]; then
+# Un Node installé à la main (ex. /opt/node) peut avoir npm à côté de lui sans qu'il soit dans le PATH.
+find_npm() {
+  local dir
+  dir=$(dirname "$(readlink -f "$(command -v node)")" 2>/dev/null)
+  if [[ -x $dir/npm ]]; then echo "$dir/npm"; else command -v npm || true; fi
+}
+if [[ -z $node_major || $node_major -lt 20 || -z $(find_npm) ]]; then
   curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - >/dev/null
   apt-get install -y -qq nodejs >/dev/null
 fi
-info "Node.js $(node -v)"
+NODE_BIN=$(readlink -f "$(command -v node)")
+NPM_BIN=$(find_npm)
+info "Node.js $("$NODE_BIN" -v) ($NODE_BIN)"
 apt-get install -y -qq nginx ufw >/dev/null
 [[ $HTTPS_MODE == letsencrypt ]] && apt-get install -y -qq certbot >/dev/null
 info "Nginx $(nginx -v 2>&1 | sed 's/.*\///')"
@@ -155,7 +163,7 @@ info "Pare-feu actif (SSH, HTTP$([[ $HTTPS_MODE != none ]] && echo ', HTTPS'))"
 
 # Dépendances du CMS
 step "Installation des dépendances du CMS"
-(cd "$INSTALL_DIR/server" && npm ci --omit=dev --no-audit --no-fund --loglevel=error)
+(cd "$INSTALL_DIR/server" && PATH="$(dirname "$NODE_BIN"):$PATH" "$NPM_BIN" ci --omit=dev --no-audit --no-fund --loglevel=error)
 info "OK"
 
 # palctl + sudoers
@@ -191,7 +199,7 @@ Environment=DATA_DIR=$DATA_DIR
 Environment=WEB_DIST=$INSTALL_DIR/web/dist
 Environment=PALCMS_VERSION=$(cat "$INSTALL_DIR/VERSION" 2>/dev/null || echo 0.0.0)
 Environment="PALCTL=sudo -n /usr/local/lib/palcms/palctl"
-ExecStart=/usr/bin/node $INSTALL_DIR/server/dist/index.js
+ExecStart=$NODE_BIN $INSTALL_DIR/server/dist/index.js
 Restart=always
 RestartSec=3
 # Pas de sandbox systemd ici : elle serait héritée par palctl (lancé via sudo) et l'empêcherait d'installer le serveur.

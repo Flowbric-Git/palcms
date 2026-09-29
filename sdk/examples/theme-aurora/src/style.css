@@ -1,0 +1,76 @@
+/*
+ * Aurora : les couleurs viennent des réglages du thème (var(--theme-from), var(--theme-to)).
+ * Seul le site public est concerné : le CSS d'un thème est désactivé dans le panel admin.
+ */
+
+:root {
+  --aurora-from: var(--theme-from, #22d3ee);
+  --aurora-to: var(--theme-to, #a855f7);
+}
+
+body {
+  background: #050816;
+  color: #e2e8f0;
+}
+
+.aurora-text {
+  background: linear-gradient(90deg, var(--aurora-from), var(--aurora-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.aurora-header {
+  background: rgb(5 8 22 / 0.75);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.aurora-hero {
+  border-bottom: 1px solid rgb(255 255 255 / 0.06);
+}
+
+.aurora-glow {
+  position: absolute;
+  inset: -40%;
+  background:
+    radial-gradient(40% 35% at 30% 40%, color-mix(in srgb, var(--aurora-from) 45%, transparent), transparent 70%),
+    radial-gradient(35% 30% at 70% 55%, color-mix(in srgb, var(--aurora-to) 40%, transparent), transparent 70%);
+  filter: blur(40px);
+  animation: aurora-drift 18s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-drift {
+  from {
+    transform: translate(-4%, -2%) rotate(0deg);
+  }
+  to {
+    transform: translate(4%, 3%) rotate(8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-glow {
+    animation: none;
+  }
+}
+
+.aurora-button {
+  background: linear-gradient(90deg, var(--aurora-from), var(--aurora-to));
+}
+.aurora-button:hover {
+  filter: brightness(1.1);
+}
+
+.aurora-footer {
+  background: rgb(255 255 255 / 0.02);
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+}
+
+/* Cartes du site en verre dépoli */
+main section.rounded-xl,
+main .rounded-xl.border {
+  background-color: rgb(15 23 42 / 0.55) !important;
+  border-color: rgb(255 255 255 / 0.08) !important;
+  backdrop-filter: blur(10px);
+}

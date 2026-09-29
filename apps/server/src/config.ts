@@ -11,7 +11,7 @@ const env = process.env;
 
 export const config = {
   isProd: env.NODE_ENV === 'production',
-  version: env.PALCMS_VERSION ?? '1.0.0',
+  version: env.PALCMS_VERSION ?? '1.0.1',
   host: env.HOST ?? '127.0.0.1',
   port: Number(env.PORT ?? 3000),
   basePath: normalizeBasePath(env.BASE_PATH ?? '/'),
@@ -24,6 +24,10 @@ export const config = {
   palctl: (env.PALCTL ?? 'sudo -n /usr/local/lib/palcms/palctl').split(' ').filter(Boolean),
   palworldApiHost: env.PALWORLD_API_HOST ?? '127.0.0.1',
   pollIntervalMs: Math.max(2000, Number(env.POLL_INTERVAL_MS ?? 5000)),
+  /** API du market des plugins et thèmes. */
+  marketUrl: (env.PALCMS_MARKET_URL ?? 'https://palcms.online/api/market').replace(/\/+$/, ''),
+  /** Clés publiques supplémentaires acceptées pour les signatures (fichiers .pem séparés par des virgules). */
+  trustedKeyFiles: (env.PALCMS_TRUSTED_KEYS ?? '').split(',').map((s) => s.trim()).filter(Boolean),
 };
 
 export const secureCookies = config.publicUrl.startsWith('https://');

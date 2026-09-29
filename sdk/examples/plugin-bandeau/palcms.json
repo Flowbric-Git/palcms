@@ -1,0 +1,29 @@
+{
+  "id": "bandeau",
+  "type": "plugin",
+  "name": "Bandeau d'annonce",
+  "version": "1.0.0",
+  "description": "Un bandeau en haut de toutes les pages du site pour annoncer un événement, une maintenance ou un wipe, avec un lien et le nombre de clics.",
+  "author": "PalCMS",
+  "palcms": ">=1.0.1",
+  "icon": "assets/icon.png",
+  "settings": [
+    { "key": "message", "type": "text", "label": "Message", "default": "Bienvenue sur le serveur ! Rejoins-nous sur Discord." },
+    { "key": "link", "type": "text", "label": "Lien (facultatif)", "description": "Adresse ouverte au clic, ex. /evenements ou https://discord.gg/…" },
+    { "key": "linkLabel", "type": "text", "label": "Texte du bouton", "default": "En savoir plus" },
+    {
+      "key": "style",
+      "type": "select",
+      "label": "Couleur",
+      "default": "accent",
+      "options": [
+        { "value": "accent", "label": "Couleur principale du site" },
+        { "value": "info", "label": "Bleu (information)" },
+        { "value": "warning", "label": "Orange (maintenance, attention)" },
+        { "value": "danger", "label": "Rouge (important)" }
+      ]
+    },
+    { "key": "dismissible", "type": "toggle", "label": "Les visiteurs peuvent le fermer", "default": true },
+    { "key": "until", "type": "text", "label": "Afficher jusqu'au (facultatif)", "description": "Date au format AAAA-MM-JJ : le bandeau disparaît tout seul après ce jour." }
+  ]
+}

@@ -10,3 +10,7 @@ tools/.dev-data/
 .DS_Store
 Thumbs.db
 coverage/
+
+# Extensions construites par le kit (sdk/)
+sdk/examples/*/dist/
+sdk/examples/*/*.zip

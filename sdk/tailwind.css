@@ -1,0 +1,14 @@
+/*
+ * Classes Tailwind pour une extension, avec les mêmes réglages que le site (couleur principale, mode sombre).
+ * Sans "preflight" : la base du site est déjà chargée.
+ */
+@layer theme, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+}

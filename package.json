@@ -1,6 +1,6 @@
 {
   "name": "palcms",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "CMS open source pour serveur dédié Palworld : installeur, site public et panel admin",
@@ -9,12 +9,13 @@
     "node": ">=20.12"
   },
   "scripts": {
-    "dev": "concurrently -k -n api,web,palworld -c blue,magenta,green \"pnpm --filter @palcms/server dev\" \"pnpm --filter @palcms/web dev\" \"node tools/fake-palworld-api/server.mjs\"",
-    "build": "pnpm --filter @palcms/web build && pnpm --filter @palcms/server build",
+    "dev": "concurrently -k -n api,web,palworld,market -c blue,magenta,green,yellow \"pnpm --filter @palcms/server dev\" \"pnpm --filter @palcms/web dev\" \"node tools/fake-palworld-api/server.mjs\" \"node tools/fake-market/server.mjs\"",
+    "build": "pnpm --filter @palcms/web build && pnpm --filter @palcms/server build && node sdk/palcms-ext.mjs site-classes apps/web/dist/assets",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "release": "node scripts/build-release.mjs",
-    "dev:reset": "node scripts/dev-reset.mjs"
+    "dev:reset": "node scripts/dev-reset.mjs",
+    "ext": "node sdk/palcms-ext.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

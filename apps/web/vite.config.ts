@@ -29,6 +29,7 @@ export default defineConfig(({ mode }) => {
         // changeOrigin: false garde l'en-tête Host du navigateur, comme Nginx en production.
         '/api': { target: api, changeOrigin: false },
         '/uploads': { target: api, changeOrigin: false },
+        '/extensions': { target: api, changeOrigin: false },
         '/ws': { target: api, ws: true, changeOrigin: false },
       },
     },

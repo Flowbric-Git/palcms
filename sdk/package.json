@@ -1,0 +1,21 @@
+{
+  "name": "palcms-sdk",
+  "version": "1.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Kit de création de plugins et de thèmes pour PalCMS",
+  "bin": {
+    "palcms-ext": "./palcms-ext.mjs"
+  },
+  "scripts": {
+    "build:examples": "node palcms-ext.mjs build examples/plugin-bandeau && node palcms-ext.mjs build examples/theme-aurora"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.0.0",
+    "esbuild": "^0.25.0",
+    "fflate": "^0.8.2",
+    "tailwindcss": "^4.0.0",
+    "lightningcss": "^1.29.0"
+  },
+  "license": "MIT"
+}
