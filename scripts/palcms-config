@@ -1,0 +1,319 @@
+#!/usr/bin/env bash
+# palcms-config - adresse, chemin, HTTPS et port du site PalCMS.
+#
+#   palcms-config ask   [options]   pose les questions (ou lit les options) et écrit /etc/palcms/config.env
+#   palcms-config apply             génère Nginx, les certificats, le pare-feu et redémarre le CMS
+#   palcms-config edit  [options]   ask + apply avec les valeurs actuelles comme valeurs par défaut
+#   palcms-config show              affiche la configuration actuelle
+#
+# Options : --domain NOM | --ip IP   --path /cms   --https letsencrypt|selfsigned|none
+#           --email EMAIL (Let's Encrypt)   --port 3000   -y (aucune question)
+set -euo pipefail
+export LC_ALL=C.UTF-8
+
+CONFIG_DIR=/etc/palcms
+CONFIG_FILE=$CONFIG_DIR/config.env
+NGINX_SITE=/etc/nginx/sites-available/palcms
+NGINX_LINK=/etc/nginx/sites-enabled/palcms
+SSL_DIR=/etc/palcms/ssl
+ACME_ROOT=/var/www/palcms-acme
+
+c_bold=$'\e[1m'; c_green=$'\e[32m'; c_yellow=$'\e[33m'; c_red=$'\e[31m'; c_off=$'\e[0m'
+info() { echo "${c_green}==>${c_off} $*"; }
+warn() { echo "${c_yellow}⚠${c_off}  $*"; }
+die() { echo "${c_red}✖${c_off}  $*" >&2; exit 1; }
+
+[[ $EUID -eq 0 ]] || die "Lance cette commande avec sudo."
+
+# Lecture au clavier même quand le script est lancé via "curl | bash".
+TTY=/dev/tty
+ask() { # ask "Question" "défaut" -> REPLY
+  local q="$1" def="${2:-}"
+  if [[ ! -r $TTY ]]; then REPLY="$def"; return; fi
+  if [[ -n $def ]]; then read -r -p "  $q [${c_bold}$def${c_off}] : " REPLY <"$TTY" || true; else read -r -p "  $q : " REPLY <"$TTY" || true; fi
+  REPLY="${REPLY:-$def}"
+}
+
+detect_ip() {
+  local ip
+  ip=$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || true)
+  [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+  echo "$ip"
+}
+
+normalize_path() {
+  local p="${1:-/}"
+  [[ $p == /* ]] || p="/$p"
+  [[ $p == */ ]] || p="$p/"
+  p=$(echo "$p" | tr -s '/')
+  [[ $p =~ ^/[A-Za-z0-9/_-]*$ ]] || die "Chemin invalide : $1 (lettres, chiffres, - _ / uniquement)"
+  echo "$p"
+}
+
+load_config() {
+  HOST_TYPE=ip; PUBLIC_HOST=""; BASE_PATH=/; HTTPS_MODE=selfsigned; LE_EMAIL=""; PORT=3000
+  # shellcheck disable=SC1090
+  [[ -f $CONFIG_FILE ]] && source "$CONFIG_FILE"
+  return 0
+}
+
+write_config() {
+  local scheme=https
+  [[ $HTTPS_MODE == none ]] && scheme=http
+  install -d -m 0750 -o root -g palcms "$CONFIG_DIR" 2>/dev/null || install -d -m 0750 "$CONFIG_DIR"
+  cat >"$CONFIG_FILE" <<EOF
+# Configuration PalCMS - modifiable avec "sudo palcms-config edit"
+HOST_TYPE="$HOST_TYPE"
+PUBLIC_HOST="$PUBLIC_HOST"
+BASE_PATH="$BASE_PATH"
+HTTPS_MODE="$HTTPS_MODE"
+LE_EMAIL="$LE_EMAIL"
+PORT="$PORT"
+PUBLIC_URL="$scheme://$PUBLIC_HOST"
+EOF
+  chmod 0640 "$CONFIG_FILE"
+  chgrp palcms "$CONFIG_FILE" 2>/dev/null || true
+}
+
+cmd_ask() {
+  load_config
+  local yes=0 opt_domain="" opt_ip="" opt_path="" opt_https="" opt_email="" opt_port=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --domain) opt_domain="$2"; shift 2 ;;
+      --ip) opt_ip="$2"; shift 2 ;;
+      --path) opt_path="$2"; shift 2 ;;
+      --https) opt_https="$2"; shift 2 ;;
+      --email) opt_email="$2"; shift 2 ;;
+      --port) opt_port="$2"; shift 2 ;;
+      -y | --yes) yes=1; shift ;;
+      *) die "Option inconnue : $1" ;;
+    esac
+  done
+  local interactive=1
+  [[ $yes -eq 1 || ! -r $TTY ]] && interactive=0
+
+  echo
+  echo "${c_bold}Configuration de l'adresse du site${c_off}"
+
+  # 1. Adresse
+  if [[ -n $opt_domain ]]; then HOST_TYPE=domain; PUBLIC_HOST="$opt_domain"
+  elif [[ -n $opt_ip ]]; then HOST_TYPE=ip; PUBLIC_HOST="$opt_ip"
+  elif [[ $interactive -eq 1 ]]; then
+    local ip; ip=$(detect_ip)
+    echo "  IP publique détectée : ${c_bold}${ip:-inconnue}${c_off}"
+    ask "Nom de domaine (laisser vide pour utiliser l'IP)" "$([[ $HOST_TYPE == domain ]] && echo "$PUBLIC_HOST")"
+    if [[ -n $REPLY ]]; then HOST_TYPE=domain; PUBLIC_HOST="$REPLY"; else HOST_TYPE=ip; PUBLIC_HOST="$ip"; fi
+  elif [[ -z $PUBLIC_HOST ]]; then HOST_TYPE=ip; PUBLIC_HOST=$(detect_ip)
+  fi
+  [[ -n $PUBLIC_HOST ]] || die "Impossible de déterminer l'adresse du VPS : utilise --ip ou --domain."
+  if [[ $HOST_TYPE == domain ]]; then
+    [[ $PUBLIC_HOST =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || die "Nom de domaine invalide : $PUBLIC_HOST"
+  else
+    [[ $PUBLIC_HOST =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "IP invalide : $PUBLIC_HOST"
+  fi
+
+  # 2. Chemin
+  if [[ -n $opt_path ]]; then BASE_PATH=$(normalize_path "$opt_path")
+  elif [[ $interactive -eq 1 ]]; then
+    ask "Chemin du site (/ pour la racine, ou par ex. /cms)" "$BASE_PATH"
+    BASE_PATH=$(normalize_path "$REPLY")
+  fi
+
+  # 3. HTTPS
+  local def_https=$HTTPS_MODE
+  [[ $HOST_TYPE == domain && $def_https == selfsigned ]] && def_https=letsencrypt
+  [[ $HOST_TYPE == ip && $def_https == letsencrypt ]] && def_https=selfsigned
+  if [[ -n $opt_https ]]; then HTTPS_MODE="$opt_https"
+  elif [[ $interactive -eq 1 ]]; then
+    if [[ $HOST_TYPE == domain ]]; then
+      echo "  HTTPS : letsencrypt (certificat gratuit et reconnu), selfsigned (auto-signé), none (HTTP simple)"
+    else
+      echo "  HTTPS : selfsigned (auto-signé, le navigateur affichera un avertissement), none (HTTP simple)"
+    fi
+    ask "Mode HTTPS" "$def_https"
+    HTTPS_MODE="$REPLY"
+  else HTTPS_MODE=$def_https
+  fi
+  case "$HTTPS_MODE" in letsencrypt | selfsigned | none) ;; *) die "Mode HTTPS invalide : $HTTPS_MODE" ;; esac
+  [[ $HTTPS_MODE == letsencrypt && $HOST_TYPE != domain ]] && die "Let's Encrypt nécessite un nom de domaine (utilise selfsigned avec une IP)."
+
+  if [[ $HTTPS_MODE == letsencrypt ]]; then
+    if [[ -n $opt_email ]]; then LE_EMAIL="$opt_email"
+    elif [[ $interactive -eq 1 ]]; then ask "Email pour Let's Encrypt (alertes d'expiration)" "$LE_EMAIL"; LE_EMAIL="$REPLY"
+    fi
+    [[ $LE_EMAIL =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] || die "Email Let's Encrypt invalide."
+  fi
+
+  # 4. Port interne
+  if [[ -n $opt_port ]]; then PORT="$opt_port"
+  elif [[ $interactive -eq 1 ]]; then ask "Port interne du CMS" "$PORT"; PORT="$REPLY"
+  fi
+  [[ $PORT =~ ^[0-9]{4,5}$ ]] && (( PORT >= 1024 && PORT <= 65535 )) || die "Port invalide : $PORT"
+  [[ $PORT == 8211 || $PORT == 8212 ]] && die "Le port $PORT est réservé au serveur Palworld."
+
+  local scheme=https; [[ $HTTPS_MODE == none ]] && scheme=http
+  echo
+  echo "${c_bold}Récapitulatif${c_off}"
+  echo "  Adresse du site : ${c_bold}$scheme://$PUBLIC_HOST$BASE_PATH${c_off}"
+  echo "  HTTPS           : $HTTPS_MODE"
+  echo "  Port interne    : $PORT"
+  if [[ $interactive -eq 1 ]]; then
+    ask "Confirmer ? (o/n)" "o"
+    [[ $REPLY =~ ^[oOyY] ]] || die "Annulé."
+  fi
+  write_config
+  info "Configuration enregistrée dans $CONFIG_FILE"
+}
+
+nginx_locations() {
+  local loc="$BASE_PATH"
+  if [[ $BASE_PATH != / ]]; then
+    echo "    location = ${BASE_PATH%/} { return 301 ${BASE_PATH}; }"
+  fi
+  cat <<EOF
+    location $loc {
+        proxy_pass http://127.0.0.1:$PORT;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$palcms_connection_upgrade;
+        proxy_read_timeout 3600s;
+    }
+EOF
+}
+
+# Un autre site Nginx (hébergeur, panel…) est-il déjà le site par défaut sur ce port ?
+# Dans ce cas on ne réclame pas "default_server", sinon Nginx refuse la configuration.
+default_flag() { # default_flag 80|443
+  local f
+  while IFS= read -r f; do
+    [[ $(readlink -f "$f") == "$(readlink -f "$NGINX_SITE")" ]] && continue
+    if grep -qE "^[[:space:]]*listen[[:space:]]+([^;]*:)?$1[[:space:];][^;]*default_server" "$f" 2>/dev/null; then
+      return 0
+    fi
+  done < <(find /etc/nginx/sites-enabled /etc/nginx/conf.d -maxdepth 1 \( -type f -o -type l \) 2>/dev/null)
+  echo " default_server"
+}
+
+write_nginx() { # write_nginx http|https
+  local mode="$1" cert="" key="" d80 d443
+  rm -f /etc/nginx/sites-enabled/default
+  d80=$(default_flag 80)
+  d443=$(default_flag 443)
+  {
+    echo "# Généré par palcms-config — ne pas modifier à la main"
+    echo "map \$http_upgrade \$palcms_connection_upgrade { default upgrade; '' close; }"
+    if [[ $mode == http ]]; then
+      cat <<EOF
+server {
+    listen 80$d80;
+    listen [::]:80$d80;
+    server_name $PUBLIC_HOST;
+    client_max_body_size 10m;
+    location /.well-known/acme-challenge/ { root $ACME_ROOT; }
+$(nginx_locations)
+}
+EOF
+    else
+      if [[ $HTTPS_MODE == letsencrypt ]]; then
+        cert="/etc/letsencrypt/live/$PUBLIC_HOST/fullchain.pem"; key="/etc/letsencrypt/live/$PUBLIC_HOST/privkey.pem"
+      else
+        cert="$SSL_DIR/palcms.crt"; key="$SSL_DIR/palcms.key"
+      fi
+      cat <<EOF
+server {
+    listen 80$d80;
+    listen [::]:80$d80;
+    server_name $PUBLIC_HOST;
+    location /.well-known/acme-challenge/ { root $ACME_ROOT; }
+    location / { return 301 https://\$host\$request_uri; }
+}
+server {
+    listen 443 ssl$d443;
+    listen [::]:443 ssl$d443;
+    http2 on;
+    server_name $PUBLIC_HOST;
+    ssl_certificate $cert;
+    ssl_certificate_key $key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    client_max_body_size 10m;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+$(nginx_locations)
+}
+EOF
+    fi
+  } >"$NGINX_SITE"
+  ln -sf "$NGINX_SITE" "$NGINX_LINK"
+  rm -f /etc/nginx/sites-enabled/default
+  # "http2 on" n'existe qu'à partir de Nginx 1.25 (Ubuntu 24.04) : sinon on le retire.
+  if ! nginx -t >/dev/null 2>&1; then
+    sed -i '/http2 on;/d' "$NGINX_SITE"
+  fi
+  nginx -t
+  systemctl reload nginx || systemctl restart nginx
+}
+
+cmd_apply() {
+  load_config
+  [[ -n $PUBLIC_HOST ]] || die "Aucune configuration : lance d'abord « palcms-config ask »."
+  install -d "$ACME_ROOT"
+
+  case "$HTTPS_MODE" in
+    none)
+      write_nginx http
+      ;;
+    selfsigned)
+      install -d -m 0750 "$SSL_DIR"
+      if [[ ! -f $SSL_DIR/palcms.crt ]] || ! openssl x509 -in "$SSL_DIR/palcms.crt" -noout -text | grep -q "$PUBLIC_HOST"; then
+        info "Génération d'un certificat auto-signé pour $PUBLIC_HOST"
+        local san="DNS:$PUBLIC_HOST"
+        [[ $HOST_TYPE == ip ]] && san="IP:$PUBLIC_HOST"
+        openssl req -x509 -nodes -newkey rsa:2048 -days 825 \
+          -keyout "$SSL_DIR/palcms.key" -out "$SSL_DIR/palcms.crt" \
+          -subj "/CN=$PUBLIC_HOST" -addext "subjectAltName=$san" >/dev/null 2>&1
+        chmod 0600 "$SSL_DIR/palcms.key"
+      fi
+      write_nginx https
+      ;;
+    letsencrypt)
+      command -v certbot >/dev/null || { info "Installation de certbot"; apt-get install -y certbot >/dev/null; }
+      if [[ ! -f /etc/letsencrypt/live/$PUBLIC_HOST/fullchain.pem ]]; then
+        write_nginx http
+        info "Demande du certificat Let's Encrypt pour $PUBLIC_HOST"
+        certbot certonly --webroot -w "$ACME_ROOT" -d "$PUBLIC_HOST" --non-interactive --agree-tos -m "$LE_EMAIL" \
+          || die "Échec de Let's Encrypt : vérifie que le domaine pointe bien vers ce VPS (enregistrement DNS A) et que le port 80 est ouvert."
+      fi
+      install -d /etc/letsencrypt/renewal-hooks/deploy
+      printf '#!/bin/sh\nsystemctl reload nginx\n' >/etc/letsencrypt/renewal-hooks/deploy/palcms-nginx.sh
+      chmod +x /etc/letsencrypt/renewal-hooks/deploy/palcms-nginx.sh
+      write_nginx https
+      ;;
+  esac
+
+  if command -v ufw >/dev/null; then
+    ufw allow 80/tcp >/dev/null
+    [[ $HTTPS_MODE != none ]] && ufw allow 443/tcp >/dev/null
+  fi
+
+  systemctl restart palcms 2>/dev/null || true
+  local scheme=https; [[ $HTTPS_MODE == none ]] && scheme=http
+  info "Site disponible sur ${c_bold}$scheme://$PUBLIC_HOST$BASE_PATH${c_off}"
+}
+
+cmd_show() {
+  load_config
+  [[ -f $CONFIG_FILE ]] || die "Aucune configuration."
+  cat "$CONFIG_FILE"
+}
+
+case "${1:-}" in
+  ask) shift; cmd_ask "$@" ;;
+  apply) cmd_apply ;;
+  edit) shift; cmd_ask "$@"; cmd_apply ;;
+  show) cmd_show ;;
+  *) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

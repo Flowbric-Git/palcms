@@ -1,0 +1,1034 @@
+{
+ "site": {
+  "name": "Palpagos FR",
+  "tagline": "Serveur Palworld communautaire, PvE et bonne ambiance",
+  "accentColor": "#22c55e",
+  "defaultTheme": "dark",
+  "allowThemeToggle": true,
+  "discordUrl": "https://discord.gg/exemple",
+  "logoUrl": "",
+  "bannerUrl": "",
+  "heroTitle": "Bienvenue sur notre serveur Palworld",
+  "heroText": "Rejoins la communauté, capture des Pals et grimpe dans le classement !",
+  "footerText": "",
+  "serverAddress": "",
+  "menu": [
+   {
+    "label": "Accueil",
+    "url": "/"
+   },
+   {
+    "label": "Actualités",
+    "url": "/actualites"
+   },
+   {
+    "label": "Classement",
+    "url": "/classement"
+   },
+   {
+    "label": "Carte",
+    "url": "/carte"
+   },
+   {
+    "label": "Règles",
+    "url": "/p/regles"
+   },
+   {
+    "label": "Rejoindre",
+    "url": "/p/rejoindre"
+   },
+   {
+    "label": "Discord",
+    "url": "https://discord.gg/exemple"
+   }
+  ],
+  "registration": {
+   "steam": true,
+   "email": true
+  }
+ },
+ "modules": [
+  {
+   "id": "status",
+   "name": "Statut en direct",
+   "description": "Statut du serveur, joueurs en ligne et IP à copier sur l'accueil.",
+   "area": "public",
+   "toggleable": true,
+   "enabled": true
+  },
+  {
+   "id": "leaderboard",
+   "name": "Classement",
+   "description": "Classement des joueurs en temps réel (par niveau).",
+   "area": "public",
+   "toggleable": true,
+   "enabled": true
+  },
+  {
+   "id": "news",
+   "name": "Actualités",
+   "description": "Articles publiés sur le site.",
+   "area": "public",
+   "toggleable": true,
+   "enabled": true
+  },
+  {
+   "id": "registration",
+   "name": "Inscription des joueurs",
+   "description": "Comptes joueurs (Steam validé automatiquement, email validé par un admin).",
+   "area": "public",
+   "toggleable": true,
+   "enabled": true
+  },
+  {
+   "id": "pages",
+   "name": "Pages",
+   "description": "Pages libres (règles, rejoindre…).",
+   "area": "site",
+   "toggleable": false,
+   "enabled": true
+  },
+  {
+   "id": "server-control",
+   "name": "Contrôle du serveur",
+   "description": "Démarrer, arrêter, redémarrer le serveur Palworld.",
+   "area": "server",
+   "toggleable": false,
+   "enabled": true
+  },
+  {
+   "id": "server-config",
+   "name": "Configuration du serveur",
+   "description": "Éditeur de PalWorldSettings.ini.",
+   "area": "server",
+   "toggleable": false,
+   "enabled": true
+  },
+  {
+   "id": "players",
+   "name": "Joueurs",
+   "description": "Joueurs connectés et historique.",
+   "area": "server",
+   "toggleable": false,
+   "enabled": true
+  },
+  {
+   "id": "logs",
+   "name": "Logs",
+   "description": "Logs du serveur en direct.",
+   "area": "server",
+   "toggleable": false,
+   "enabled": true
+  },
+  {
+   "id": "map",
+   "name": "Carte en temps réel (publique)",
+   "description": "Carte avec la position des joueurs. Désactivé : seuls les admins la voient.",
+   "area": "public",
+   "toggleable": true,
+   "enabled": true
+  },
+  {
+   "id": "player-stats",
+   "name": "Statistiques des joueurs",
+   "description": "Graphiques d’évolution (niveau, temps de jeu) sur les profils.",
+   "area": "public",
+   "toggleable": true,
+   "enabled": true
+  },
+  {
+   "id": "backups",
+   "name": "Sauvegardes",
+   "description": "Sauvegardes automatiques et restauration.",
+   "area": "server",
+   "toggleable": false,
+   "enabled": true
+  },
+  {
+   "id": "schedules",
+   "name": "Programmation",
+   "description": "Redémarrages programmés, mises à jour et annonces planifiées.",
+   "area": "server",
+   "toggleable": false,
+   "enabled": true
+  },
+  {
+   "id": "moderation",
+   "name": "Modération",
+   "description": "Expulsions, bannissements et liste blanche.",
+   "area": "server",
+   "toggleable": false,
+   "enabled": true
+  },
+  {
+   "id": "rcon",
+   "name": "Console RCON",
+   "description": "Commandes admin du serveur depuis le panel.",
+   "area": "server",
+   "toggleable": false,
+   "enabled": true
+  },
+  {
+   "id": "discord",
+   "name": "Discord",
+   "description": "Notifications sur un salon Discord (webhook).",
+   "area": "site",
+   "toggleable": false,
+   "enabled": true
+  },
+  {
+   "id": "themes",
+   "name": "Thèmes avancés",
+   "description": "Police, fond et CSS personnalisé du site public.",
+   "area": "site",
+   "toggleable": false,
+   "enabled": true
+  }
+ ],
+ "pages": [
+  {
+   "id": 2,
+   "slug": "rejoindre",
+   "title": "Rejoindre le serveur",
+   "contentHtml": "<h2>Comment nous rejoindre</h2>\n<ol>\n<li>Lance Palworld et choisis <strong>Rejoindre une partie multijoueur</strong>.</li>\n<li>En bas de l'écran, saisis l'adresse du serveur affichée sur l'accueil du site.</li>\n<li>Entre le mot de passe si le serveur en a un.</li>\n</ol>\n<p>Rejoins aussi notre <a href=\"https://discord.gg/exemple\">Discord</a> !</p>",
+   "published": true,
+   "updatedAt": -1036800000
+  },
+  {
+   "id": 1,
+   "slug": "regles",
+   "title": "Règles du serveur",
+   "contentHtml": "<h2>Règles générales</h2>\n<ol>\n<li>Respecte les autres joueurs : pas d'insultes ni de harcèlement.</li>\n<li>Pas de triche, d'exploit de bug ou de logiciel tiers.</li>\n<li>Ne détruis pas les bases des autres joueurs sans leur accord.</li>\n<li>Écoute les décisions des administrateurs.</li>\n</ol>\n<p>Ces règles sont modifiables dans le panel admin, rubrique <em>Gestion du site &gt; Pages</em>.</p>",
+   "published": true,
+   "updatedAt": -1036800000
+  }
+ ],
+ "news": [
+  {
+   "id": 3,
+   "slug": "nouvelle-carte-en-direct",
+   "title": "Nouvelle carte en direct",
+   "excerpt": "Suivez la position des joueurs connectés et les points importants directement sur le site.",
+   "coverUrl": null,
+   "publishedAt": -86400000,
+   "author": "admin",
+   "contentHtml": "<p>La carte en direct est disponible dans le menu : positions des joueurs en temps réel, bases de la communauté et points d'intérêt.</p>",
+   "published": true
+  },
+  {
+   "id": 2,
+   "slug": "evenement-du-week-end-chasse-aux-alphas",
+   "title": "Événement du week-end : chasse aux alphas",
+   "excerpt": "Samedi soir, on part ensemble à la chasse aux Pals alpha. Rendez-vous au point de départ.",
+   "coverUrl": null,
+   "publishedAt": -345600000,
+   "author": "admin",
+   "contentHtml": "<p>Samedi à 21h, grosse sortie en groupe pour affronter les Pals alpha de l'île. Rendez-vous au point <em>Spawn</em> sur la carte.</p><ul><li>Niveau 20 conseillé</li><li>Pensez aux soins</li></ul>",
+   "published": true
+  },
+  {
+   "id": 1,
+   "slug": "ouverture-du-serveur",
+   "title": "Ouverture du serveur !",
+   "excerpt": "Le serveur ouvre ses portes : taux d'XP x1,5, capture facilitée et sauvegardes toutes les heures.",
+   "coverUrl": null,
+   "publishedAt": -1123200000,
+   "author": "admin",
+   "contentHtml": "<p>Bienvenue à tous ! Le serveur est ouvert, rejoignez-nous depuis la liste des serveurs communautaires ou avec l'adresse affichée sur l'accueil.</p><p>Au programme : <strong>XP x1,5</strong>, capture facilitée, sauvegardes automatiques toutes les heures.</p>",
+   "published": true
+  }
+ ],
+ "pendingMember": {
+  "id": 2,
+  "username": "lyra",
+  "displayName": "lyra",
+  "email": "lyra@palcms.demo",
+  "role": "player",
+  "status": "pending",
+  "inGameName": "Lyra",
+  "steam": 0,
+  "playerUid": null,
+  "playerName": null,
+  "playerLevel": null,
+  "createdAt": -7200000,
+  "lastLoginAt": -7200000
+ },
+ "config": {
+  "entries": [
+   {
+    "key": "Difficulty",
+    "type": "raw",
+    "value": "Normal",
+    "locked": false
+   },
+   {
+    "key": "RandomizerType",
+    "type": "raw",
+    "value": "None",
+    "locked": false
+   },
+   {
+    "key": "RandomizerSeed",
+    "type": "string",
+    "value": "",
+    "locked": false
+   },
+   {
+    "key": "bIsRandomizerPalLevelRandom",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "DayTimeSpeedRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "NightTimeSpeedRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "ExpRate",
+    "type": "number",
+    "value": 1.5,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PalCaptureRate",
+    "type": "number",
+    "value": 1.2,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PalSpawnNumRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PalDamageRateAttack",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PalDamageRateDefense",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PlayerDamageRateAttack",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PlayerDamageRateDefense",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PlayerStomachDecreaceRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PlayerStaminaDecreaceRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PlayerAutoHPRegeneRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PlayerAutoHpRegeneRateInSleep",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PalStomachDecreaceRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PalStaminaDecreaceRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PalAutoHPRegeneRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "PalAutoHpRegeneRateInSleep",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "BuildObjectHpRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "BuildObjectDamageRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "BuildObjectDeteriorationDamageRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "CollectionDropRate",
+    "type": "number",
+    "value": 1.5,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "CollectionObjectHpRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "CollectionObjectRespawnSpeedRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "EnemyDropItemRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "DeathPenalty",
+    "type": "raw",
+    "value": "Item",
+    "locked": false
+   },
+   {
+    "key": "bEnablePlayerToPlayerDamage",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "bEnableFriendlyFire",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "bEnableInvaderEnemy",
+    "type": "bool",
+    "value": true,
+    "locked": false
+   },
+   {
+    "key": "bActiveUNKO",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "bEnableAimAssistPad",
+    "type": "bool",
+    "value": true,
+    "locked": false
+   },
+   {
+    "key": "bEnableAimAssistKeyboard",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "DropItemMaxNum",
+    "type": "number",
+    "value": 3000,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "DropItemMaxNum_UNKO",
+    "type": "number",
+    "value": 100,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "BaseCampMaxNum",
+    "type": "number",
+    "value": 128,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "BaseCampWorkerMaxNum",
+    "type": "number",
+    "value": 15,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "DropItemAliveMaxHours",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "bAutoResetGuildNoOnlinePlayers",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "AutoResetGuildTimeNoOnlinePlayers",
+    "type": "number",
+    "value": 72,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "GuildPlayerMaxNum",
+    "type": "number",
+    "value": 20,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "BaseCampMaxNumInGuild",
+    "type": "number",
+    "value": 4,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "PalEggDefaultHatchingTime",
+    "type": "number",
+    "value": 72,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "WorkSpeedRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "AutoSaveSpan",
+    "type": "number",
+    "value": 30,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "bIsMultiplay",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "bIsPvP",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "bHardcore",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "bPalLost",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "bCharacterRecreateInHardcore",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "bCanPickupOtherGuildDeathPenaltyDrop",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "bEnableNonLoginPenalty",
+    "type": "bool",
+    "value": true,
+    "locked": false
+   },
+   {
+    "key": "bEnableFastTravel",
+    "type": "bool",
+    "value": true,
+    "locked": false
+   },
+   {
+    "key": "bIsStartLocationSelectByMap",
+    "type": "bool",
+    "value": true,
+    "locked": false
+   },
+   {
+    "key": "bExistPlayerAfterLogout",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "bEnableDefenseOtherGuildPlayer",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "bInvisibleOtherGuildBaseCampAreaFX",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "bBuildAreaLimit",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "ItemWeightRate",
+    "type": "number",
+    "value": 1,
+    "decimals": true,
+    "locked": false
+   },
+   {
+    "key": "CoopPlayerMaxNum",
+    "type": "number",
+    "value": 4,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "ServerPlayerMaxNum",
+    "type": "number",
+    "value": 16,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "ServerName",
+    "type": "string",
+    "value": "Palpagos FR",
+    "locked": false
+   },
+   {
+    "key": "ServerDescription",
+    "type": "string",
+    "value": "Serveur communautaire PvE",
+    "locked": false
+   },
+   {
+    "key": "AdminPassword",
+    "type": "string",
+    "value": "demo-admin",
+    "locked": false
+   },
+   {
+    "key": "ServerPassword",
+    "type": "string",
+    "value": "",
+    "locked": false
+   },
+   {
+    "key": "PublicPort",
+    "type": "number",
+    "value": 8211,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "PublicIP",
+    "type": "string",
+    "value": "",
+    "locked": false
+   },
+   {
+    "key": "RCONEnabled",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "RCONPort",
+    "type": "number",
+    "value": 25575,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "Region",
+    "type": "string",
+    "value": "",
+    "locked": false
+   },
+   {
+    "key": "bUseAuth",
+    "type": "bool",
+    "value": true,
+    "locked": false
+   },
+   {
+    "key": "BanListURL",
+    "type": "string",
+    "value": "https://api.palworldgame.com/api/banlist.txt",
+    "locked": false
+   },
+   {
+    "key": "RESTAPIEnabled",
+    "type": "bool",
+    "value": true,
+    "locked": true
+   },
+   {
+    "key": "RESTAPIPort",
+    "type": "number",
+    "value": 8212,
+    "decimals": false,
+    "locked": true
+   },
+   {
+    "key": "bShowPlayerList",
+    "type": "bool",
+    "value": false,
+    "locked": false
+   },
+   {
+    "key": "ChatPostLimitPerMinute",
+    "type": "number",
+    "value": 10,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "CrossplayPlatforms",
+    "type": "raw",
+    "value": "(Steam,Xbox,PS5,Mac)",
+    "locked": false
+   },
+   {
+    "key": "bIsUseBackupSaveData",
+    "type": "bool",
+    "value": true,
+    "locked": false
+   },
+   {
+    "key": "LogFormatType",
+    "type": "raw",
+    "value": "Text",
+    "locked": false
+   },
+   {
+    "key": "SupplyDropSpan",
+    "type": "number",
+    "value": 180,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "EnablePredatorBossPal",
+    "type": "bool",
+    "value": true,
+    "locked": false
+   },
+   {
+    "key": "MaxBuildingLimitNum",
+    "type": "number",
+    "value": 0,
+    "decimals": false,
+    "locked": false
+   },
+   {
+    "key": "ServerReplicatePawnCullDistance",
+    "type": "number",
+    "value": 15000,
+    "decimals": true,
+    "locked": false
+   }
+  ]
+ },
+ "team": {
+  "roles": [
+   {
+    "id": 1,
+    "name": "Administrateur",
+    "builtin": true,
+    "permissions": [
+     "server.control",
+     "server.config",
+     "server.players",
+     "server.logs",
+     "server.moderation",
+     "server.announce",
+     "server.rcon",
+     "server.backups",
+     "server.schedules",
+     "site.pages",
+     "site.news",
+     "site.appearance",
+     "site.modules",
+     "site.members",
+     "site.map",
+     "site.discord",
+     "admin.team",
+     "admin.audit"
+    ],
+    "all": true,
+    "members": 0
+   },
+   {
+    "id": 2,
+    "name": "Modérateur",
+    "builtin": true,
+    "permissions": [
+     "server.players",
+     "server.logs",
+     "server.moderation",
+     "server.announce",
+     "site.members"
+    ],
+    "all": false,
+    "members": 0
+   },
+   {
+    "id": 3,
+    "name": "Rédacteur",
+    "builtin": true,
+    "permissions": [
+     "site.pages",
+     "site.news"
+    ],
+    "all": false,
+    "members": 0
+   }
+  ],
+  "permissions": {
+   "server.control": "Démarrer, arrêter et redémarrer le serveur",
+   "server.config": "Modifier la configuration du serveur",
+   "server.players": "Voir les joueurs",
+   "server.logs": "Voir les logs",
+   "server.moderation": "Expulser, bannir, liste blanche",
+   "server.announce": "Envoyer des annonces en jeu",
+   "server.rcon": "Console RCON",
+   "server.backups": "Sauvegardes et restauration",
+   "server.schedules": "Redémarrages programmés et mises à jour",
+   "site.pages": "Pages",
+   "site.news": "Actualités",
+   "site.appearance": "Apparence, menu et thèmes",
+   "site.modules": "Modules",
+   "site.members": "Membres",
+   "site.map": "Carte (image et points d’intérêt)",
+   "site.discord": "Discord",
+   "admin.team": "Équipe et rôles",
+   "admin.audit": "Journal des actions"
+  },
+  "staff": [
+   {
+    "id": 1,
+    "username": "admin",
+    "displayName": "admin",
+    "role": "superadmin",
+    "roleId": null,
+    "roleName": null,
+    "lastLoginAt": 1790655356302
+   }
+  ]
+ },
+ "discord": {
+  "webhookUrl": "",
+  "events": {
+   "server": true,
+   "schedule": true,
+   "content": true
+  },
+  "configured": false
+ },
+ "rcon": {
+  "enabled": false,
+  "port": 25575,
+  "managed": true,
+  "mode": "managed"
+ },
+ "schedules": {
+  "settings": {
+   "enabled": false,
+   "times": [
+    "06:00"
+   ],
+   "warnings": [
+    15,
+    5,
+    1
+   ],
+   "updateOnRestart": true,
+   "message": "Redémarrage du serveur dans {min} minute(s). Pensez à vous mettre à l’abri !"
+  },
+  "next": null,
+  "pending": null,
+  "busy": false
+ },
+ "theme": {
+  "font": "system",
+  "background": "plain",
+  "backgroundImage": "",
+  "glass": false,
+  "customCss": ""
+ },
+ "whitelist": {
+  "settings": {
+   "enabled": false,
+   "message": "Ce serveur est sur liste blanche."
+  },
+  "entries": []
+ },
+ "backupSettings": {
+  "enabled": true,
+  "intervalMinutes": 60,
+  "keep": 48
+ },
+ "map": {
+  "settings": {
+   "image": "official",
+   "customUrl": "",
+   "bounds": [
+    349400,
+    724400,
+    -1099400,
+    -724400
+   ]
+  },
+  "pois": [
+   {
+    "id": 2,
+    "label": "Base de la guilde",
+    "description": "Base commune, coffres partagés",
+    "icon": "home",
+    "color": "#3b82f6",
+    "x": -250000,
+    "y": 150000
+   },
+   {
+    "id": 3,
+    "label": "Boss : Jetragon",
+    "description": "Niveau 50, venez en groupe",
+    "icon": "skull",
+    "color": "#ef4444",
+    "x": 150000,
+    "y": -200000
+   },
+   {
+    "id": 4,
+    "label": "Marchand",
+    "description": "Marchand errant et sphères",
+    "icon": "star",
+    "color": "#eab308",
+    "x": -100000,
+    "y": -120000
+   },
+   {
+    "id": 1,
+    "label": "Spawn",
+    "description": "Point de départ des nouveaux joueurs",
+    "icon": "home",
+    "color": "#22c55e",
+    "x": -375000,
+    "y": 0
+   }
+  ]
+ },
+ "adminUser": {
+  "id": 1,
+  "username": "admin",
+  "displayName": "admin",
+  "role": "superadmin",
+  "status": "active",
+  "avatarUrl": null,
+  "steam": false,
+  "playerPublicId": null,
+  "permissions": [
+   "server.control",
+   "server.config",
+   "server.players",
+   "server.logs",
+   "server.moderation",
+   "server.announce",
+   "server.rcon",
+   "server.backups",
+   "server.schedules",
+   "site.pages",
+   "site.news",
+   "site.appearance",
+   "site.modules",
+   "site.members",
+   "site.map",
+   "site.discord",
+   "admin.team",
+   "admin.audit"
+  ]
+ }
+}

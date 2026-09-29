@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-demo/
+release/
+.data/
+tools/.dev-data/
+*.log
+.env
+.env.local
+.DS_Store
+Thumbs.db
+coverage/
