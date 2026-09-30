@@ -1,5 +1,7 @@
 # PalCMS
 
+🇬🇧 [English version](README.en.md)
+
 **CMS open source et gratuit pour serveur dédié Palworld.** Une commande sur un VPS installe le site. Le site installe ensuite le serveur de jeu, puis offre :
 
 - **un site public de serveur de jeu** : accueil, actualités, pages, statut et joueurs en direct, **carte en temps réel** (joueurs, bases, voyage rapide), **classement**, **guildes**, **Paldex du serveur**, **calendrier des événements**, page de **disponibilité**, profils de joueurs avec graphiques, comptes joueurs (Steam ou email) avec leurs Pals et leur inventaire, **signalements et suggestions** ;
@@ -34,7 +36,7 @@ La démo tourne entièrement dans le navigateur avec des données fictives (joue
 
 **Prérequis**
 - Ubuntu **22.04** ou **24.04**, processeur **x86_64**.
-- **8 Go de RAM minimum**, 16 Go conseillés pour plus de 8 joueurs.
+- **8 Go de RAM pour le serveur Palworld**, 16 Go conseillés pour plus de 8 joueurs. PalCMS lui-même est léger : si tu connectes un serveur existant ou n'installes que le site, 1 Go suffit.
 - 15 Go d'espace disque libre.
 - Un accès root (`sudo`).
 
@@ -145,7 +147,7 @@ La démo (`apps/web/src/demo`) remplace l'API par un faux serveur dans le naviga
 
 Tester une archive sur un VPS : `sudo bash install.sh --from-local palcms.tar.gz`.
 
-**Publier une version** : pousser un tag `v1.0.0`. Le workflow GitHub Actions teste, construit et publie la release. Le dépôt utilisé par `install.sh` se règle dans la variable `PALCMS_REPO`.
+**Publier une version** : écrire ses notes (en anglais) dans `release-notes/v1.0.0.md`, puis pousser le tag `v1.0.0`. Le workflow GitHub Actions teste, construit et publie la release avec ces notes. Le dépôt utilisé par `install.sh` se règle dans la variable `PALCMS_REPO`.
 
 ### Structure
 
