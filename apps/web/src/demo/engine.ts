@@ -5,6 +5,7 @@ import { ALL_PERMISSIONS, type WsServerMessage } from '@palcms/shared';
 import seed from './data.json';
 import { version } from '../../package.json';
 import { createWorldDemo } from './world';
+import { createExtensionsDemo } from './extensions';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -20,37 +21,6 @@ class DemoError extends Error {
   ) {
     super(message);
   }
-}
-
-// Market : le catalogue est visible, l'installation ne l'est pas (pas de serveur dans la démo).
-const DEMO_MARKET = [
-  {
-    id: 'bandeau',
-    type: 'plugin',
-    name: "Bandeau d'annonce",
-    summary: 'Un bandeau en haut de toutes les pages du site pour annoncer un événement, une maintenance ou un wipe, avec un lien et le nombre de clics.',
-    author: 'PalCMS',
-    version: '1.0.0',
-    downloads: 128,
-    palcms: '>=1.0.1',
-  },
-  {
-    id: 'aurora',
-    type: 'theme',
-    name: 'Aurora',
-    summary: 'Thème sombre à dégradés façon aurore boréale : en-tête centré, grand bandeau avec le statut du serveur et pied de page en colonnes.',
-    author: 'PalCMS',
-    version: '1.0.0',
-    downloads: 96,
-    palcms: '>=1.0.1',
-  },
-].map((r) => ({ ...r, download: '', sha256: '', signature: '', installed: null, update: false, compatible: true }));
-
-function demoExtensions(method: string, sub: string | undefined): Any {
-  if (method === 'GET' && !sub) return { items: [], allowUnverified: false, version };
-  if (method === 'GET' && sub === 'themes') return { items: [], active: null, allowUnverified: false };
-  if (method === 'GET' && sub === 'market') return { resources: DEMO_MARKET, error: null };
-  throw new DemoError(400, "L'installation d'extensions n'est pas disponible dans la démo : essaie-la sur ton propre serveur.");
 }
 
 const notInDemo = () => {
@@ -396,11 +366,21 @@ const bootstrap = () => ({
   modules: Object.fromEntries(state.modules.map((m: Any) => [m.id, m.enabled])),
   // Dans la démo, le visiteur a toutes les permissions du panel.
   user: state.user ? { ...state.user, permissions: ALL_PERMISSIONS } : null,
+  extensions: extensions.boot(),
 });
 
 function record(action: string, target: string | null = null) {
   state.audit.unshift(audit(action, target));
 }
+
+const extensions = createExtensionsDemo({
+  state: () => state,
+  version,
+  record,
+  fail: (code, message) => {
+    throw new DemoError(code, message);
+  },
+});
 
 const extra = createWorldDemo({
   players,
@@ -474,7 +454,8 @@ function handle(method: string, fullPath: string, body: Any): Any {
     return playerStats(p);
   }
   if (route === 'GET features/theme') return state.theme;
-  if (seg[0] === 'features' && seg[1] === 'extensions') return demoExtensions(method, seg[2]);
+  if (seg[0] === 'features' && seg[1] === 'extensions') return extensions.handle(method, seg, body, q);
+  if (seg[0] === 'plugins') return extensions.plugin(method, seg);
 
   const fromExtra = extra.publicRoute(method, path, seg, q, body);
   if (fromExtra !== undefined) return fromExtra;
