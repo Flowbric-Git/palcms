@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { translateMessage } from '@palcms/shared';
 import { itemName, palName, passiveName } from '../src/gamedata';
-import { buildPaldex, parseWorld, worldUidFromPlayerId } from '../src/features/world';
+import { LIVE_INTERVAL_MS, buildPaldex, liveDelay, parseWorld, worldUidFromPlayerId } from '../src/features/world';
 import { itemAnomalies, levelAnomalies } from '../src/features/sanctions';
 import { attendanceHeatmap } from '../src/features/monitoring';
 import { compareVersions, parseBuildIds } from '../src/features/updates';
@@ -40,6 +40,17 @@ describe('world data', () => {
     expect(dex.filter((e) => e.count > 0)).toHaveLength(1);
   });
 
+
+  it('reads the export case-insensitively (sav_cli writes "Sheepball")', () => {
+    const dex = buildPaldex([{ type: 'Sheepball', owner: '1', lucky: 0, alpha: 0, level: 2 }]);
+    expect(dex[0]).toMatchObject({ no: '001', count: 1 });
+  });
+
+  it('paces the live read: 30 s, slower when the world takes long to read', () => {
+    expect(liveDelay(0)).toBe(LIVE_INTERVAL_MS);
+    expect(liveDelay(4000)).toBe(LIVE_INTERVAL_MS);
+    expect(liveDelay(20_000)).toBe(80_000);
+  });
   it('turns game ids into names', () => {
     expect(palName('SheepBall')).toBe('Lamball');
     expect(palName('BOSS_Anubis')).toBe('Anubis');

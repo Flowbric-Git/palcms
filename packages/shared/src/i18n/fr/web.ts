@@ -855,6 +855,9 @@ export default {
   'Never read: click "Read now"': 'Jamais lue : clique sur « Lire maintenant »',
   'Automatic reading': 'Lecture automatique',
   'Only when someone played since the last read.': 'Seulement si quelqu’un a joué depuis la dernière lecture.',
+  'Live while players are online': 'En direct pendant que des joueurs sont connectés',
+  'Quick read every 30 s: profiles and the Paldex follow the game. Spaced out on its own if the world is big.':
+    'Lecture rapide toutes les 30 s : les profils et le Paldex suivent la partie. Espacée toute seule si le monde est gros.',
   'Find an item': 'Rechercher un objet',
   'Who owns what (English names)': 'Qui possède quoi (noms en anglais)',
   'e.g. Legendary Sphere, Gold Coin, ingot…': 'ex. Legendary Sphere, Gold Coin, ingot…',

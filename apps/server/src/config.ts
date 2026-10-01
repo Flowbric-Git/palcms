@@ -11,7 +11,7 @@ const env = process.env;
 
 export const config = {
   isProd: env.NODE_ENV === 'production',
-  version: env.PALCMS_VERSION ?? '1.1.0',
+  version: env.PALCMS_VERSION ?? '1.1.1',
   host: env.HOST ?? '127.0.0.1',
   port: Number(env.PORT ?? 3000),
   basePath: normalizeBasePath(env.BASE_PATH ?? '/'),

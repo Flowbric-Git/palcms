@@ -156,7 +156,7 @@ export function createWorldDemo(ctx: DemoContext) {
       ],
       thresholds: { enabled: true, fpsLow: 20, memoryHigh: 90, diskLow: 10 },
       anticheat: { enabled: true, levelJump: 6, levelsPerHour: 20, itemStack: 20000, money: 10000000 },
-      worldSettings: { enabled: true, intervalMinutes: 15 },
+      worldSettings: { enabled: true, intervalMinutes: 15, live: true },
       serverUpdate: { auto: true, checkMinutes: 30, warnings: [15, 5, 1] },
       nextId: 50,
     };

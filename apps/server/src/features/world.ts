@@ -76,7 +76,7 @@ export function parseWorld(json: string): SavWorld {
     .filter((p) => p && str(p.player_uid))
     .map((p) => ({
       player_uid: str(p.player_uid),
-      nickname: str(p.nickname).slice(0, 64) || 'Inconnu',
+      nickname: str(p.nickname).slice(0, 64) || 'Unknown',
       level: num(p.level, 1),
       exp: num(p.exp),
       hp: num(p.hp),
@@ -119,8 +119,14 @@ export function buildPaldex(rows: { type: string; owner: string; lucky: number; 
 interface WorldSettings {
   enabled: boolean;
   intervalMinutes: number;
+  /** Quick read every 30 s while players are online (profiles and Paldex follow the game). */
+  live: boolean;
 }
-const DEFAULT_WORLD: WorldSettings = { enabled: true, intervalMinutes: 15 };
+const DEFAULT_WORLD: WorldSettings = { enabled: true, intervalMinutes: 15, live: true };
+
+/** Pace of the live read. A slow read (big world) spaces them out to keep the CPU free. */
+export const LIVE_INTERVAL_MS = 30_000;
+export const liveDelay = (lastDurationMs: number) => Math.max(LIVE_INTERVAL_MS, lastDurationMs * 4);
 
 interface SyncState {
   running: boolean;
@@ -214,16 +220,20 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
     }
   };
 
-  const sync = async () => {
+  // live: the server already saves on its own every 30 s while people play (AutoSaveSpan),
+  // so the quick read does not force a save.
+  const sync = async (live = false) => {
     if (state.running) throw httpError(409, 'A read is already running');
     if (!available()) throw httpError(409, 'Only available for a server installed by PalCMS on this VPS');
     state.running = true;
     const t0 = Date.now();
     try {
       await ensureTools();
-      // The server first writes the world to disk so the read is up to date.
-      await host.palworld.save().catch(() => {});
-      await new Promise((r) => setTimeout(r, 3000));
+      if (!live) {
+        // The server first writes the world to disk so the read is up to date.
+        await host.palworld.save().catch(() => {});
+        await new Promise((r) => setTimeout(r, 3000));
+      }
       const world = parseWorld(await host.palctlText(['world-export'], { timeoutMs: 16 * 60_000 }));
       store(world);
       state.lastAt = Date.now();
@@ -342,12 +352,19 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
       offTick = host.events.on('tick', ({ players }) => {
         if (players.length) playedSinceSync = true;
       });
-      stopTimer = every(60_000, async () => {
+      stopTimer = every(10_000, async () => {
         const s = settings();
         if (!s.enabled || !available() || state.running) return;
+        const since = Date.now() - lastAttempt;
+        // Players online: quick read every 30 s. After an error, back to the normal interval.
+        if (s.live && !state.lastError && host.server.onlinePlayers().length > 0 && since >= liveDelay(state.lastDurationMs)) {
+          lastAttempt = Date.now();
+          await sync(true).catch(() => {});
+          return;
+        }
         // Nothing changed if nobody played since the last successful read.
         // After an error, also wait a full interval before trying again.
-        const due = Date.now() - lastAttempt >= s.intervalMinutes * 60_000 && (playedSinceSync || !state.lastAt || !!state.lastError);
+        const due = since >= s.intervalMinutes * 60_000 && (playedSinceSync || !state.lastAt || !!state.lastError);
         if (due) {
           lastAttempt = Date.now();
           await sync().catch(() => {});
@@ -384,7 +401,7 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
         access: 'staff',
         permission: 'server.world',
         handler: ({ body, user }) => {
-          const s = parseBody(z.object({ enabled: z.boolean(), intervalMinutes: z.number().int().min(5).max(24 * 60) }), body);
+          const s = parseBody(z.object({ enabled: z.boolean(), intervalMinutes: z.number().int().min(5).max(24 * 60), live: z.boolean().default(true) }), body);
           host.settings.set('feature.world', s);
           host.events.emit('audit', { userId: user!.id, username: user!.username, action: 'world.settings' });
           return s;

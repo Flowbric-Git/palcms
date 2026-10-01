@@ -370,7 +370,7 @@ export function StatsPage() {
 
 interface WorldStatus {
   available: boolean;
-  settings: { enabled: boolean; intervalMinutes: number };
+  settings: { enabled: boolean; intervalMinutes: number; live: boolean };
   running: boolean;
   installing: boolean;
   lastAt: number | null;
@@ -452,6 +452,12 @@ export function WorldPage() {
               <Card title={t('Automatic reading')}>
                 <div className="space-y-3">
                   <Toggle checked={settings.enabled} onChange={(v) => setSettings({ ...settings, enabled: v })} label={t('Enabled')} description={t('Only when someone played since the last read.')} />
+                  <Toggle
+                    checked={settings.live ?? true}
+                    onChange={(v) => setSettings({ ...settings, live: v })}
+                    label={t('Live while players are online')}
+                    description={t('Quick read every 30 s: profiles and the Paldex follow the game. Spaced out on its own if the world is big.')}
+                  />
                   <Select value={settings.intervalMinutes} onChange={(e) => setSettings({ ...settings, intervalMinutes: Number(e.target.value) })}>
                     {[5, 10, 15, 30, 60, 120].map((m) => (
                       <option key={m} value={m}>

@@ -26,17 +26,34 @@ function Page({ icon, title, subtitle, children }: { icon: ReactNode; title: str
   );
 }
 
-function useGet<T>(path: string | null) {
+/** World data refreshes every 30 s on the server while people play: pages follow at the same pace. */
+const WORLD_REFRESH_MS = 30_000;
+
+function useGet<T>(path: string | null, refreshMs = 0) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (!path) return;
+    let alive = true;
     setData(null);
     api
       .get<T>(path)
-      .then(setData)
-      .catch((e) => setError(errorText(e)));
-  }, [path]);
+      .then((d) => alive && setData(d))
+      .catch((e) => alive && setError(errorText(e)));
+    if (!refreshMs) return () => void (alive = false);
+    // Silent refresh, skipped while the tab is hidden.
+    const timer = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      api
+        .get<T>(path)
+        .then((d) => alive && setData(d))
+        .catch(() => {});
+    }, refreshMs);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [path, refreshMs]);
   return { data, error };
 }
 
@@ -54,7 +71,7 @@ interface GuildSummary {
 }
 
 export function GuildsPage() {
-  const { data, error } = useGet<{ syncedAt: number | null; guilds: GuildSummary[] }>('features/guilds');
+  const { data, error } = useGet<{ syncedAt: number | null; guilds: GuildSummary[] }>('features/guilds', WORLD_REFRESH_MS);
   return (
     <Page icon={<Castle className="h-8 w-8 text-accent" />} title={t('Guilds')} subtitle={data ? synced(data.syncedAt) : undefined}>
       {error ? (
@@ -269,7 +286,7 @@ export function PaldexPage() {
   const player = params.get('player') ?? params.get('joueur');
   const guild = params.get('guild') ?? params.get('guilde');
   const query = player ? `?player=${encodeURIComponent(player)}` : guild ? `?guild=${encodeURIComponent(guild)}` : '';
-  const { data, error } = useGet<DexData>(`features/paldex${query}`);
+  const { data, error } = useGet<DexData>(`features/paldex${query}`, WORLD_REFRESH_MS);
   const [q, setQ] = useState('');
   const [onlyCaught, setOnlyCaught] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
@@ -905,7 +922,17 @@ export function CharacterSection() {
   const [c, setC] = useState<Character | null>(null);
   const [tab, setTab] = useState<'pals' | 'inventory'>('pals');
   useEffect(() => {
-    if (boot.modules.character) api.get<Character>('features/me/character').then(setC).catch(() => setC(null));
+    if (!boot.modules.character) return;
+    let alive = true;
+    const load = () => api.get<Character>('features/me/character').then((d) => alive && setC(d));
+    load().catch(() => alive && setC(null));
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') load().catch(() => {});
+    }, WORLD_REFRESH_MS);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
   }, [boot.modules.character]);
   if (!c || !c.linked) return null;
   if (!c.world) {

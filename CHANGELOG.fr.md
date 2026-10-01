@@ -2,6 +2,16 @@
 
 🇬🇧 [English version](CHANGELOG.md)
 
+## 1.1.1
+
+**Données du monde**
+- Lecture en direct de la sauvegarde toutes les 30 s pendant que des joueurs sont connectés : les Pals capturés apparaissent dans le Paldex et dans le profil en moins d’une minute (réglage dans *Serveur > Données du monde*, activé par défaut)
+- Aucune sauvegarde forcée pour la lecture en direct (le serveur sauvegarde tout seul), espacement plus long sur les gros mondes
+- Le profil, le Paldex et la page des guildes se rafraîchissent toutes les 30 s tant qu’ils sont ouverts
+
+**Corrections**
+- Les personnages sans nom de la sauvegarde s’affichaient « Inconnu » au lieu de « Unknown »
+
 ## 1.1.0
 
 **Anglais et français**

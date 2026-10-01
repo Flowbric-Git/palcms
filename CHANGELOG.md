@@ -2,6 +2,16 @@
 
 🇫🇷 [Version française](CHANGELOG.fr.md)
 
+## 1.1.1
+
+**World data**
+- Live read of the world save every 30 s while players are online: caught Pals show up in the Paldex and in the profile within a minute (setting in *Server > World data*, on by default)
+- No forced save for the live read (the server autosaves on its own), and longer spacing on big worlds
+- The profile, the Paldex and the guilds page refresh every 30 s while open
+
+**Fixes**
+- Unnamed save characters showed "Inconnu" instead of "Unknown"
+
 ## 1.1.0
 
 **English and French**
