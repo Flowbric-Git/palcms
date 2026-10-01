@@ -9,7 +9,7 @@ import { audit, requirePermission } from '../../core/permissions';
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 
-/** Comptes joueurs : validation des inscriptions par email, liaison au personnage, bannissement. */
+/** Player accounts: approving email sign-ups, linking to a character, banning. */
 export async function adminMemberRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requirePermission('site.members'));
 
@@ -27,16 +27,16 @@ export async function adminMemberRoutes(app: FastifyInstance) {
       .all(status, status);
   });
 
-  /** Personnages connus, pour lier un compte validé à la main. */
+  /** Known characters, to link an account approved by hand. */
   app.get('/players', async () =>
     db.prepare('SELECT uid, name, level, last_seen AS lastSeen FROM players ORDER BY name').all(),
   );
 
   const guardTarget = (id: number, actorId: number) => {
     const target = findUserById(id);
-    if (!target) return { ok: false, error: 'Compte introuvable', code: 404 } as const;
-    if (target.role === 'superadmin') return { ok: false, error: 'Le compte administrateur principal ne peut pas être modifié ici', code: 403 } as const;
-    if (target.id === actorId) return { ok: false, error: 'Action impossible sur ton propre compte', code: 403 } as const;
+    if (!target) return { ok: false, error: 'Account not found', code: 404 } as const;
+    if (target.role === 'superadmin') return { ok: false, error: 'The main administrator account cannot be changed here', code: 403 } as const;
+    if (target.id === actorId) return { ok: false, error: 'Not possible on your own account', code: 403 } as const;
     return { ok: true, target } as const;
   };
 
@@ -48,7 +48,7 @@ export async function adminMemberRoutes(app: FastifyInstance) {
     if (!body) return;
     const g = guardTarget(id, req.user!.id);
     if (!g.ok) return reply.code(g.code).send({ error: g.error });
-    if (body.playerUid && !playerExists(body.playerUid)) return reply.code(400).send({ error: 'Personnage introuvable' });
+    if (body.playerUid && !playerExists(body.playerUid)) return reply.code(400).send({ error: 'Character not found' });
     db.prepare("UPDATE users SET status = 'active', player_uid = COALESCE(?, player_uid) WHERE id = ?").run(body.playerUid ?? null, id);
     audit(req, 'member.approve', g.target.username);
     return { ok: true };
@@ -60,8 +60,8 @@ export async function adminMemberRoutes(app: FastifyInstance) {
     if (!body) return;
     const g = guardTarget(id, req.user!.id);
     if (!g.ok) return reply.code(g.code).send({ error: g.error });
-    if (g.target.steam_id) return reply.code(400).send({ error: 'Ce compte est lié automatiquement via Steam' });
-    if (body.playerUid && !playerExists(body.playerUid)) return reply.code(400).send({ error: 'Personnage introuvable' });
+    if (g.target.steam_id) return reply.code(400).send({ error: 'This account is linked automatically through Steam' });
+    if (body.playerUid && !playerExists(body.playerUid)) return reply.code(400).send({ error: 'Character not found' });
     db.prepare('UPDATE users SET player_uid = ? WHERE id = ?').run(body.playerUid ?? null, id);
     audit(req, 'member.link', g.target.username);
     return { ok: true };

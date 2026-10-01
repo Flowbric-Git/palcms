@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# palcms-config - adresse, chemin, HTTPS et port du site PalCMS.
+# palcms-config - address, path, HTTPS and port of the PalCMS site.
 #
-#   palcms-config ask   [options]   pose les questions (ou lit les options) et écrit /etc/palcms/config.env
-#   palcms-config apply             génère Nginx, les certificats, le pare-feu et redémarre le CMS
-#   palcms-config edit  [options]   ask + apply avec les valeurs actuelles comme valeurs par défaut
-#   palcms-config show              affiche la configuration actuelle
+#   palcms-config ask   [options]   asks the questions (or reads the options) and writes /etc/palcms/config.env
+#   palcms-config apply             writes Nginx, the certificates, the firewall and restarts the CMS
+#   palcms-config edit  [options]   ask + apply with the current values as defaults
+#   palcms-config show              shows the current configuration
 #
-# Options : --domain NOM | --ip IP   --path /cms   --https letsencrypt|selfsigned|none
-#           --email EMAIL (Let's Encrypt)   --port 3000   -y (aucune question)
+# Options: --domain NAME | --ip IP   --path /cms   --https letsencrypt|selfsigned|none
+#          --email EMAIL (Let's Encrypt)   --port 3000   -y (no questions)
 set -euo pipefail
 export LC_ALL=C.UTF-8
 
@@ -23,14 +23,14 @@ info() { echo "${c_green}==>${c_off} $*"; }
 warn() { echo "${c_yellow}⚠${c_off}  $*"; }
 die() { echo "${c_red}✖${c_off}  $*" >&2; exit 1; }
 
-[[ $EUID -eq 0 ]] || die "Lance cette commande avec sudo."
+[[ $EUID -eq 0 ]] || die "Run this command with sudo."
 
-# Lecture au clavier même quand le script est lancé via "curl | bash".
+# Keyboard input even when the script runs through "curl | bash".
 TTY=/dev/tty
-ask() { # ask "Question" "défaut" -> REPLY
+ask() { # ask "Question" "default" -> REPLY
   local q="$1" def="${2:-}"
   if [[ ! -r $TTY ]]; then REPLY="$def"; return; fi
-  if [[ -n $def ]]; then read -r -p "  $q [${c_bold}$def${c_off}] : " REPLY <"$TTY" || true; else read -r -p "  $q : " REPLY <"$TTY" || true; fi
+  if [[ -n $def ]]; then read -r -p "  $q [${c_bold}$def${c_off}]: " REPLY <"$TTY" || true; else read -r -p "  $q: " REPLY <"$TTY" || true; fi
   REPLY="${REPLY:-$def}"
 }
 
@@ -46,7 +46,7 @@ normalize_path() {
   [[ $p == /* ]] || p="/$p"
   [[ $p == */ ]] || p="$p/"
   p=$(echo "$p" | tr -s '/')
-  [[ $p =~ ^/[A-Za-z0-9/_-]*$ ]] || die "Chemin invalide : $1 (lettres, chiffres, - _ / uniquement)"
+  [[ $p =~ ^/[A-Za-z0-9/_-]*$ ]] || die "Invalid path: $1 (letters, digits, - _ / only)"
   echo "$p"
 }
 
@@ -62,7 +62,7 @@ write_config() {
   [[ $HTTPS_MODE == none ]] && scheme=http
   install -d -m 0750 -o root -g palcms "$CONFIG_DIR" 2>/dev/null || install -d -m 0750 "$CONFIG_DIR"
   cat >"$CONFIG_FILE" <<EOF
-# Configuration PalCMS - modifiable avec "sudo palcms-config edit"
+# PalCMS configuration - change it with "sudo palcms-config edit"
 HOST_TYPE="$HOST_TYPE"
 PUBLIC_HOST="$PUBLIC_HOST"
 BASE_PATH="$BASE_PATH"
@@ -87,36 +87,36 @@ cmd_ask() {
       --email) opt_email="$2"; shift 2 ;;
       --port) opt_port="$2"; shift 2 ;;
       -y | --yes) yes=1; shift ;;
-      *) die "Option inconnue : $1" ;;
+      *) die "Unknown option: $1" ;;
     esac
   done
   local interactive=1
   [[ $yes -eq 1 || ! -r $TTY ]] && interactive=0
 
   echo
-  echo "${c_bold}Configuration de l'adresse du site${c_off}"
+  echo "${c_bold}Site address setup${c_off}"
 
-  # 1. Adresse
+  # 1. Address
   if [[ -n $opt_domain ]]; then HOST_TYPE=domain; PUBLIC_HOST="$opt_domain"
   elif [[ -n $opt_ip ]]; then HOST_TYPE=ip; PUBLIC_HOST="$opt_ip"
   elif [[ $interactive -eq 1 ]]; then
     local ip; ip=$(detect_ip)
-    echo "  IP publique détectée : ${c_bold}${ip:-inconnue}${c_off}"
-    ask "Nom de domaine (laisser vide pour utiliser l'IP)" "$([[ $HOST_TYPE == domain ]] && echo "$PUBLIC_HOST")"
+    echo "  Public IP detected: ${c_bold}${ip:-unknown}${c_off}"
+    ask "Domain name (leave empty to use the IP)" "$([[ $HOST_TYPE == domain ]] && echo "$PUBLIC_HOST")"
     if [[ -n $REPLY ]]; then HOST_TYPE=domain; PUBLIC_HOST="$REPLY"; else HOST_TYPE=ip; PUBLIC_HOST="$ip"; fi
   elif [[ -z $PUBLIC_HOST ]]; then HOST_TYPE=ip; PUBLIC_HOST=$(detect_ip)
   fi
-  [[ -n $PUBLIC_HOST ]] || die "Impossible de déterminer l'adresse du VPS : utilise --ip ou --domain."
+  [[ -n $PUBLIC_HOST ]] || die "Could not find the VPS address: use --ip or --domain."
   if [[ $HOST_TYPE == domain ]]; then
-    [[ $PUBLIC_HOST =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || die "Nom de domaine invalide : $PUBLIC_HOST"
+    [[ $PUBLIC_HOST =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || die "Invalid domain name: $PUBLIC_HOST"
   else
-    [[ $PUBLIC_HOST =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "IP invalide : $PUBLIC_HOST"
+    [[ $PUBLIC_HOST =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Invalid IP: $PUBLIC_HOST"
   fi
 
-  # 2. Chemin
+  # 2. Path
   if [[ -n $opt_path ]]; then BASE_PATH=$(normalize_path "$opt_path")
   elif [[ $interactive -eq 1 ]]; then
-    ask "Chemin du site (/ pour la racine, ou par ex. /cms)" "$BASE_PATH"
+    ask "Site path (/ for the root, or e.g. /cms)" "$BASE_PATH"
     BASE_PATH=$(normalize_path "$REPLY")
   fi
 
@@ -127,43 +127,43 @@ cmd_ask() {
   if [[ -n $opt_https ]]; then HTTPS_MODE="$opt_https"
   elif [[ $interactive -eq 1 ]]; then
     if [[ $HOST_TYPE == domain ]]; then
-      echo "  HTTPS : letsencrypt (certificat gratuit et reconnu), selfsigned (auto-signé), none (HTTP simple)"
+      echo "  HTTPS: letsencrypt (free trusted certificate), selfsigned (self-signed), none (plain HTTP)"
     else
-      echo "  HTTPS : selfsigned (auto-signé, le navigateur affichera un avertissement), none (HTTP simple)"
+      echo "  HTTPS: selfsigned (self-signed, the browser will show a warning), none (plain HTTP)"
     fi
-    ask "Mode HTTPS" "$def_https"
+    ask "HTTPS mode" "$def_https"
     HTTPS_MODE="$REPLY"
   else HTTPS_MODE=$def_https
   fi
-  case "$HTTPS_MODE" in letsencrypt | selfsigned | none) ;; *) die "Mode HTTPS invalide : $HTTPS_MODE" ;; esac
-  [[ $HTTPS_MODE == letsencrypt && $HOST_TYPE != domain ]] && die "Let's Encrypt nécessite un nom de domaine (utilise selfsigned avec une IP)."
+  case "$HTTPS_MODE" in letsencrypt | selfsigned | none) ;; *) die "Invalid HTTPS mode: $HTTPS_MODE" ;; esac
+  [[ $HTTPS_MODE == letsencrypt && $HOST_TYPE != domain ]] && die "Let's Encrypt needs a domain name (use selfsigned with an IP)."
 
   if [[ $HTTPS_MODE == letsencrypt ]]; then
     if [[ -n $opt_email ]]; then LE_EMAIL="$opt_email"
-    elif [[ $interactive -eq 1 ]]; then ask "Email pour Let's Encrypt (alertes d'expiration)" "$LE_EMAIL"; LE_EMAIL="$REPLY"
+    elif [[ $interactive -eq 1 ]]; then ask "Email for Let's Encrypt (expiry alerts)" "$LE_EMAIL"; LE_EMAIL="$REPLY"
     fi
-    [[ $LE_EMAIL =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] || die "Email Let's Encrypt invalide."
+    [[ $LE_EMAIL =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] || die "Invalid Let's Encrypt email."
   fi
 
-  # 4. Port interne
+  # 4. Internal port
   if [[ -n $opt_port ]]; then PORT="$opt_port"
-  elif [[ $interactive -eq 1 ]]; then ask "Port interne du CMS" "$PORT"; PORT="$REPLY"
+  elif [[ $interactive -eq 1 ]]; then ask "Internal CMS port" "$PORT"; PORT="$REPLY"
   fi
-  [[ $PORT =~ ^[0-9]{4,5}$ ]] && (( PORT >= 1024 && PORT <= 65535 )) || die "Port invalide : $PORT"
-  [[ $PORT == 8211 || $PORT == 8212 ]] && die "Le port $PORT est réservé au serveur Palworld."
+  [[ $PORT =~ ^[0-9]{4,5}$ ]] && (( PORT >= 1024 && PORT <= 65535 )) || die "Invalid port: $PORT"
+  [[ $PORT == 8211 || $PORT == 8212 ]] && die "Port $PORT is reserved for the Palworld server."
 
   local scheme=https; [[ $HTTPS_MODE == none ]] && scheme=http
   echo
-  echo "${c_bold}Récapitulatif${c_off}"
-  echo "  Adresse du site : ${c_bold}$scheme://$PUBLIC_HOST$BASE_PATH${c_off}"
-  echo "  HTTPS           : $HTTPS_MODE"
-  echo "  Port interne    : $PORT"
+  echo "${c_bold}Summary${c_off}"
+  echo "  Site address:  ${c_bold}$scheme://$PUBLIC_HOST$BASE_PATH${c_off}"
+  echo "  HTTPS:         $HTTPS_MODE"
+  echo "  Internal port: $PORT"
   if [[ $interactive -eq 1 ]]; then
-    ask "Confirmer ? (o/n)" "o"
-    [[ $REPLY =~ ^[oOyY] ]] || die "Annulé."
+    ask "Confirm? (y/n)" "y"
+    [[ $REPLY =~ ^[oOyY] ]] || die "Cancelled."
   fi
   write_config
-  info "Configuration enregistrée dans $CONFIG_FILE"
+  info "Configuration saved in $CONFIG_FILE"
 }
 
 nginx_locations() {
@@ -186,8 +186,8 @@ nginx_locations() {
 EOF
 }
 
-# Un autre site Nginx (hébergeur, panel…) est-il déjà le site par défaut sur ce port ?
-# Dans ce cas on ne réclame pas "default_server", sinon Nginx refuse la configuration.
+# Is another Nginx site (host, panel…) already the default site on this port?
+# If so, do not claim "default_server", otherwise Nginx refuses the configuration.
 default_flag() { # default_flag 80|443
   local f
   while IFS= read -r f; do
@@ -205,7 +205,7 @@ write_nginx() { # write_nginx http|https
   d80=$(default_flag 80)
   d443=$(default_flag 443)
   {
-    echo "# Généré par palcms-config — ne pas modifier à la main"
+    echo "# Written by palcms-config — do not edit by hand"
     echo "map \$http_upgrade \$palcms_connection_upgrade { default upgrade; '' close; }"
     if [[ $mode == http ]]; then
       cat <<EOF
@@ -249,7 +249,7 @@ EOF
   } >"$NGINX_SITE"
   ln -sf "$NGINX_SITE" "$NGINX_LINK"
   rm -f /etc/nginx/sites-enabled/default
-  # "http2 on" n'existe qu'à partir de Nginx 1.25 (Ubuntu 24.04) : sinon on le retire.
+  # "http2 on" only exists from Nginx 1.25 (Ubuntu 24.04): remove it otherwise.
   if ! nginx -t >/dev/null 2>&1; then
     sed -i '/http2 on;/d' "$NGINX_SITE"
   fi
@@ -259,7 +259,7 @@ EOF
 
 cmd_apply() {
   load_config
-  [[ -n $PUBLIC_HOST ]] || die "Aucune configuration : lance d'abord « palcms-config ask »."
+  [[ -n $PUBLIC_HOST ]] || die "No configuration: run \"palcms-config ask\" first."
   install -d "$ACME_ROOT"
 
   case "$HTTPS_MODE" in
@@ -269,7 +269,7 @@ cmd_apply() {
     selfsigned)
       install -d -m 0750 "$SSL_DIR"
       if [[ ! -f $SSL_DIR/palcms.crt ]] || ! openssl x509 -in "$SSL_DIR/palcms.crt" -noout -text | grep -q "$PUBLIC_HOST"; then
-        info "Génération d'un certificat auto-signé pour $PUBLIC_HOST"
+        info "Creating a self-signed certificate for $PUBLIC_HOST"
         local san="DNS:$PUBLIC_HOST"
         [[ $HOST_TYPE == ip ]] && san="IP:$PUBLIC_HOST"
         openssl req -x509 -nodes -newkey rsa:2048 -days 825 \
@@ -280,12 +280,12 @@ cmd_apply() {
       write_nginx https
       ;;
     letsencrypt)
-      command -v certbot >/dev/null || { info "Installation de certbot"; apt-get install -y certbot >/dev/null; }
+      command -v certbot >/dev/null || { info "Installing certbot"; apt-get install -y certbot >/dev/null; }
       if [[ ! -f /etc/letsencrypt/live/$PUBLIC_HOST/fullchain.pem ]]; then
         write_nginx http
-        info "Demande du certificat Let's Encrypt pour $PUBLIC_HOST"
+        info "Requesting the Let's Encrypt certificate for $PUBLIC_HOST"
         certbot certonly --webroot -w "$ACME_ROOT" -d "$PUBLIC_HOST" --non-interactive --agree-tos -m "$LE_EMAIL" \
-          || die "Échec de Let's Encrypt : vérifie que le domaine pointe bien vers ce VPS (enregistrement DNS A) et que le port 80 est ouvert."
+          || die "Let's Encrypt failed: check that the domain points to this VPS (DNS A record) and that port 80 is open."
       fi
       install -d /etc/letsencrypt/renewal-hooks/deploy
       printf '#!/bin/sh\nsystemctl reload nginx\n' >/etc/letsencrypt/renewal-hooks/deploy/palcms-nginx.sh
@@ -301,12 +301,12 @@ cmd_apply() {
 
   systemctl restart palcms 2>/dev/null || true
   local scheme=https; [[ $HTTPS_MODE == none ]] && scheme=http
-  info "Site disponible sur ${c_bold}$scheme://$PUBLIC_HOST$BASE_PATH${c_off}"
+  info "Site available at ${c_bold}$scheme://$PUBLIC_HOST$BASE_PATH${c_off}"
 }
 
 cmd_show() {
   load_config
-  [[ -f $CONFIG_FILE ]] || die "Aucune configuration."
+  [[ -f $CONFIG_FILE ]] || die "No configuration."
   cat "$CONFIG_FILE"
 }
 

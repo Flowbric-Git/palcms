@@ -15,10 +15,10 @@ import { createExtensions } from './extensions';
 
 export { MIGRATIONS as FEATURE_MIGRATIONS, MODULES as FEATURE_MODULES };
 
-/** Permissions dont les routes exigent un serveur installé et géré par PalCMS (palctl). */
+/** Permissions whose routes need a server installed and run by PalCMS (palctl). */
 const MANAGED_ONLY: Permission[] = ['server.backups', 'server.schedules'];
 
-/** Assemble les fonctionnalités du CMS (carte, sauvegardes, équipe…) autour des services du cœur. */
+/** Assembles the CMS features (map, backups, team…) around the core services. */
 export const createFeatures: CreateFeatures = (host) => {
   const bus = new FeatureBus();
   const team = createTeam(host);
@@ -44,7 +44,7 @@ export const createFeatures: CreateFeatures = (host) => {
     createRcon(host),
     createDiscord(host, bus),
     createThemes(host),
-    // En dernier : les plugins démarrent une fois toutes les fonctionnalités du CMS en place.
+    // Last: plugins start once every CMS feature is in place.
     createExtensions(host),
   ];
 
@@ -60,7 +60,7 @@ export const createFeatures: CreateFeatures = (host) => {
               ...r,
               handler: (ctx) => {
                 if (host.server.mode() !== 'managed') {
-                  throw httpError(409, 'Disponible uniquement pour un serveur installé par PalCMS sur ce VPS');
+                  throw httpError(409, 'Only available for a server installed by PalCMS on this VPS');
                 }
                 return r.handler(ctx);
               },

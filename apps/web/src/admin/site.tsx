@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp, Ban, Check, Gamepad2, Link2, Plus, Save, Trash2, X } from 'lucide-react';
-import type { ModuleInfo, SiteSettings } from '@palcms/shared';
+import { LANGS, type Lang, type ModuleInfo, type SiteSettings } from '@palcms/shared';
 import { api, ApiError, errorText } from '../lib/api';
 import { useApp } from '../lib/app';
 import { applyTheme } from '../lib/theme';
 import { formatDate, timeAgo } from '../lib/format';
+import { t } from '../lib/i18n';
 import { ImageField } from '../components/ImageField';
 import { Alert, Badge, Button, Card, Empty, Field, Input, PageHeader, Select, Spinner, Textarea, Toggle, cx } from '../components/ui';
 import { useLoad } from './AdminLayout';
 
-/** Réglages du site partagés par les pages Menu et Apparence. */
+/** Site settings shared by the Menu and Appearance pages. */
 function useSiteSettings() {
   const { refresh } = useApp();
   const { data, error } = useLoad<{ site: SiteSettings; steamApiKeySet: boolean }>('admin/site/settings');
@@ -26,7 +27,7 @@ function useSiteSettings() {
     try {
       await api.put('admin/site/settings', value);
       await refresh();
-      setMsg({ kind: 'success', text: 'Réglages enregistrés.' });
+      setMsg({ kind: 'success', text: t('Settings saved.') });
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e), err: e instanceof ApiError ? e : undefined });
     } finally {
@@ -52,11 +53,11 @@ export function MenuPage() {
   return (
     <>
       <PageHeader
-        title="Menu du site"
-        description="Liens affichés en haut du site public. Un lien interne commence par / (ex. /p/regles), un lien externe par https://."
+        title={t('Site menu')}
+        description={t('Links shown at the top of the public site. An internal link starts with / (e.g. /p/rules), an external one with https://.')}
         actions={
           <Button onClick={() => void save()} loading={busy}>
-            <Save className="h-4 w-4" /> Enregistrer
+            <Save className="h-4 w-4" /> {t('Save')}
           </Button>
         }
       />
@@ -65,32 +66,32 @@ export function MenuPage() {
         <div className="space-y-2">
           {menu.map((m, i) => (
             <div key={i} className="flex flex-wrap items-center gap-2">
-              <Input value={m.label} onChange={(e) => update(i, { label: e.target.value })} placeholder="Libellé" className="w-40" />
-              <Input value={m.url} onChange={(e) => update(i, { url: e.target.value })} placeholder="/p/ma-page ou https://…" className="min-w-48 flex-1 font-mono" />
-              <Button variant="ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Monter">
+              <Input value={m.label} onChange={(e) => update(i, { label: e.target.value })} placeholder={t('Label')} className="w-40" />
+              <Input value={m.url} onChange={(e) => update(i, { url: e.target.value })} placeholder={t('/p/my-page or https://…')} className="min-w-48 flex-1 font-mono" />
+              <Button variant="ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t('Move up')}>
                 <ArrowUp className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" disabled={i === menu.length - 1} onClick={() => move(i, 1)} aria-label="Descendre">
+              <Button variant="ghost" disabled={i === menu.length - 1} onClick={() => move(i, 1)} aria-label={t('Move down')}>
                 <ArrowDown className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" onClick={() => setSite({ ...site, menu: menu.filter((_, j) => j !== i) })} aria-label="Supprimer">
+              <Button variant="ghost" onClick={() => setSite({ ...site, menu: menu.filter((_, j) => j !== i) })} aria-label={t('Delete')}>
                 <Trash2 className="h-4 w-4 text-red-500" />
               </Button>
             </div>
           ))}
         </div>
-        <Button variant="secondary" className="mt-4" disabled={menu.length >= 20} onClick={() => setSite({ ...site, menu: [...menu, { label: 'Nouveau lien', url: '/' }] })}>
-          <Plus className="h-4 w-4" /> Ajouter un lien
+        <Button variant="secondary" className="mt-4" disabled={menu.length >= 20} onClick={() => setSite({ ...site, menu: [...menu, { label: t('New link'), url: '/' }] })}>
+          <Plus className="h-4 w-4" /> {t('Add a link')}
         </Button>
         <p className="mt-4 text-xs text-slate-500">
-          Pages disponibles : / (accueil), /actualites, /classement, /p/&lt;adresse&gt; pour tes pages, /inscription, /connexion.
+          {t('Available pages: / (home), /news, /leaderboard, /map, /guilds, /paldex, /events, /uptime, /report, /p/<address> for your pages, /register, /login.')}
         </p>
       </Card>
     </>
   );
 }
 
-// Apparence
+// Appearance
 
 export function AppearancePage() {
   const { site, setSite, save, busy, msg, error, steamApiKeySet } = useSiteSettings();
@@ -108,7 +109,7 @@ export function AppearancePage() {
   const saveSteamKey = async () => {
     try {
       await api.put('admin/site/steam-api-key', { key: steamKey });
-      setKeyMsg(steamKey ? 'Clé Steam enregistrée.' : 'Clé Steam supprimée.');
+      setKeyMsg(steamKey ? t('Steam key saved.') : t('Steam key removed.'));
       setSteamKey('');
     } catch (e) {
       setKeyMsg(errorText(e));
@@ -118,33 +119,45 @@ export function AppearancePage() {
   return (
     <>
       <PageHeader
-        title="Apparence et réglages"
+        title={t('Appearance and settings')}
         actions={
           <Button onClick={() => void save()} loading={busy}>
-            <Save className="h-4 w-4" /> Enregistrer
+            <Save className="h-4 w-4" /> {t('Save')}
           </Button>
         }
       />
       {msg && <Alert kind={msg.kind} className="mb-4">{msg.text}</Alert>}
       <div className="grid gap-6">
-        <Card title="Identité">
+        <Card title={t('Identity')}>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Nom du site" error={f('name')}>
+            <Field label={t('Site name')} error={f('name')}>
               {(id) => <Input id={id} value={site.name} onChange={(e) => set('name', e.target.value)} />}
             </Field>
-            <Field label="Slogan" error={f('tagline')}>
+            <Field label={t('Tagline')} error={f('tagline')}>
               {(id) => <Input id={id} value={site.tagline} onChange={(e) => set('tagline', e.target.value)} />}
             </Field>
-            <Field label="Logo">{() => <ImageField value={site.logoUrl} onChange={(v) => set('logoUrl', v)} />}</Field>
-            <Field label="Bannière de l'accueil" help="Image large, idéalement 1920×600">
+            <Field label={t('Site language')} help={t('Default language for visitors, and language of Discord and in-game messages. Each visitor can still switch with the EN / FR button.')}>
+              {(id) => (
+                <Select id={id} value={site.language} onChange={(e) => set('language', e.target.value as Lang)}>
+                  {LANGS.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.label}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <div />
+            <Field label={t('Logo')}>{() => <ImageField value={site.logoUrl} onChange={(v) => set('logoUrl', v)} />}</Field>
+            <Field label={t('Home page banner')} help={t('Wide image, ideally 1920×600')}>
               {() => <ImageField value={site.bannerUrl} onChange={(v) => set('bannerUrl', v)} previewClass="h-16 w-32" />}
             </Field>
           </div>
         </Card>
 
-        <Card title="Couleurs et thème">
+        <Card title={t('Colors and theme')}>
           <div className="grid gap-4 md:grid-cols-3">
-            <Field label="Couleur principale" error={f('accentColor')}>
+            <Field label={t('Main color')} error={f('accentColor')}>
               {(id) => (
                 <div className="flex items-center gap-2">
                   <input id={id} type="color" value={site.accentColor} onChange={(e) => set('accentColor', e.target.value)} className="h-10 w-14 cursor-pointer rounded bg-transparent" />
@@ -152,68 +165,74 @@ export function AppearancePage() {
                 </div>
               )}
             </Field>
-            <Field label="Thème par défaut">
+            <Field label={t('Default theme')}>
               {(id) => (
                 <Select id={id} value={site.defaultTheme} onChange={(e) => set('defaultTheme', e.target.value as SiteSettings['defaultTheme'])}>
-                  <option value="dark">Sombre</option>
-                  <option value="light">Clair</option>
-                  <option value="system">Selon l'appareil du visiteur</option>
+                  <option value="dark">{t('Dark')}</option>
+                  <option value="light">{t('Light')}</option>
+                  <option value="system">{t("Follow the visitor's device")}</option>
                 </Select>
               )}
             </Field>
             <div className="flex items-end pb-2">
-              <Toggle checked={site.allowThemeToggle} onChange={(v) => set('allowThemeToggle', v)} label="Bouton clair / sombre" description="Les visiteurs peuvent changer de thème" />
+              <Toggle checked={site.allowThemeToggle} onChange={(v) => set('allowThemeToggle', v)} label={t('Light / dark button')} description={t('Visitors can switch the theme')} />
             </div>
           </div>
         </Card>
 
-        <Card title="Accueil">
+        <Card title={t('Home page')}>
           <div className="grid gap-4">
-            <Field label="Grand titre" error={f('heroTitle')}>
+            <Field label={t('Main title')} error={f('heroTitle')}>
               {(id) => <Input id={id} value={site.heroTitle} onChange={(e) => set('heroTitle', e.target.value)} />}
             </Field>
-            <Field label="Texte d'accroche" error={f('heroText')}>
+            <Field label={t('Intro text')} error={f('heroText')}>
               {(id) => <Textarea id={id} value={site.heroText} onChange={(e) => set('heroText', e.target.value)} rows={2} />}
             </Field>
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Adresse du serveur affichée" help="Vide = détectée automatiquement (IP:port)" error={f('serverAddress')}>
-                {(id) => <Input id={id} value={site.serverAddress} onChange={(e) => set('serverAddress', e.target.value)} placeholder="play.monserveur.fr:8211" />}
+              <Field label={t('Server address shown')} help={t('Empty = detected automatically (IP:port)')} error={f('serverAddress')}>
+                {(id) => <Input id={id} value={site.serverAddress} onChange={(e) => set('serverAddress', e.target.value)} placeholder="play.myserver.com:8211" />}
               </Field>
-              <Field label="Lien Discord" error={f('discordUrl')}>
+              <Field label={t('"Join the server" button link')} help={t('Usually the page explaining how to join')} error={f('joinUrl')}>
+                {(id) => <Input id={id} value={site.joinUrl} onChange={(e) => set('joinUrl', e.target.value)} placeholder="/p/join" className="font-mono" />}
+              </Field>
+              <Field label={t('Discord link')} error={f('discordUrl')}>
                 {(id) => <Input id={id} value={site.discordUrl} onChange={(e) => set('discordUrl', e.target.value)} placeholder="https://discord.gg/…" />}
               </Field>
+              <Field label={t('Footer text')} error={f('footerText')}>
+                {(id) => <Input id={id} value={site.footerText} onChange={(e) => set('footerText', e.target.value)} />}
+              </Field>
             </div>
-            <Field label="Texte du pied de page" error={f('footerText')}>
-              {(id) => <Input id={id} value={site.footerText} onChange={(e) => set('footerText', e.target.value)} />}
-            </Field>
           </div>
         </Card>
 
-        <Card title="Inscription des joueurs">
+        <Card title={t('Player registration')}>
           <div className="space-y-4">
             <Toggle
               checked={site.registration.steam}
               onChange={(v) => set('registration', { ...site.registration, steam: v })}
-              label="Connexion avec Steam"
-              description="Le compte est validé et relié au personnage automatiquement"
+              label={t('Steam login')}
+              description={t('The account is approved and linked to the character automatically')}
             />
             <Toggle
               checked={site.registration.email}
               onChange={(v) => set('registration', { ...site.registration, email: v })}
-              label="Inscription par email"
-              description="Le compte doit être validé par un administrateur (rubrique Membres)"
+              label={t('Email sign-up')}
+              description={t('The account must be approved by an administrator (Members section)')}
             />
             <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-800/40">
               <p className="text-sm font-medium">
-                Clé Steam Web API <Badge tone={steamApiKeySet ? 'green' : 'slate'}>{steamApiKeySet ? 'configurée' : 'facultative'}</Badge>
+                {t('Steam Web API key')} <Badge tone={steamApiKeySet ? 'green' : 'slate'}>{steamApiKeySet ? t('set') : t('optional')}</Badge>
               </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Permet de récupérer le pseudo et l'avatar Steam à l'inscription. À obtenir sur steamcommunity.com/dev/apikey.
-              </p>
+              <p className="mt-1 text-xs text-slate-500">{t('Fetches the Steam name and avatar on sign-up. Get one at steamcommunity.com/dev/apikey.')}</p>
               <div className="mt-3 flex gap-2">
-                <Input type="password" value={steamKey} onChange={(e) => setSteamKey(e.target.value)} placeholder={steamApiKeySet ? '•••••••• (laisser vide pour supprimer)' : 'Clé API Steam'} />
+                <Input
+                  type="password"
+                  value={steamKey}
+                  onChange={(e) => setSteamKey(e.target.value)}
+                  placeholder={steamApiKeySet ? t('•••••••• (leave empty to remove)') : t('Steam API key')}
+                />
                 <Button variant="secondary" onClick={() => void saveSteamKey()}>
-                  Enregistrer
+                  {t('Save')}
                 </Button>
               </div>
               {keyMsg && <p className="mt-2 text-xs text-slate-500">{keyMsg}</p>}
@@ -237,16 +256,16 @@ export function ModulesPage() {
     await refresh();
   };
   const areas: { id: ModuleInfo['area']; title: string }[] = [
-    { id: 'public', title: 'Site public' },
-    { id: 'site', title: 'Gestion du site' },
-    { id: 'server', title: 'Gestion du serveur' },
+    { id: 'public', title: 'Public site' },
+    { id: 'site', title: 'Website' },
+    { id: 'server', title: 'Server' },
   ];
   return (
     <>
-      <PageHeader title="Modules" description="Active ou désactive les fonctionnalités du site. De nouveaux modules arriveront avec les mises à jour." />
+      <PageHeader title={t('Modules')} description={t('Turn the features of the site on or off. New modules come with updates.')} />
       <div className="space-y-6">
         {areas.map((a) => (
-          <Card key={a.id} title={a.title}>
+          <Card key={a.id} title={t(a.title)}>
             <ul className="space-y-4">
               {data
                 .filter((m) => m.area === a.id)
@@ -256,8 +275,8 @@ export function ModulesPage() {
                       checked={m.enabled}
                       onChange={(v) => void toggle(m, v)}
                       disabled={!m.toggleable}
-                      label={m.name}
-                      description={m.toggleable ? m.description : `${m.description} (toujours actif)`}
+                      label={t(m.name)}
+                      description={m.toggleable ? t(m.description) : t('{description} (always on)', { description: t(m.description) })}
                     />
                   </li>
                 ))}
@@ -269,7 +288,7 @@ export function ModulesPage() {
   );
 }
 
-// Membres
+// Members
 
 interface Member {
   id: number;
@@ -295,10 +314,10 @@ interface KnownPlayer {
 }
 
 const STATUS: Record<Member['status'], { text: string; tone: 'green' | 'amber' | 'red' | 'slate' }> = {
-  active: { text: 'Actif', tone: 'green' },
-  pending: { text: 'En attente', tone: 'amber' },
-  rejected: { text: 'Refusé', tone: 'slate' },
-  banned: { text: 'Banni', tone: 'red' },
+  active: { text: 'Active', tone: 'green' },
+  pending: { text: 'Waiting', tone: 'amber' },
+  rejected: { text: 'Refused', tone: 'slate' },
+  banned: { text: 'Banned', tone: 'red' },
 };
 
 function PlayerPicker({ players, value, onChange, hint }: { players: KnownPlayer[]; value: string; onChange: (v: string) => void; hint: string | null }) {
@@ -307,10 +326,10 @@ function PlayerPicker({ players, value, onChange, hint }: { players: KnownPlayer
     : players;
   return (
     <Select value={value} onChange={(e) => onChange(e.target.value)} className="w-56">
-      <option value="">— Aucun personnage —</option>
+      <option value="">— {t('No character')} —</option>
       {sorted.map((p) => (
         <option key={p.uid} value={p.uid}>
-          {p.name} (niv. {p.level}){hint && p.name.toLowerCase() === hint.toLowerCase() ? ' ✓' : ''}
+          {p.name} ({t('lvl {level}', { level: p.level })}){hint && p.name.toLowerCase() === hint.toLowerCase() ? ' ✓' : ''}
         </option>
       ))}
     </Select>
@@ -328,7 +347,7 @@ export function MembersPage() {
     setMsg('');
     try {
       if (action === 'delete') {
-        if (!window.confirm(`Supprimer définitivement le compte « ${m.username} » ?`)) return;
+        if (!window.confirm(t('Delete the account "{name}" for good?', { name: m.username }))) return;
         await api.del(`admin/members/${m.id}`);
       } else {
         await api.post(`admin/members/${m.id}/${action}`, body ?? {});
@@ -348,15 +367,15 @@ export function MembersPage() {
 
   return (
     <>
-      <PageHeader title="Membres" description="Comptes joueurs du site. Les inscriptions par email doivent être validées ici." />
+      <PageHeader title={t('Members')} description={t('Player accounts of the site. Email sign-ups must be approved here.')} />
       <div className="mb-4 flex gap-2">
-        {(['pending', 'all'] as const).map((t) => (
+        {(['pending', 'all'] as const).map((tb) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cx('rounded-lg px-4 py-2 text-sm font-medium', tab === t ? 'bg-accent text-accent-fg' : 'bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800')}
+            key={tb}
+            onClick={() => setTab(tb)}
+            className={cx('rounded-lg px-4 py-2 text-sm font-medium', tab === tb ? 'bg-accent text-accent-fg' : 'bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800')}
           >
-            {t === 'pending' ? 'À valider' : 'Tous les membres'}
+            {tb === 'pending' ? t('To approve') : t('All members')}
           </button>
         ))}
       </div>
@@ -365,7 +384,7 @@ export function MembersPage() {
       {!data ? (
         <Spinner />
       ) : data.length === 0 ? (
-        <Empty>{tab === 'pending' ? 'Aucune inscription en attente.' : 'Aucun membre.'}</Empty>
+        <Empty>{tab === 'pending' ? t('No sign-up waiting.') : t('No member.')}</Empty>
       ) : (
         <div className="space-y-3">
           {data.map((m) => (
@@ -375,8 +394,8 @@ export function MembersPage() {
                   <p className="flex flex-wrap items-center gap-2 font-semibold">
                     {m.displayName}
                     <span className="text-sm font-normal text-slate-500">@{m.username}</span>
-                    <Badge tone={STATUS[m.status].tone}>{STATUS[m.status].text}</Badge>
-                    {m.role !== 'player' && <Badge tone="accent">{m.role === 'superadmin' ? 'Admin principal' : 'Admin'}</Badge>}
+                    <Badge tone={STATUS[m.status].tone}>{t(STATUS[m.status].text)}</Badge>
+                    {m.role !== 'player' && <Badge tone="accent">{m.role === 'superadmin' ? t('Main admin') : t('Admin')}</Badge>}
                     {!!m.steam && (
                       <Badge tone="blue">
                         <Gamepad2 className="h-3 w-3" /> Steam
@@ -384,15 +403,15 @@ export function MembersPage() {
                     )}
                   </p>
                   <p className="mt-1 text-xs text-slate-500">
-                    {m.email ?? 'sans email'} · inscrit le {formatDate(m.createdAt)}
-                    {m.lastLoginAt && ` · vu ${timeAgo(m.lastLoginAt)}`}
+                    {m.email ?? t('no email')} · {t('signed up on {date}', { date: formatDate(m.createdAt) })}
+                    {m.lastLoginAt && ` · ${t('seen {when}', { when: timeAgo(m.lastLoginAt) })}`}
                   </p>
                   <p className="mt-1 text-sm">
-                    Pseudo en jeu déclaré : <strong>{m.inGameName ?? '—'}</strong>
+                    {t('Declared in-game name:')} <strong>{m.inGameName ?? '—'}</strong>
                     {m.playerName && (
                       <>
                         {' '}
-                        · Personnage lié : <strong>{m.playerName}</strong> (niv. {m.playerLevel})
+                        · {t('Linked character:')} <strong>{m.playerName}</strong> ({t('lvl {level}', { level: m.playerLevel })})
                       </>
                     )}
                   </p>
@@ -406,29 +425,29 @@ export function MembersPage() {
                     {m.status === 'pending' && (
                       <>
                         <Button onClick={() => void act(m, 'approve', { playerUid: pick(m) || null })}>
-                          <Check className="h-4 w-4" /> Valider
+                          <Check className="h-4 w-4" /> {t('Approve')}
                         </Button>
                         <Button variant="secondary" onClick={() => void act(m, 'reject')}>
-                          <X className="h-4 w-4" /> Refuser
+                          <X className="h-4 w-4" /> {t('Refuse')}
                         </Button>
                       </>
                     )}
                     {m.status === 'active' && !m.steam && (
                       <Button variant="secondary" onClick={() => void act(m, 'link', { playerUid: pick(m) || null })}>
-                        <Link2 className="h-4 w-4" /> Lier
+                        <Link2 className="h-4 w-4" /> {t('Link')}
                       </Button>
                     )}
                     {m.status === 'active' && (
-                      <Button variant="ghost" onClick={() => void act(m, 'ban')} title="Bannir du site">
+                      <Button variant="ghost" onClick={() => void act(m, 'ban')} title={t('Ban from the site')}>
                         <Ban className="h-4 w-4 text-red-500" />
                       </Button>
                     )}
                     {(m.status === 'banned' || m.status === 'rejected') && (
                       <Button variant="secondary" onClick={() => void act(m, 'unban')}>
-                        Réactiver
+                        {t('Reactivate')}
                       </Button>
                     )}
-                    <Button variant="ghost" onClick={() => void act(m, 'delete')} title="Supprimer">
+                    <Button variant="ghost" onClick={() => void act(m, 'delete')} title={t('Delete')}>
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
@@ -439,7 +458,7 @@ export function MembersPage() {
         </div>
       )}
       {tab === 'pending' && players.data?.length === 0 && (
-        <p className="mt-4 text-xs text-slate-500">Aucun personnage connu pour l'instant : ils apparaissent dès leur première connexion au serveur.</p>
+        <p className="mt-4 text-xs text-slate-500">{t('No known character yet: they show up after their first time on the server.')}</p>
       )}
     </>
   );

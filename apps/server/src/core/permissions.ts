@@ -6,7 +6,7 @@ type Resolver = (user: HostUser, permission: Permission) => boolean;
 
 let resolver: Resolver | null = null;
 
-/** Les rôles de l'équipe fournissent la répartition des permissions ; sans eux, tout admin a tout. */
+/** Team roles decide how permissions are shared; without them, every admin has everything. */
 export function setPermissionResolver(fn: Resolver | null): void {
   resolver = fn;
 }
@@ -25,15 +25,15 @@ export function permissionsOf(user: HostUser | null | undefined): Permission[] {
   return ALL_PERMISSIONS.filter((p) => hasPermission(user, p));
 }
 
-/** Garde Fastify : exige une permission du panel admin. */
+/** Fastify guard: requires an admin panel permission. */
 export function requirePermission(permission: Permission) {
   return async (req: FastifyRequest, reply: FastifyReply) => {
-    if (!req.user) return reply.code(401).send({ error: 'Connexion requise' });
-    if (!hasPermission(req.user, permission)) return reply.code(403).send({ error: 'Permission insuffisante' });
+    if (!req.user) return reply.code(401).send({ error: 'Login required' });
+    if (!hasPermission(req.user, permission)) return reply.code(403).send({ error: 'Insufficient permission' });
   };
 }
 
-/** Enregistre une action dans le journal des actions. */
+/** Writes an action to the audit log. */
 export function audit(req: FastifyRequest, action: string, target?: string, details?: unknown): void {
   events.emit('audit', { userId: req.user?.id ?? null, username: req.user?.username ?? null, action, target, details });
 }

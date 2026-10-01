@@ -6,6 +6,7 @@ import { useApp } from '../lib/app';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { cx } from '../components/ui';
 import { Overridable, Slot } from '../lib/extensions';
+import { t } from '../lib/i18n';
 import type { Bootstrap } from '@palcms/shared';
 
 export function MenuLink({ label, href, onClick }: { label: string; href: string; onClick?: () => void }) {
@@ -31,7 +32,7 @@ export function MenuLink({ label, href, onClick }: { label: string; href: string
   );
 }
 
-/** Ce que reçoivent l'en-tête et le pied de page, y compris ceux d'un thème. */
+/** What the header and footer receive, including a theme's own. */
 export interface LayoutProps {
   site: Bootstrap['site'];
   menu: { label: string; url: string }[];
@@ -41,15 +42,15 @@ export interface LayoutProps {
   logout: () => Promise<void>;
 }
 
-// Un lien vers une page dont le module est désactivé est masqué du menu.
+// A link to a page whose module is disabled is hidden from the menu.
 const MODULE_OF: Record<string, string> = {
-  '/actualites': 'news',
-  '/classement': 'leaderboard',
-  '/guildes': 'guilds',
+  '/news': 'news',
+  '/leaderboard': 'leaderboard',
+  '/guilds': 'guilds',
   '/paldex': 'paldex',
-  '/evenements': 'calendar',
-  '/disponibilite': 'uptime',
-  '/signaler': 'tickets',
+  '/events': 'calendar',
+  '/uptime': 'uptime',
+  '/report': 'tickets',
 };
 
 export function PublicLayout() {
@@ -99,27 +100,27 @@ export function DefaultHeader({ site, menu, user, isAdmin, modules, logout }: La
           <ThemeToggle />
           {isAdmin && (
             <Link to="/admin" className="hidden items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-accent-fg sm:flex">
-              <LayoutDashboard className="h-4 w-4" /> Panel admin
+              <LayoutDashboard className="h-4 w-4" /> {t('Admin panel')}
             </Link>
           )}
           {user ? (
             <>
-              <Link to="/profil" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800">
+              <Link to="/profile" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800">
                 {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="h-7 w-7 rounded-full" /> : <User className="h-5 w-5" />}
                 <span className="hidden lg:inline">{user.displayName}</span>
               </Link>
-              <button onClick={() => void logout()} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" title="Déconnexion" aria-label="Déconnexion">
+              <button onClick={() => void logout()} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" title={t('Log out')} aria-label={t('Log out')}>
                 <LogOut className="h-5 w-5" />
               </button>
             </>
           ) : (
             modules.registration && (
-              <Link to="/connexion" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800">
-                <LogIn className="h-4 w-4" /> Connexion
+              <Link to="/login" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800">
+                <LogIn className="h-4 w-4" /> {t('Log in')}
               </Link>
             )
           )}
-          <button className="rounded-lg p-2 md:hidden" onClick={() => setOpen(!open)} aria-label="Menu">
+          <button className="rounded-lg p-2 md:hidden" onClick={() => setOpen(!open)} aria-label={t('Menu')}>
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
@@ -129,7 +130,7 @@ export function DefaultHeader({ site, menu, user, isAdmin, modules, logout }: La
           {menu.map((m) => (
             <MenuLink key={m.label + m.url} label={m.label} href={m.url} onClick={() => setOpen(false)} />
           ))}
-          {isAdmin && <MenuLink label="Panel admin" href="/admin" onClick={() => setOpen(false)} />}
+          {isAdmin && <MenuLink label={t('Admin panel')} href="/admin" onClick={() => setOpen(false)} />}
         </nav>
       )}
     </header>
@@ -144,18 +145,18 @@ export function DefaultFooter({ site, modules }: LayoutProps) {
       {(modules.uptime || modules.tickets) && (
         <p className="mt-2 flex justify-center gap-4">
           {modules.uptime && (
-            <Link to="/disponibilite" className="hover:text-accent">
-              Disponibilité du serveur
+            <Link to="/uptime" className="hover:text-accent">
+              {t('Server uptime')}
             </Link>
           )}
           {modules.tickets && (
-            <Link to="/signaler" className="hover:text-accent">
-              Signaler un problème
+            <Link to="/report" className="hover:text-accent">
+              {t('Report a problem')}
             </Link>
           )}
         </p>
       )}
-      <p className="mt-1 text-xs opacity-70">Propulsé par PalCMS · Palworld est une marque de Pocketpair, Inc.</p>
+      <p className="mt-1 text-xs opacity-70">{t('Powered by PalCMS · Palworld is a trademark of Pocketpair, Inc.')}</p>
     </footer>
   );
 }

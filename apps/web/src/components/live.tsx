@@ -4,6 +4,7 @@ import { Check, Copy, Crown, Medal, Users } from 'lucide-react';
 import type { LeaderboardEntry, PublicPlayer, ServerStatus } from '@palcms/shared';
 import { formatDuration } from '../lib/format';
 import { Badge, Card, Empty, cx } from './ui';
+import { t } from '../lib/i18n';
 
 export function StatusDot({ online }: { online: boolean }) {
   return (
@@ -22,7 +23,7 @@ export function CopyAddress({ address }: { address: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      /* presse-papiers indisponible (HTTP non sécurisé) */
+      /* clipboard unavailable (insecure HTTP) */
     }
   };
   return (
@@ -30,7 +31,7 @@ export function CopyAddress({ address }: { address: string }) {
       type="button"
       onClick={() => void copy()}
       className="group inline-flex items-center gap-2 rounded-lg bg-slate-900/5 px-3 py-2 font-mono text-sm ring-1 ring-slate-900/10 hover:bg-slate-900/10 dark:bg-white/5 dark:ring-white/10 dark:hover:bg-white/10"
-      title="Copier l'adresse"
+      title={t('Copy the address')}
     >
       {address}
       {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 opacity-60 group-hover:opacity-100" />}
@@ -45,11 +46,11 @@ export function ServerStatusCard({ status }: { status: ServerStatus | null }) {
     <Card className="h-full">
       <div className="flex items-center gap-3">
         <StatusDot online={status.online} />
-        <span className="text-lg font-semibold">{status.online ? 'Serveur en ligne' : 'Serveur hors ligne'}</span>
+        <span className="text-lg font-semibold">{status.online ? t('Server online') : t('Server offline')}</span>
       </div>
       <div className="mt-5">
         <div className="flex items-baseline justify-between text-sm">
-          <span className="text-slate-500">Joueurs</span>
+          <span className="text-slate-500">{t('Players')}</span>
           <span className="text-2xl font-bold">
             {status.players}
             <span className="text-base font-medium text-slate-400"> / {status.maxPlayers}</span>
@@ -61,21 +62,21 @@ export function ServerStatusCard({ status }: { status: ServerStatus | null }) {
       </div>
       <dl className="mt-5 grid grid-cols-3 gap-3 text-center text-sm">
         <div className="rounded-lg bg-slate-100 p-2 dark:bg-slate-800/60">
-          <dt className="text-xs text-slate-500">Jour en jeu</dt>
+          <dt className="text-xs text-slate-500">{t('In-game day')}</dt>
           <dd className="font-semibold">{status.days ?? '—'}</dd>
         </div>
         <div className="rounded-lg bg-slate-100 p-2 dark:bg-slate-800/60">
-          <dt className="text-xs text-slate-500">FPS serveur</dt>
+          <dt className="text-xs text-slate-500">{t('Server FPS')}</dt>
           <dd className="font-semibold">{status.fps ?? '—'}</dd>
         </div>
         <div className="rounded-lg bg-slate-100 p-2 dark:bg-slate-800/60">
-          <dt className="text-xs text-slate-500">En ligne depuis</dt>
+          <dt className="text-xs text-slate-500">{t('Online for')}</dt>
           <dd className="font-semibold">{status.uptime != null ? formatDuration(status.uptime) : '—'}</dd>
         </div>
       </dl>
       {status.address && (
         <div className="mt-5">
-          <p className="mb-1 text-xs text-slate-500">Adresse du serveur</p>
+          <p className="mb-1 text-xs text-slate-500">{t('Server address')}</p>
           <CopyAddress address={status.address} />
         </div>
       )}
@@ -89,26 +90,26 @@ export function OnlinePlayers({ players }: { players: PublicPlayer[] }) {
       className="h-full"
       title={
         <span className="flex items-center gap-2">
-          <Users className="h-4 w-4" /> Joueurs connectés
+          <Users className="h-4 w-4" /> {t('Online players')}
         </span>
       }
       actions={<Badge tone="accent">{players.length}</Badge>}
     >
       {players.length === 0 ? (
-        <Empty>Personne en ligne pour le moment.</Empty>
+        <Empty>{t('Nobody online right now.')}</Empty>
       ) : (
         <ul className="grid gap-2 sm:grid-cols-2">
           {players.map((p) => (
             <li key={p.id}>
               <Link
-                to={`/joueurs/${p.id}`}
+                to={`/players/${p.id}`}
                 className="flex items-center justify-between rounded-lg bg-slate-100 px-3 py-2 text-sm hover:bg-slate-200 dark:bg-slate-800/60 dark:hover:bg-slate-800"
               >
                 <span className="flex items-center gap-2 truncate font-medium">
                   <span className="h-2 w-2 rounded-full bg-green-500" />
                   {p.name}
                 </span>
-                <span className="text-xs text-slate-500">niv. {p.level}</span>
+                <span className="text-xs text-slate-500">{t('lvl {level}', { level: p.level })}</span>
               </Link>
             </li>
           ))}
@@ -127,16 +128,16 @@ function RankIcon({ rank }: { rank: number }) {
 
 export function LeaderboardTable({ entries, compact = false }: { entries: LeaderboardEntry[] | null; compact?: boolean }) {
   if (!entries) return <div className="h-40 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800/50" />;
-  if (entries.length === 0) return <Empty>Aucun joueur classé pour l'instant.</Empty>;
+  if (entries.length === 0) return <Empty>{t('No ranked player yet.')}</Empty>;
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-slate-200 text-left text-xs tracking-wide text-slate-500 uppercase dark:border-slate-800">
             <th className="py-2 pr-2 font-medium">#</th>
-            <th className="py-2 pr-2 font-medium">Joueur</th>
-            <th className="py-2 pr-2 text-right font-medium">Niveau</th>
-            {!compact && <th className="hidden py-2 text-right font-medium sm:table-cell">Temps de jeu</th>}
+            <th className="py-2 pr-2 font-medium">{t('Player')}</th>
+            <th className="py-2 pr-2 text-right font-medium">{t('Level')}</th>
+            {!compact && <th className="hidden py-2 text-right font-medium sm:table-cell">{t('Playtime')}</th>}
           </tr>
         </thead>
         <tbody>
@@ -146,8 +147,8 @@ export function LeaderboardTable({ entries, compact = false }: { entries: Leader
                 <RankIcon rank={e.rank} />
               </td>
               <td className="py-2 pr-2">
-                <Link to={`/joueurs/${e.id}`} className="flex items-center gap-2 font-medium hover:text-accent">
-                  {e.online && <span className="h-2 w-2 rounded-full bg-green-500" title="En ligne" />}
+                <Link to={`/players/${e.id}`} className="flex items-center gap-2 font-medium hover:text-accent">
+                  {e.online && <span className="h-2 w-2 rounded-full bg-green-500" title={t('Online')} />}
                   {e.name}
                 </Link>
               </td>

@@ -1,7 +1,7 @@
-// Côté navigateur : le bandeau en haut de toutes les pages et une page de statistiques dans le panel.
+// Browser side: the banner at the top of every page and a statistics page in the panel.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, Empty, PageHeader, Spinner, formatDate, isExternal } from '@palcms/sdk';
+import { Card, Empty, PageHeader, Spinner, formatDate, isExternal, lang } from '@palcms/sdk';
 
 const STYLES = {
   accent: 'bg-accent text-accent-fg',
@@ -10,7 +10,19 @@ const STYLES = {
   danger: 'bg-red-600 text-white',
 };
 
-// Clé propre au message : un nouveau message réapparaît même si l'ancien a été fermé.
+// The plugin's own French texts. lang() exists since PalCMS 1.1.0: older versions stay in English.
+const FR = {
+  'Close the banner': 'Fermer le bandeau',
+  'Announcement banner': "Bandeau d'annonce",
+  'Clicks on the banner button, day by day. The message and the color are set in Extensions > Plugins > Announcement banner (Settings icon).':
+    "Clics sur le bouton du bandeau, jour par jour. Le message et la couleur se règlent dans Extensions > Plugins > Bandeau d'annonce (icône Réglages).",
+  'No click yet.': 'Aucun clic pour le moment.',
+  '{n} click(s) over the last 30 days': '{n} clic(s) sur les 30 derniers jours',
+};
+const t = (text, vars = {}) =>
+  (lang?.() === 'fr' ? FR[text] ?? text : text).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+
+// Key tied to the message: a new message shows up again even if the old one was closed.
 const dismissKey = (message) => `palcms-bandeau:${message.length}:${message.slice(0, 40)}`;
 
 export default function bandeau(pal) {
@@ -26,7 +38,7 @@ export default function bandeau(pal) {
           try {
             if (d.dismissible && localStorage.getItem(dismissKey(d.message))) return;
           } catch {
-            // stockage indisponible (navigation privée) : on affiche le bandeau
+            // storage unavailable (private browsing): show the banner
           }
           setData(d);
         })
@@ -40,7 +52,7 @@ export default function bandeau(pal) {
       try {
         localStorage.setItem(dismissKey(data.message), '1');
       } catch {
-        // tant pis, il réapparaîtra au prochain chargement
+        // never mind, it will show up again on the next load
       }
     };
     const click = () => void pal.api.post('clicks').catch(() => {});
@@ -61,7 +73,7 @@ export default function bandeau(pal) {
               </Link>
             ))}
           {data.dismissible && (
-            <button onClick={close} className="shrink-0 rounded-md px-2 py-1 text-base leading-none opacity-80 hover:opacity-100" aria-label="Fermer le bandeau">
+            <button onClick={close} className="shrink-0 rounded-md px-2 py-1 text-base leading-none opacity-80 hover:opacity-100" aria-label={t('Close the banner')}>
               ×
             </button>
           )}
@@ -79,15 +91,17 @@ export default function bandeau(pal) {
     return (
       <>
         <PageHeader
-          title="Bandeau d'annonce"
-          description="Clics sur le bouton du bandeau, jour par jour. Le message et la couleur se règlent dans Extensions > Plugins > Bandeau d'annonce (icône Réglages)."
+          title={t('Announcement banner')}
+          description={t(
+            'Clicks on the banner button, day by day. The message and the color are set in Extensions > Plugins > Announcement banner (Settings icon).',
+          )}
         />
         {!stats ? (
           <Spinner />
         ) : stats.days.length === 0 ? (
-          <Empty>Aucun clic pour le moment.</Empty>
+          <Empty>{t('No click yet.')}</Empty>
         ) : (
-          <Card title={`${stats.total} clic${stats.total > 1 ? 's' : ''} sur les 30 derniers jours`}>
+          <Card title={t('{n} click(s) over the last 30 days', { n: stats.total })}>
             <ul className="space-y-2">
               {stats.days.map((d) => (
                 <li key={d.day} className="flex items-center gap-3 text-sm">
@@ -104,5 +118,5 @@ export default function bandeau(pal) {
   }
 
   pal.widget('layout.top', Banner);
-  pal.adminPage({ path: 'statistiques', label: "Bandeau d'annonce", component: StatsPage, permission: 'site.appearance' });
+  pal.adminPage({ path: 'stats', label: t('Announcement banner'), component: StatsPage, permission: 'site.appearance' });
 }

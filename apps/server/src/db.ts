@@ -17,7 +17,7 @@ export interface Migration {
   sql: string;
 }
 
-/** Applique les migrations pas encore passées, chacune dans sa transaction. */
+/** Runs the migrations not applied yet, each one in its own transaction. */
 export function runMigrations(list: Migration[]): string[] {
   const has = db.prepare('SELECT 1 FROM migrations WHERE id = ?');
   const mark = db.prepare('INSERT INTO migrations (id, applied_at) VALUES (?, ?)');
@@ -37,7 +37,7 @@ const getSetting = () => db.prepare<[string], { value: string }>('SELECT value F
 const setSetting = () =>
   db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
 
-/** Petit magasin clé/valeur JSON (table settings). */
+/** Small JSON key/value store (settings table). */
 export const settings = {
   get<T>(key: string, fallback: T): T {
     const row = getSetting().get(key);

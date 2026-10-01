@@ -1,6 +1,6 @@
 /**
- * Connexion Steam via OpenID 2.0 (aucune clé API nécessaire pour identifier le joueur).
- * Une clé Steam Web API optionnelle permet en plus de récupérer pseudo et avatar.
+ * Steam login through OpenID 2.0 (no API key needed to identify the player).
+ * An optional Steam Web API key also fetches the player's name and avatar.
  */
 const STEAM_OPENID = 'https://steamcommunity.com/openid/login';
 const CLAIMED_ID_RE = /^https:\/\/steamcommunity\.com\/openid\/id\/(\d{17})$/;
@@ -17,14 +17,14 @@ export function steamLoginUrl(returnTo: string, realm: string): string {
   return `${STEAM_OPENID}?${params}`;
 }
 
-/** Vérifie la réponse de Steam auprès de Steam lui-même et renvoie le SteamID64. */
+/** Checks the Steam answer with Steam itself and returns the SteamID64. */
 export async function verifySteamResponse(query: Record<string, string>, expectedReturnTo: string): Promise<string> {
-  if (query['openid.mode'] !== 'id_res') throw new Error('Connexion Steam annulée');
-  if (query['openid.op_endpoint'] !== STEAM_OPENID) throw new Error('Réponse Steam invalide');
+  if (query['openid.mode'] !== 'id_res') throw new Error('Steam login cancelled');
+  if (query['openid.op_endpoint'] !== STEAM_OPENID) throw new Error('Invalid Steam response');
   const returnTo = query['openid.return_to'] ?? '';
-  if (!returnTo.startsWith(expectedReturnTo)) throw new Error('Adresse de retour Steam invalide');
+  if (!returnTo.startsWith(expectedReturnTo)) throw new Error('Invalid Steam return address');
   const match = CLAIMED_ID_RE.exec(query['openid.claimed_id'] ?? '');
-  if (!match) throw new Error('Identifiant Steam invalide');
+  if (!match) throw new Error('Invalid Steam id');
 
   const body = new URLSearchParams();
   for (const [k, v] of Object.entries(query)) if (k.startsWith('openid.')) body.set(k, v);
@@ -37,7 +37,7 @@ export async function verifySteamResponse(query: Record<string, string>, expecte
     signal: AbortSignal.timeout(10_000),
   });
   const text = await res.text();
-  if (!/is_valid\s*:\s*true/.test(text)) throw new Error('Steam a refusé la vérification');
+  if (!/is_valid\s*:\s*true/.test(text)) throw new Error('Steam refused the verification');
   return match[1];
 }
 
@@ -61,5 +61,5 @@ export async function fetchSteamProfile(steamId: string, apiKey: string): Promis
   }
 }
 
-/** Identifiant du joueur tel que renvoyé par l'API REST de Palworld. */
+/** Player id as returned by the Palworld REST API. */
 export const palworldUidFromSteam = (steamId: string) => `steam_${steamId}`;

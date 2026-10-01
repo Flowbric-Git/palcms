@@ -7,8 +7,8 @@ import { setupTokenPath } from '../config';
 import { cookieOptions } from '../auth/sessions';
 
 /**
- * Jeton d'installation à usage unique : affiché dans le terminal par install.sh,
- * il empêche un inconnu de prendre la main sur l'assistant avant le propriétaire du VPS.
+ * One-time setup token: printed in the terminal by install.sh,
+ * it prevents a stranger from taking over the wizard before the VPS owner.
  */
 export const SETUP_COOKIE = 'palcms_setup';
 

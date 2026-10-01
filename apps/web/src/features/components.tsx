@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { t } from '../lib/i18n';
 import type { Channel } from '@palcms/shared';
 import { api } from '../lib/api';
 import { useRealtime } from '../lib/ws';
 import type { MapData, MapPlayer } from './map/LiveMap';
 
-/** Carte : configuration + positions des joueurs en temps réel (canal public ou équipe). */
+/** Map: configuration + live player positions (public or team channel). */
 export function useMapData(channel: Channel = 'public') {
   const [data, setData] = useState<MapData | null>(null);
   const [players, setPlayers] = useState<MapPlayer[]>([]);
@@ -29,7 +30,7 @@ export function useMapData(channel: Channel = 'public') {
   return { data, players, error, reload: () => setTick((t) => t + 1), setData };
 }
 
-/** Graphique en barres minimaliste (SVG), sans dépendance. */
+/** Minimal bar chart (SVG), with no dependency. */
 export function BarChart({
   points,
   format = (v) => String(v),
@@ -39,7 +40,7 @@ export function BarChart({
   format?: (v: number) => string;
   height?: number;
 }) {
-  if (points.length === 0) return <p className="py-8 text-center text-sm text-slate-500">Pas encore de données.</p>;
+  if (points.length === 0) return <p className="py-8 text-center text-sm text-slate-500">{t('No data yet.')}</p>;
   const max = Math.max(1, ...points.map((p) => p.value));
   const w = 100 / points.length;
   return (
@@ -49,7 +50,7 @@ export function BarChart({
           const h = (p.value / max) * (height - 4);
           return (
             <rect key={p.label} x={i * w + w * 0.15} y={height - h} width={w * 0.7} height={h} rx={0.6} className="fill-accent/80">
-              <title>{`${p.label} : ${format(p.value)}`}</title>
+              <title>{`${p.label}: ${format(p.value)}`}</title>
             </rect>
           );
         })}
@@ -63,9 +64,9 @@ export function BarChart({
   );
 }
 
-/** Courbe minimaliste (SVG). */
+/** Minimal line chart (SVG). */
 export function LineChart({ points, height = 140 }: { points: { label: string; value: number }[]; height?: number }) {
-  if (points.length < 2) return <p className="py-8 text-center text-sm text-slate-500">Pas encore assez de données.</p>;
+  if (points.length < 2) return <p className="py-8 text-center text-sm text-slate-500">{t('Not enough data yet.')}</p>;
   const min = Math.min(...points.map((p) => p.value));
   const max = Math.max(min + 1, ...points.map((p) => p.value));
   const x = (i: number) => (i / (points.length - 1)) * 100;

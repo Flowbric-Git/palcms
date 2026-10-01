@@ -2,9 +2,9 @@ import { z } from 'zod';
 import type { FeatureHost, FeatureContext, WsServerMessage } from '@palcms/shared';
 import { httpError, localDay, parseBody, type Feature } from './util';
 
-// Carte
+// Map
 
-/** Calibration de la carte officielle : coordonnées monde [maxX, maxY, minX, minY]. */
+/** Calibration of the official map: world coordinates [maxX, maxY, minX, minY]. */
 export const OFFICIAL_BOUNDS: [number, number, number, number] = [349400, 724400, -1099400, -724400];
 
 export interface MapSettings {
@@ -30,7 +30,7 @@ const mapSettingsSchema = z.object({
     .string()
     .trim()
     .max(500)
-    .refine((v) => v === '' || v.startsWith('/') || /^https?:\/\//.test(v), 'Lien invalide'),
+    .refine((v) => v === '' || v.startsWith('/') || /^https?:\/\//.test(v), 'Invalid link'),
   bounds: z.tuple([z.number(), z.number(), z.number(), z.number()]).refine(([maxX, maxY, minX, minY]) => maxX > minX && maxY > minY, 'Limites invalides'),
 });
 
@@ -53,18 +53,18 @@ export function createMap(host: FeatureHost): Feature {
 
   return {
     start() {
-      // Premier démarrage : la carte est ajoutée au menu du site, juste après le classement.
+      // First start: the map is added to the site menu, right after the leaderboard.
       if (!host.settings.get('feature.map.menuAdded', false)) {
         const site = host.site.get();
-        if (!site.menu.some((m) => m.url === '/carte')) {
-          const i = site.menu.findIndex((m) => m.url === '/classement');
+        if (!site.menu.some((m) => m.url === '/map')) {
+          const i = site.menu.findIndex((m) => m.url === '/leaderboard');
           const menu = [...site.menu];
-          menu.splice(i >= 0 ? i + 1 : menu.length, 0, { label: 'Carte', url: '/carte' });
+          menu.splice(i >= 0 ? i + 1 : menu.length, 0, { label: host.t('Map'), url: '/map' });
           host.site.save({ ...site, menu: menu.slice(0, 20) });
         }
         host.settings.set('feature.map.menuAdded', true);
       }
-      // Toutes les 5 secondes : positions envoyées à tous (carte publique) ou seulement à l'équipe.
+      // Every 5 seconds: positions sent to everyone (public map) or to the team only.
       off = host.events.on('tick', () => {
         const msg = message();
         host.realtime.broadcast('admin', msg);
@@ -84,7 +84,7 @@ export function createMap(host: FeatureHost): Feature {
         path: 'map',
         access: 'public',
         handler: (ctx) => {
-          if (!canSee(ctx)) throw httpError(403, 'La carte est réservée à l’équipe');
+          if (!canSee(ctx)) throw httpError(403, 'The map is reserved for the team');
           return {
             public: isPublic(),
             settings: settings(),
@@ -142,7 +142,7 @@ export function createMap(host: FeatureHost): Feature {
           const r = host.db
             .prepare('UPDATE pro_map_poi SET label = ?, description = ?, icon = ?, color = ?, x = ?, y = ? WHERE id = ?')
             .run(p.label, p.description, p.icon, p.color, p.x, p.y, Number(params.id));
-          if (!r.changes) throw httpError(404, 'Point introuvable');
+          if (!r.changes) throw httpError(404, 'Point not found');
           return { id: Number(params.id), ...p };
         },
       },
@@ -160,7 +160,7 @@ export function createMap(host: FeatureHost): Feature {
   };
 }
 
-// Classement complet
+// Full leaderboard
 
 export type RankBy = 'level' | 'playtime' | 'seniority' | 'buildings';
 
@@ -188,7 +188,7 @@ const VALUE: Record<RankBy, (r: RankRow) => number> = {
   buildings: (r) => r.building_count,
 };
 
-/** Classement selon plusieurs critères ; les ex æquo sur la valeur affichée partagent le même rang. */
+/** Leaderboard by several criteria; ties on the displayed value share the same rank. */
 export function rankBy(rows: RankRow[], by: RankBy, limit = 100) {
   const sorted = [...rows].sort((a, b) => SORTS[by](a, b) || a.name.localeCompare(b.name));
   let rank = 0;
@@ -215,7 +215,7 @@ export function createLeaderboard(host: FeatureHost): Feature {
         path: 'leaderboard',
         access: 'public',
         handler: ({ query }) => {
-          if (!host.modules.isEnabled('leaderboard')) throw httpError(404, 'Classement désactivé');
+          if (!host.modules.isEnabled('leaderboard')) throw httpError(404, 'Leaderboard disabled');
           const by = (['level', 'playtime', 'seniority', 'buildings'] as RankBy[]).includes(query.by as RankBy) ? (query.by as RankBy) : 'level';
           const rows = host.db
             .prepare('SELECT public_id, name, level, online, playtime_seconds, first_seen, building_count FROM players')
@@ -227,7 +227,7 @@ export function createLeaderboard(host: FeatureHost): Feature {
   };
 }
 
-// Statistiques par joueur
+// Per-player statistics
 
 export function createStats(host: FeatureHost): Feature {
   let off: (() => void) | null = null;
@@ -235,7 +235,7 @@ export function createStats(host: FeatureHost): Feature {
 
   return {
     start() {
-      // Une fois par minute : niveau et temps de jeu cumulé du jour, pour chaque joueur connecté.
+      // Once a minute: level and total playtime of the day, for each online player.
       off = host.events.on('tick', ({ players }) => {
         if (Date.now() - last < 60_000 || players.length === 0) return;
         last = Date.now();
@@ -259,16 +259,16 @@ export function createStats(host: FeatureHost): Feature {
         path: 'players/:id/stats',
         access: 'public',
         handler: (ctx) => {
-          if (!host.modules.isEnabled('player-stats') && !ctx.can('server.players')) throw httpError(404, 'Statistiques désactivées');
+          if (!host.modules.isEnabled('player-stats') && !ctx.can('server.players')) throw httpError(404, 'Statistics disabled');
           const player = host.db.prepare('SELECT uid, building_count FROM players WHERE public_id = ?').get(ctx.params.id) as
             | { uid: string; building_count: number }
             | undefined;
-          if (!player) throw httpError(404, 'Joueur introuvable');
+          if (!player) throw httpError(404, 'Player not found');
           const rows = host.db
             .prepare('SELECT day, level, playtime_seconds FROM pro_player_daily WHERE uid = ? ORDER BY day DESC LIMIT 60')
             .all(player.uid) as { day: string; level: number; playtime_seconds: number }[];
           rows.reverse();
-          // Temps de jeu de chaque jour = cumul du jour − cumul du jour précédent.
+          // Playtime of each day = total of the day − total of the previous day.
           const days = rows.map((r, i) => ({
             day: r.day,
             level: r.level,

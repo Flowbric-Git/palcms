@@ -1,6 +1,6 @@
 import sanitizeHtml from 'sanitize-html';
 
-/** Nettoie le HTML produit par l'éditeur riche : aucun script, style inline ou iframe. */
+/** Cleans the HTML produced by the rich editor: no script, inline style or iframe. */
 export function cleanHtml(html: string): string {
   return sanitizeHtml(html, {
     allowedTags: [

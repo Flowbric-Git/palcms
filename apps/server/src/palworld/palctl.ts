@@ -32,7 +32,7 @@ function lineSplitter(onLine: (l: string) => void) {
   return {
     push(chunk: Buffer) {
       buf += chunk.toString('utf8');
-      // steamcmd réécrit sa progression avec \r : on le traite comme une fin de ligne.
+      // steamcmd rewrites its progress with \r: treat it as a line ending.
       const parts = buf.split(/\r\n|\n|\r/);
       buf = parts.pop() ?? '';
       for (const p of parts) if (p.trim()) onLine(p);
@@ -44,7 +44,7 @@ function lineSplitter(onLine: (l: string) => void) {
   };
 }
 
-/** Exécute une commande palctl et attend sa fin. Lève PalctlError si le code de sortie n'est pas 0. */
+/** Runs a palctl command and waits for it. Throws PalctlError when the exit code is not 0. */
 export function runPalctl(args: string[], opts: RunOptions = {}): Promise<string> {
   return new Promise((resolve, reject) => {
     let child: ChildProcess;
@@ -71,14 +71,14 @@ export function runPalctl(args: string[], opts: RunOptions = {}): Promise<string
 
     child.on('error', (e) => {
       if (timer) clearTimeout(timer);
-      reject(new PalctlError(`Impossible de lancer palctl : ${e.message}`, -1, output));
+      reject(new PalctlError(`Could not start palctl: ${e.message}`, -1, output));
     });
     child.on('close', (code) => {
       if (timer) clearTimeout(timer);
       out.flush();
       err.flush();
       if (code === 0) resolve(output);
-      else reject(new PalctlError(`palctl ${args[0]} a échoué (code ${code})`, code ?? -1, output));
+      else reject(new PalctlError(`palctl ${args[0]} failed (code ${code})`, code ?? -1, output));
     });
 
     if (opts.input !== undefined) child.stdin?.end(opts.input);
@@ -87,8 +87,8 @@ export function runPalctl(args: string[], opts: RunOptions = {}): Promise<string
 }
 
 /**
- * Sortie complète d'une commande palctl (ex. export JSON du monde, plusieurs Mo),
- * sans la limite de runPalctl. Lève PalctlError avec la fin de stderr si la commande échoue.
+ * Full output of a palctl command (e.g. world JSON export, several MB),
+ * without runPalctl's limit. Throws PalctlError with the end of stderr when the command fails.
  */
 export function capturePalctl(args: string[], opts: { timeoutMs?: number; maxBytes?: number } = {}): Promise<Buffer> {
   const maxBytes = opts.maxBytes ?? 256 * 1024 * 1024;
@@ -113,18 +113,18 @@ export function capturePalctl(args: string[], opts: { timeoutMs?: number; maxByt
     const timer = opts.timeoutMs ? setTimeout(() => child.kill('SIGTERM'), opts.timeoutMs) : null;
     child.on('error', (e) => {
       if (timer) clearTimeout(timer);
-      reject(new PalctlError(`Impossible de lancer palctl : ${e.message}`, -1, stderr));
+      reject(new PalctlError(`Could not start palctl: ${e.message}`, -1, stderr));
     });
     child.on('close', (code) => {
       if (timer) clearTimeout(timer);
       if (code === 0) resolve(Buffer.concat(chunks));
-      else reject(new PalctlError(stderr.trim().split('\n').pop() || `palctl ${args[0]} a échoué (code ${code})`, code ?? -1, stderr));
+      else reject(new PalctlError(stderr.trim().split('\n').pop() || `palctl ${args[0]} failed (code ${code})`, code ?? -1, stderr));
     });
     child.stdin?.end();
   });
 }
 
-/** Sortie binaire brute d'une commande palctl (ex. téléchargement d'une sauvegarde). */
+/** Raw binary output of a palctl command (e.g. downloading a backup). */
 export function palctlRawStream(args: string[]): NodeJS.ReadableStream {
   const child = start(args);
   child.stdin?.end();
@@ -132,7 +132,7 @@ export function palctlRawStream(args: string[]): NodeJS.ReadableStream {
   return child.stdout!;
 }
 
-/** Lance une commande palctl longue (ex. suivi des logs). Renvoie une fonction d'arrêt. */
+/** Starts a long-running palctl command (e.g. following logs). Returns a stop function. */
 export function streamPalctl(args: string[], onLine: (line: string) => void, onExit?: () => void): () => void {
   const child = start(args);
   const out = lineSplitter(onLine);

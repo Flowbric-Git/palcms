@@ -3,7 +3,7 @@ import { PALDEX, paldexId, type FeatureContext, type FeatureHost } from '@palcms
 import { MAP_POINTS, itemName, palName, passiveName } from '../gamedata';
 import { addMenuOnce, errorText, every, httpError, parseBody, type Feature, type FeatureBus } from './util';
 
-// Format produit par sav_cli (palworld-server-tool)
+// Format produced by sav_cli (palworld-server-tool)
 
 interface SavItem {
   ItemId: string;
@@ -47,30 +47,31 @@ export interface SavWorld {
 }
 
 /**
- * sav_cli identifie un joueur par les 8 premiers caractères hexadécimaux de son PlayerUId, en décimal.
- * L'API REST donne le PlayerUId complet ("9E967EB0000…") : on fait la même conversion pour les relier.
+ * sav_cli identifies a player by the first 8 hex characters of their PlayerUId, in decimal.
+ * The REST API gives the full PlayerUId ("9E967EB0000…"): the same conversion links both.
  */
 export function worldUidFromPlayerId(playerId: string | null | undefined): string | null {
   const hex = (playerId ?? '').replace(/-/g, '').slice(0, 8);
   return /^[0-9a-fA-F]{8}$/.test(hex) ? String(parseInt(hex, 16)) : null;
 }
 
+/** Inventory containers (labels translated on display). */
 export const CONTAINERS: Record<string, string> = {
-  CommonContainerId: 'Inventaire',
-  EssentialContainerId: 'Objets essentiels',
-  WeaponLoadOutContainerId: 'Armes',
-  PlayerEquipArmorContainerId: 'Équipement',
-  FoodEquipContainerId: 'Nourriture',
-  DropSlotContainerId: 'Objets déposés',
+  CommonContainerId: 'Inventory',
+  EssentialContainerId: 'Key items',
+  WeaponLoadOutContainerId: 'Weapons',
+  PlayerEquipArmorContainerId: 'Equipment',
+  FoodEquipContainerId: 'Food',
+  DropSlotContainerId: 'Dropped items',
 };
 
 const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
 
-/** Vérifie et nettoie l'export de sav_cli (on ne fait pas confiance aveuglément à un fichier externe). */
+/** Checks and cleans the sav_cli export (an external file is never trusted blindly). */
 export function parseWorld(json: string): SavWorld {
   const data = JSON.parse(json) as { players?: unknown; guilds?: unknown };
-  if (!data || !Array.isArray(data.players) || !Array.isArray(data.guilds)) throw new Error('Export du monde invalide');
+  if (!data || !Array.isArray(data.players) || !Array.isArray(data.guilds)) throw new Error('Invalid world export');
   const players = (data.players as Partial<SavPlayer>[])
     .filter((p) => p && str(p.player_uid))
     .map((p) => ({
@@ -87,7 +88,7 @@ export function parseWorld(json: string): SavWorld {
   const guilds = (data.guilds as Partial<SavGuild>[])
     .filter((g) => g && str(g.admin_player_uid))
     .map((g) => ({
-      name: str(g.name).slice(0, 64) || 'Guilde sans nom',
+      name: str(g.name).slice(0, 64) || 'Unnamed guild',
       base_camp_level: num(g.base_camp_level),
       admin_player_uid: str(g.admin_player_uid),
       players: Array.isArray(g.players) ? g.players.filter((m) => m && str(m.player_uid)) : [],
@@ -96,7 +97,7 @@ export function parseWorld(json: string): SavWorld {
   return { players, guilds };
 }
 
-/** Les 288 entrées du Paldex, avec ce qui a été capturé (pur, testé). */
+/** The 288 Paldex entries, with what has been caught (pure, tested). */
 export function buildPaldex(rows: { type: string; owner: string; lucky: number; alpha: number; level: number }[]) {
   const by = new Map<string, { count: number; owners: Set<string>; lucky: number; alpha: number; maxLevel: number }>();
   for (const r of rows) {
@@ -130,7 +131,7 @@ interface SyncState {
 }
 
 export interface WorldService {
-  /** Personnage de la sauvegarde lié à un joueur PalCMS (uid REST). */
+  /** Save-file character linked to a PalCMS player (REST uid). */
   linkedUid(uid: string): string | null;
   onSynced(fn: () => void): () => void;
 }
@@ -214,13 +215,13 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
   };
 
   const sync = async () => {
-    if (state.running) throw httpError(409, 'Lecture déjà en cours');
-    if (!available()) throw httpError(409, 'Disponible uniquement pour un serveur installé par PalCMS sur ce VPS');
+    if (state.running) throw httpError(409, 'A read is already running');
+    if (!available()) throw httpError(409, 'Only available for a server installed by PalCMS on this VPS');
     state.running = true;
     const t0 = Date.now();
     try {
       await ensureTools();
-      // Le serveur écrit d'abord le monde sur le disque pour que la lecture soit à jour.
+      // The server first writes the world to disk so the read is up to date.
       await host.palworld.save().catch(() => {});
       await new Promise((r) => setTimeout(r, 3000));
       const world = parseWorld(await host.palctlText(['world-export'], { timeoutMs: 16 * 60_000 }));
@@ -319,7 +320,7 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
   };
 
   const requireData = () => {
-    if (!state.lastAt) throw httpError(404, 'Les données du monde ne sont pas encore disponibles');
+    if (!state.lastAt) throw httpError(404, 'World data is not available yet');
   };
 
   return {
@@ -333,10 +334,10 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
         host,
         'feature.world.menuAdded',
         [
-          { label: 'Guildes', url: '/guildes' },
+          { label: host.t('Guilds'), url: '/guilds' },
           { label: 'Paldex', url: '/paldex' },
         ],
-        '/carte',
+        '/map',
       );
       offTick = host.events.on('tick', ({ players }) => {
         if (players.length) playedSinceSync = true;
@@ -344,8 +345,8 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
       stopTimer = every(60_000, async () => {
         const s = settings();
         if (!s.enabled || !available() || state.running) return;
-        // Rien n'a changé si personne n'a joué depuis la dernière lecture réussie.
-        // Après une erreur, on attend aussi un intervalle complet avant de réessayer.
+        // Nothing changed if nobody played since the last successful read.
+        // After an error, also wait a full interval before trying again.
         const due = Date.now() - lastAttempt >= s.intervalMinutes * 60_000 && (playedSinceSync || !state.lastAt || !!state.lastError);
         if (due) {
           lastAttempt = Date.now();
@@ -408,10 +409,10 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
         handler: ({ params }) => {
           requireData();
           const player = db.prepare('SELECT uid, name FROM players WHERE public_id = ?').get(params.id) as { uid: string; name: string } | undefined;
-          if (!player) throw httpError(404, 'Joueur introuvable');
+          if (!player) throw httpError(404, 'Player not found');
           const wuid = (db.prepare('SELECT player_uid FROM world_links WHERE uid = ?').get(player.uid) as { player_uid: string } | undefined)?.player_uid;
           const wp = wuid ? (db.prepare('SELECT * FROM world_players WHERE player_uid = ?').get(wuid) as Record<string, unknown> | undefined) : undefined;
-          if (!wuid || !wp) throw httpError(404, 'Personnage absent de la dernière lecture du monde (il faut qu’il se soit connecté depuis)');
+          if (!wuid || !wp) throw httpError(404, 'Character missing from the last world read (they must have logged in since)');
           const pals = (db.prepare('SELECT * FROM world_pals WHERE owner_uid = ? ORDER BY level DESC, type').all(wuid) as Record<string, unknown>[]).map(palRow);
           const guild = guildOf(wuid);
           return {
@@ -462,7 +463,7 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
         path: 'guilds',
         access: 'public',
         handler: (ctx) => {
-          if (!host.modules.isEnabled('guilds') && !canWorld(ctx)) throw httpError(404, 'Page désactivée');
+          if (!host.modules.isEnabled('guilds') && !canWorld(ctx)) throw httpError(404, 'Page disabled');
           if (!state.lastAt) return { syncedAt: null, guilds: [] };
           const guilds = (db.prepare('SELECT id FROM world_guilds ORDER BY level DESC, name').all() as { id: string }[])
             .map((g) => guildDetail(g.id, false)!)
@@ -475,10 +476,10 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
         path: 'guilds/:id',
         access: 'public',
         handler: (ctx) => {
-          if (!host.modules.isEnabled('guilds') && !canWorld(ctx)) throw httpError(404, 'Page désactivée');
+          if (!host.modules.isEnabled('guilds') && !canWorld(ctx)) throw httpError(404, 'Page disabled');
           const id = findGuild(ctx.params.id);
           const detail = id ? guildDetail(id, host.modules.isEnabled('map') || canWorld(ctx)) : null;
-          if (!detail) throw httpError(404, 'Guilde introuvable');
+          if (!detail) throw httpError(404, 'Guild not found');
           return { ...detail, syncedAt: state.lastAt };
         },
       },
@@ -487,30 +488,33 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
         path: 'paldex',
         access: 'public',
         handler: (ctx) => {
-          if (!host.modules.isEnabled('paldex') && !canWorld(ctx)) throw httpError(404, 'Page désactivée');
+          if (!host.modules.isEnabled('paldex') && !canWorld(ctx)) throw httpError(404, 'Page disabled');
           const players = db.prepare('SELECT player_uid, nickname FROM world_players').all() as { player_uid: string; nickname: string }[];
-          // Identifiant public d'un personnage : celui de son profil s'il existe, sinon dérivé de la sauvegarde.
+          // Public id of a character: its profile id when it exists, otherwise derived from the save file.
           const idOf = (wuid: string) => publicIdOfWorldUid(wuid) ?? host.server.publicPlayerId(`world:${wuid}`);
 
-          // Portée : tout le serveur, un joueur ou une guilde
+          // Scope: the whole server, a player or a guild
           let scope: { type: 'server' | 'player' | 'guild'; id: string | null; name: string; guild: { id: string; name: string } | null } = {
             type: 'server',
             id: null,
-            name: 'Serveur',
+            name: 'Server',
             guild: null,
           };
           let owners: string[] | null = null;
-          if (ctx.query.joueur) {
-            const p = players.find((x) => idOf(x.player_uid) === ctx.query.joueur);
-            if (!p) throw httpError(404, 'Joueur introuvable dans la sauvegarde');
+          // "joueur" / "guilde": parameter names used before 1.1.0.
+          const playerParam = ctx.query.player ?? ctx.query.joueur;
+          const guildParam = ctx.query.guild ?? ctx.query.guilde;
+          if (playerParam) {
+            const p = players.find((x) => idOf(x.player_uid) === playerParam);
+            if (!p) throw httpError(404, 'Player not found in the save file');
             const g = guildOf(p.player_uid);
-            scope = { type: 'player', id: ctx.query.joueur, name: p.nickname, guild: g ? { id: guildPublicId(g.id), name: g.name } : null };
+            scope = { type: 'player', id: playerParam, name: p.nickname, guild: g ? { id: guildPublicId(g.id), name: g.name } : null };
             owners = [p.player_uid];
-          } else if (ctx.query.guilde) {
-            const gid = findGuild(ctx.query.guilde);
-            if (!gid) throw httpError(404, 'Guilde introuvable');
+          } else if (guildParam) {
+            const gid = findGuild(guildParam);
+            if (!gid) throw httpError(404, 'Guild not found');
             const g = db.prepare('SELECT name FROM world_guilds WHERE id = ?').get(gid) as { name: string };
-            scope = { type: 'guild', id: ctx.query.guilde, name: g.name, guild: null };
+            scope = { type: 'guild', id: guildParam, name: g.name, guild: null };
             owners = (db.prepare('SELECT player_uid FROM world_guild_members WHERE guild_id = ?').all(gid) as { player_uid: string }[]).map((m) => m.player_uid);
           }
 
@@ -522,7 +526,7 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
             .all(...(owners ?? [])) as { type: string; owner: string; lucky: number; alpha: number; level: number }[];
           const entries = buildPaldex(rows);
 
-          // Classements : joueurs et guildes par nombre d'espèces capturées
+          // Rankings: players and guilds by number of species caught
           const all = db.prepare('SELECT type, owner_uid AS owner FROM world_pals').all() as { type: string; owner: string }[];
           const speciesBy = new Map<string, Set<string>>();
           const palsBy = new Map<string, number>();
@@ -564,7 +568,7 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
         path: 'me/character',
         access: 'user',
         handler: ({ user }) => {
-          if (!host.modules.isEnabled('character')) throw httpError(404, 'Page désactivée');
+          if (!host.modules.isEnabled('character')) throw httpError(404, 'Page disabled');
           const u = db.prepare('SELECT player_uid, steam_id FROM users WHERE id = ?').get(user!.id) as { player_uid: string | null; steam_id: string | null };
           const uid = u.player_uid ?? (u.steam_id ? `steam_${u.steam_id}` : null);
           if (!uid) return { linked: false };
@@ -599,7 +603,7 @@ export function createWorld(host: FeatureHost, bus: FeatureBus): Feature & World
         access: 'public',
         handler: (ctx) => {
           const staff = canWorld(ctx) || ctx.can('site.map');
-          if (!host.modules.isEnabled('map') && !staff) throw httpError(403, 'La carte est réservée à l’équipe');
+          if (!host.modules.isEnabled('map') && !staff) throw httpError(403, 'The map is reserved for the team');
           const showBases = staff || host.modules.isEnabled('guilds');
           const bases = showBases
             ? (db.prepare('SELECT b.x, b.y, g.id, g.name, g.level FROM world_bases b JOIN world_guilds g ON g.id = b.guild_id').all() as {

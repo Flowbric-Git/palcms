@@ -34,7 +34,7 @@ const toApi = (t: TicketRow) => ({
 export function createTickets(host: FeatureHost, bus: FeatureBus): Feature {
   const { db } = host;
   const enabled = () => {
-    if (!host.modules.isEnabled('tickets')) throw httpError(404, 'Les signalements sont désactivés');
+    if (!host.modules.isEnabled('tickets')) throw httpError(404, 'Reports are disabled');
   };
 
   return {
@@ -45,21 +45,21 @@ export function createTickets(host: FeatureHost, bus: FeatureBus): Feature {
         access: 'user',
         handler: ({ body, user }) => {
           enabled();
-          if (user!.status !== 'active') throw httpError(403, 'Ton compte doit être validé pour envoyer un message à l’équipe');
+          if (user!.status !== 'active') throw httpError(403, 'Your account must be approved to send a message to the team');
           const t = parseBody(
             z.object({
               kind: z.enum(['report', 'suggestion']),
-              subject: z.string().trim().min(3, 'Sujet trop court').max(120),
-              message: z.string().trim().min(10, 'Message trop court (10 caractères minimum)').max(3000),
+              subject: z.string().trim().min(3, 'Subject too short').max(120),
+              message: z.string().trim().min(10, 'Message too short (10 characters minimum)').max(3000),
               target: z.string().trim().max(64).optional(),
             }),
             body,
           );
-          // Anti-abus : une demande par minute et 5 demandes en attente au maximum.
+          // Anti-abuse: one request per minute and 5 open requests at most.
           const last = db.prepare('SELECT MAX(created_at) AS t FROM pro_tickets WHERE user_id = ?').get(user!.id) as { t: number | null };
-          if (last.t && Date.now() - last.t < 60_000) throw httpError(429, 'Patiente une minute avant d’envoyer une autre demande');
+          if (last.t && Date.now() - last.t < 60_000) throw httpError(429, 'Wait a minute before sending another request');
           const open = db.prepare("SELECT COUNT(*) AS c FROM pro_tickets WHERE user_id = ? AND status = 'open'").get(user!.id) as { c: number };
-          if (open.c >= 5) throw httpError(429, 'Tu as déjà 5 demandes en attente de réponse');
+          if (open.c >= 5) throw httpError(429, 'You already have 5 requests waiting for an answer');
           const now = Date.now();
           const r = db
             .prepare('INSERT INTO pro_tickets (user_id, kind, subject, message, target, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
@@ -94,9 +94,9 @@ export function createTickets(host: FeatureHost, bus: FeatureBus): Feature {
         permission: 'site.tickets',
         handler: ({ params, body, user }) => {
           const b = parseBody(z.object({ reply: z.string().trim().max(3000).default(''), close: z.boolean().default(false) }), body);
-          if (!b.reply && !b.close) throw httpError(400, 'Écris une réponse ou ferme la demande');
+          if (!b.reply && !b.close) throw httpError(400, 'Write an answer or close the request');
           const t = db.prepare('SELECT id, subject FROM pro_tickets WHERE id = ?').get(Number(params.id)) as { id: number; subject: string } | undefined;
-          if (!t) throw httpError(404, 'Demande introuvable');
+          if (!t) throw httpError(404, 'Request not found');
           const status = b.close ? 'closed' : 'answered';
           if (b.reply) {
             db.prepare('UPDATE pro_tickets SET reply = ?, replied_by = ?, status = ?, updated_at = ? WHERE id = ?').run(b.reply, user!.username, status, Date.now(), t.id);

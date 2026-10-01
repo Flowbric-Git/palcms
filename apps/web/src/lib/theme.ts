@@ -12,7 +12,7 @@ function readChoice(): ThemeChoice | null {
   }
 }
 
-/** Couleur de texte lisible (noir ou blanc) sur la couleur d'accent. */
+/** Readable text color (black or white) on the accent color. */
 function contrastColor(hex: string): string {
   const n = parseInt(hex.slice(1), 16);
   const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => {
@@ -42,6 +42,6 @@ export function saveThemeChoice(theme: ThemeChoice) {
   try {
     localStorage.setItem(KEY, theme);
   } catch {
-    /* stockage indisponible : le choix ne sera pas mémorisé */
+    /* storage unavailable: the choice will not be remembered */
   }
 }

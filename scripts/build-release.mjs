@@ -1,5 +1,5 @@
-// Construit l'archive de distribution : release/palcms.tar.gz
-// Contenu : serveur compilé, site compilé (carte comprise), scripts système.
+// Builds the distribution archive: release/palcms.tar.gz
+// Contents: compiled server, compiled site (map included), system scripts.
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,10 +13,10 @@ const run = (cmd) => execSync(cmd, { cwd: root, stdio: 'inherit' });
 const rootPkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const serverPkg = JSON.parse(fs.readFileSync(path.join(root, 'apps/server/package.json'), 'utf8'));
 
-console.log('▶ Compilation');
+console.log('▶ Build');
 run('pnpm build');
 
-console.log('▶ Préparation de l’archive');
+console.log('▶ Preparing the archive');
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(path.join(stage, 'server'), { recursive: true });
 fs.cpSync(path.join(root, 'apps/server/dist'), path.join(stage, 'server/dist'), { recursive: true });
@@ -26,7 +26,7 @@ for (const f of ['palctl', 'palcms-config']) fs.copyFileSync(path.join(root, 'sc
 fs.copyFileSync(path.join(root, 'install.sh'), path.join(stage, 'install.sh'));
 fs.writeFileSync(path.join(stage, 'VERSION'), rootPkg.version + '\n');
 
-// package.json de production : uniquement les dépendances d'exécution (le paquet partagé est dans le bundle).
+// Production package.json: runtime dependencies only (the shared package is in the bundle).
 const prodPkg = {
   name: '@palcms/server',
   version: rootPkg.version,
@@ -36,14 +36,14 @@ const prodPkg = {
   dependencies: serverPkg.dependencies,
 };
 fs.writeFileSync(path.join(stage, 'server/package.json'), JSON.stringify(prodPkg, null, 2));
-// Verrouille les versions exactes pour "npm ci" sur le VPS.
+// Locks the exact versions for "npm ci" on the VPS.
 execSync('npm install --package-lock-only --omit=dev --no-audit --no-fund --loglevel=error', {
   cwd: path.join(stage, 'server'),
   stdio: 'inherit',
 });
 
-// tar est livré avec Windows 10+ et avec Linux / macOS.
+// tar ships with Windows 10+ and with Linux / macOS.
 execSync('tar -czf palcms.tar.gz palcms', { cwd: out, stdio: 'inherit' });
 fs.copyFileSync(path.join(root, 'install.sh'), path.join(out, 'install.sh'));
 const size = (fs.statSync(path.join(out, 'palcms.tar.gz')).size / 1024 / 1024).toFixed(1);
-console.log(`✔ release/palcms.tar.gz (${size} Mo) et release/install.sh prêts`);
+console.log(`✔ release/palcms.tar.gz (${size} MB) and release/install.sh ready`);

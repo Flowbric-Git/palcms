@@ -3,7 +3,7 @@ import type { LeaderboardEntry, PublicPlayer, ServerStatus } from '@palcms/share
 import { api } from './api';
 import { useRealtime } from './ws';
 
-/** Données du serveur en temps réel : statut, joueurs connectés, top du classement. */
+/** Live server data: status, online players, top of the leaderboard. */
 export function useLiveServer() {
   const [status, setStatus] = useState<ServerStatus | null>(null);
   const [players, setPlayers] = useState<PublicPlayer[]>([]);

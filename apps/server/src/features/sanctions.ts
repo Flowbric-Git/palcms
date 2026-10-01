@@ -9,7 +9,7 @@ const audit = (host: FeatureHost, user: HostUser | null, action: string, target?
 
 export type SanctionType = 'warning' | 'note' | 'kick' | 'ban' | 'tempban' | 'unban';
 
-/** Enregistre une sanction dans l'historique du joueur (utilisé aussi par la modération classique). */
+/** Records a sanction in the player's history (also used by regular moderation). */
 export function recordSanction(host: FeatureHost, uid: string, name: string, type: SanctionType, reason: string, by: string | null, expiresAt: number | null = null) {
   host.db
     .prepare('INSERT INTO pro_sanctions (uid, name, type, reason, expires_at, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
@@ -27,17 +27,17 @@ export function createSanctions(host: FeatureHost): Feature {
   const { db } = host;
   let stopTimer: (() => void) | null = null;
 
-  /** Bans temporaires arrivés à échéance : levés automatiquement. */
+  /** Expired temporary bans: lifted automatically. */
   const expire = async () => {
     const rows = db.prepare('SELECT uid, name FROM pro_bans WHERE expires_at IS NOT NULL AND expires_at <= ?').all(Date.now()) as { uid: string; name: string }[];
     for (const b of rows) {
       try {
         await host.palworld.unban(b.uid);
       } catch {
-        continue; // serveur hors ligne : on réessaiera à la prochaine minute
+        continue; // server offline: try again next minute
       }
       db.prepare('DELETE FROM pro_bans WHERE uid = ?').run(b.uid);
-      recordSanction(host, b.uid, b.name, 'unban', 'Fin du bannissement temporaire', null);
+      recordSanction(host, b.uid, b.name, 'unban', 'Temporary ban ended', null);
     }
   };
 
@@ -75,10 +75,10 @@ export function createSanctions(host: FeatureHost): Feature {
           const b = parseBody(z.object({ reason: z.string().trim().min(1).max(300), announce: z.boolean().default(false), kick: z.boolean().default(false) }), body);
           const name = nameOf(host, params.uid);
           recordSanction(host, params.uid, name, 'warning', b.reason, user!.username);
-          // L'API Palworld n'a pas de message privé : l'annonce est visible par tous les joueurs connectés.
-          if (b.announce) await host.palworld.announce(`Avertissement pour ${name} : ${b.reason}`).catch(() => {});
+          // The Palworld API has no private message: the announcement is seen by every online player.
+          if (b.announce) await host.palworld.announce(host.t('Warning for {name}: {reason}', { name, reason: b.reason })).catch(() => {});
           if (b.kick) {
-            await host.palworld.kick(params.uid, `Avertissement : ${b.reason}`).catch(() => {});
+            await host.palworld.kick(params.uid, host.t('Warning: {reason}', { reason: b.reason })).catch(() => {});
             recordSanction(host, params.uid, name, 'kick', b.reason, user!.username);
           }
           audit(host, user, 'player.warn', name, { reason: b.reason });
@@ -106,7 +106,7 @@ export function createSanctions(host: FeatureHost): Feature {
           const b = parseBody(z.object({ reason: z.string().trim().max(300).default(''), hours: z.number().int().min(1).max(24 * 365) }), body);
           const name = nameOf(host, params.uid);
           const expiresAt = Date.now() + b.hours * 3600_000;
-          await host.palworld.ban(params.uid, b.reason || `Banni pour ${b.hours} h`);
+          await host.palworld.ban(params.uid, b.reason || host.t('Banned for {n} h', { n: b.hours }));
           db.prepare(
             `INSERT INTO pro_bans (uid, name, reason, banned_at, banned_by, expires_at) VALUES (?, ?, ?, ?, ?, ?)
              ON CONFLICT(uid) DO UPDATE SET reason = excluded.reason, banned_at = excluded.banned_at, banned_by = excluded.banned_by, expires_at = excluded.expires_at`,
@@ -125,7 +125,7 @@ export function createSanctions(host: FeatureHost): Feature {
           const row = db.prepare("SELECT name, type FROM pro_sanctions WHERE id = ? AND type IN ('warning', 'note')").get(Number(params.id)) as
             | { name: string; type: string }
             | undefined;
-          if (!row) throw httpError(404, 'Seuls les avertissements et les notes peuvent être retirés');
+          if (!row) throw httpError(404, 'Only warnings and notes can be removed');
           db.prepare('DELETE FROM pro_sanctions WHERE id = ?').run(Number(params.id));
           audit(host, user, `sanction.remove`, row.name, { type: row.type });
           return { ok: true };
@@ -135,22 +135,22 @@ export function createSanctions(host: FeatureHost): Feature {
   };
 }
 
-// Anti-triche léger
+// Light anti-cheat
 
 interface AntiCheatSettings {
   enabled: boolean;
-  /** Niveaux gagnés en moins de 5 minutes à partir desquels on s'alerte. */
+  /** Levels gained in under 5 minutes that trigger an alert. */
   levelJump: number;
-  /** Niveaux gagnés en une heure. */
+  /** Levels gained in one hour. */
   levelsPerHour: number;
-  /** Quantité d'un même objet (hors pièces) au-delà de laquelle on soupçonne une duplication. */
+  /** Amount of one item (coins excluded) above which duplication is suspected. */
   itemStack: number;
-  /** Pièces d'or. */
+  /** Gold coins. */
   money: number;
 }
 export const DEFAULT_ANTICHEAT: AntiCheatSettings = { enabled: true, levelJump: 6, levelsPerHour: 20, itemStack: 20000, money: 10_000_000 };
 
-/** Historique des niveaux d'un joueur : renvoie les soupçons (pur, testé). */
+/** A player's level history: returns the suspicions (pure, tested). Details are English templates, translated on display. */
 export function levelAnomalies(history: { ts: number; level: number }[], now: number, s: Pick<AntiCheatSettings, 'levelJump' | 'levelsPerHour'>) {
   const found: { kind: string; severity: number; details: string }[] = [];
   if (history.length < 2) return found;
@@ -159,19 +159,19 @@ export function levelAnomalies(history: { ts: number; level: number }[], now: nu
   const hour = history.filter((h) => h.ts >= now - 3600_000);
   const gain5 = current - Math.min(...fiveMin.map((h) => h.level));
   const gainHour = current - Math.min(...hour.map((h) => h.level));
-  if (gain5 >= s.levelJump) found.push({ kind: 'level-jump', severity: 3, details: `+${gain5} niveaux en moins de 5 minutes (niveau ${current})` });
-  else if (gainHour >= s.levelsPerHour) found.push({ kind: 'level-rate', severity: 2, details: `+${gainHour} niveaux en moins d'une heure (niveau ${current})` });
+  if (gain5 >= s.levelJump) found.push({ kind: 'level-jump', severity: 3, details: `+${gain5} levels in under 5 minutes (level ${current})` });
+  else if (gainHour >= s.levelsPerHour) found.push({ kind: 'level-rate', severity: 2, details: `+${gainHour} levels in under an hour (level ${current})` });
   return found;
 }
 
-/** Quantités suspectes dans un inventaire sav_cli (pur, testé). */
+/** Suspicious amounts in a sav_cli inventory (pure, tested). */
 export function itemAnomalies(items: Record<string, { ItemId: string; StackCount: number }[]>, s: Pick<AntiCheatSettings, 'itemStack' | 'money'>) {
   const totals = new Map<string, number>();
   for (const list of Object.values(items)) for (const i of list ?? []) if (i?.ItemId) totals.set(i.ItemId, (totals.get(i.ItemId) ?? 0) + (i.StackCount || 0));
   const found: { kind: string; severity: number; details: string }[] = [];
   for (const [id, count] of totals) {
     const limit = id.toLowerCase() === 'money' ? s.money : s.itemStack;
-    if (count > limit) found.push({ kind: `items:${id.toLowerCase()}`, severity: 3, details: `${count.toLocaleString('fr-FR')} × ${itemName(id)} (seuil ${limit.toLocaleString('fr-FR')})` });
+    if (count > limit) found.push({ kind: `items:${id.toLowerCase()}`, severity: 3, details: `${count} × ${itemName(id)} (threshold ${limit})` });
   }
   return found;
 }
@@ -283,20 +283,20 @@ export function createAntiCheat(host: FeatureHost, bus: FeatureBus, world: World
           const f = db.prepare('SELECT uid, name, details FROM pro_flags WHERE id = ? AND resolved_at IS NULL').get(Number(params.id)) as
             | { uid: string; name: string; details: string }
             | undefined;
-          if (!f) throw httpError(404, 'Alerte introuvable ou déjà traitée');
-          const reason = `Anti-triche : ${f.details}`;
+          if (!f) throw httpError(404, 'Alert not found or already handled');
+          const reason = `Anti-cheat: ${f.details}`;
           if (action === 'kick') {
-            await host.palworld.kick(f.uid, 'Expulsé par l’anti-triche');
+            await host.palworld.kick(f.uid, host.t('Kicked by the anti-cheat'));
             recordSanction(host, f.uid, f.name, 'kick', reason, user!.username);
           } else if (action === 'ban') {
-            await host.palworld.ban(f.uid, 'Banni par l’anti-triche');
+            await host.palworld.ban(f.uid, host.t('Banned by the anti-cheat'));
             db.prepare(
               `INSERT INTO pro_bans (uid, name, reason, banned_at, banned_by) VALUES (?, ?, ?, ?, ?)
                ON CONFLICT(uid) DO UPDATE SET reason = excluded.reason, banned_at = excluded.banned_at, banned_by = excluded.banned_by, expires_at = NULL`,
             ).run(f.uid, f.name, reason, Date.now(), user!.username);
             recordSanction(host, f.uid, f.name, 'ban', reason, user!.username);
           }
-          const label = { ignore: 'Ignorée', kick: 'Joueur expulsé', ban: 'Joueur banni' }[action];
+          const label = { ignore: 'Ignored', kick: 'Player kicked', ban: 'Player banned' }[action];
           db.prepare('UPDATE pro_flags SET resolved_at = ?, resolved_by = ?, resolution = ? WHERE id = ?').run(Date.now(), user!.username, label, Number(params.id));
           audit(host, user, `anticheat.${action}`, f.name);
           return { ok: true };

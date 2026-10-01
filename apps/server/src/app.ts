@@ -38,7 +38,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   const publicHost = new URL(config.publicUrl).host;
 
   app.addHook('onRequest', async (req, reply) => {
-    // Protection CSRF : une requête qui modifie quelque chose doit venir du site lui-même.
+    // CSRF protection: a request that changes something must come from the site itself.
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
       const origin = req.headers.origin;
       if (origin) {
@@ -46,10 +46,10 @@ export async function buildApp(): Promise<FastifyInstance> {
         try {
           host = new URL(origin).host;
         } catch {
-          /* origine illisible */
+          /* unreadable origin */
         }
         const allowed = [req.headers.host, req.headers['x-forwarded-host'], publicHost];
-        if (!host || !allowed.includes(host)) return reply.code(403).send({ error: 'Origine refusée' });
+        if (!host || !allowed.includes(host)) return reply.code(403).send({ error: 'Origin refused' });
       }
     }
     req.user = userFromCookie(req.cookies[SESSION_COOKIE]);
@@ -75,7 +75,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       await api.register(
         async (admin) => {
           admin.addHook('preHandler', async (req, reply) => {
-            if (!isSetupDone()) return reply.code(409).send({ error: "L'installation n'est pas terminée" });
+            if (!isSetupDone()) return reply.code(409).send({ error: 'Setup is not finished' });
             return requireAdmin(req, reply);
           });
           await admin.register(adminServerRoutes, { prefix: '/server' });
@@ -92,7 +92,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     { prefix },
   );
 
-  // Fichiers envoyés et site React
+  // Uploaded files and React site
 
   fs.mkdirSync(uploadsDir, { recursive: true });
   await app.register(fastifyStatic, {
@@ -106,15 +106,15 @@ export async function buildApp(): Promise<FastifyInstance> {
   const hasWeb = fs.existsSync(indexFile);
   let indexHtml = '';
   if (hasWeb) {
-    // Le front est compilé avec des chemins relatifs : on lui indique ici sous quel chemin il est servi.
+    // The front end is built with relative paths: tell it here which path it is served under.
     indexHtml = fs
       .readFileSync(indexFile, 'utf8')
       .replace(
         '<head>',
         `<head><base href="${config.basePath}"><script>window.__PALCMS__=${JSON.stringify({ basePath: config.basePath })}</script>`,
       );
-    // La racine doit renvoyer la page React : sans cela, le module de fichiers statiques
-    // répond 403 sur un dossier (index désactivé).
+    // The root must return the React page: otherwise the static file module
+    // answers 403 on a directory (index disabled).
     const sendIndex = (_req: unknown, reply: import('fastify').FastifyReply) =>
       reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-cache').send(indexHtml);
     app.get(config.basePath, sendIndex);
@@ -136,7 +136,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     if (req.method === 'GET' && !isApi && hasWeb && url.startsWith(config.basePath)) {
       return reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-cache').send(indexHtml);
     }
-    return reply.code(404).send({ error: 'Introuvable' });
+    return reply.code(404).send({ error: 'Not found' });
   });
 
   return app;

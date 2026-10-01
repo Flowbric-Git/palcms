@@ -3,6 +3,7 @@ import type { PublicUser } from '@palcms/shared';
 import { api, errorText } from '../lib/api';
 import { useApp } from '../lib/app';
 import { Alert, Button, Card, Field, Input, PageHeader } from '../components/ui';
+import { t } from '../lib/i18n';
 
 export function AccountPage() {
   const { boot, setUser } = useApp();
@@ -17,7 +18,7 @@ export function AccountPage() {
       const r = await api.patch<{ user: PublicUser }>('auth/me', body);
       setUser(r.user);
       setPwd({ currentPassword: '', newPassword: '', confirm: '' });
-      setMsg({ kind: 'success', text: 'Modifications enregistrées.' });
+      setMsg({ kind: 'success', text: t('Changes saved.') });
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
     }
@@ -25,10 +26,10 @@ export function AccountPage() {
 
   return (
     <>
-      <PageHeader title="Mon compte" description={`Connecté en tant que @${user.username}`} />
+      <PageHeader title={t('My account')} description={t('Logged in as @{name}', { name: user.username })} />
       {msg && <Alert kind={msg.kind} className="mb-4">{msg.text}</Alert>}
       <div className="grid gap-6 md:grid-cols-2">
-        <Card title="Profil">
+        <Card title={t('Profile')}>
           <form
             className="space-y-4"
             onSubmit={(e) => {
@@ -36,32 +37,32 @@ export function AccountPage() {
               void save({ displayName });
             }}
           >
-            <Field label="Nom affiché">{(id) => <Input id={id} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />}</Field>
+            <Field label={t('Display name')}>{(id) => <Input id={id} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />}</Field>
             <Button type="submit" variant="secondary">
-              Enregistrer
+              {t('Save')}
             </Button>
           </form>
         </Card>
-        <Card title="Mot de passe">
+        <Card title={t('Password')}>
           <form
             className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              if (pwd.newPassword !== pwd.confirm) return setMsg({ kind: 'error', text: 'Les mots de passe ne correspondent pas.' });
+              if (pwd.newPassword !== pwd.confirm) return setMsg({ kind: 'error', text: t('The passwords do not match.') });
               void save({ currentPassword: pwd.currentPassword, newPassword: pwd.newPassword });
             }}
           >
-            <Field label="Mot de passe actuel">
+            <Field label={t('Current password')}>
               {(id) => <Input id={id} type="password" value={pwd.currentPassword} onChange={(e) => setPwd({ ...pwd, currentPassword: e.target.value })} autoComplete="current-password" />}
             </Field>
-            <Field label="Nouveau mot de passe" help="8 caractères minimum">
+            <Field label={t('New password')} help={t('At least 8 characters')}>
               {(id) => <Input id={id} type="password" value={pwd.newPassword} onChange={(e) => setPwd({ ...pwd, newPassword: e.target.value })} autoComplete="new-password" />}
             </Field>
-            <Field label="Confirmation">
+            <Field label={t('Confirmation')}>
               {(id) => <Input id={id} type="password" value={pwd.confirm} onChange={(e) => setPwd({ ...pwd, confirm: e.target.value })} autoComplete="new-password" />}
             </Field>
             <Button type="submit" variant="secondary" disabled={pwd.newPassword.length < 8}>
-              Changer le mot de passe
+              {t('Change the password')}
             </Button>
           </form>
         </Card>

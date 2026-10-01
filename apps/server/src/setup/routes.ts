@@ -20,6 +20,7 @@ import { seedContent } from '../core/seed';
 import { saveImageUpload } from '../core/uploads';
 import {
   getPalworldConfig,
+  defaultSite,
   getSiteSettings,
   isSetupDone,
   saveExternalServer,
@@ -44,7 +45,7 @@ export const setupRunner = new TaskRunner(store, INSTALL_STEPS, (ev) => realtime
 realtime.setHooks('setup', { snapshot: () => setupRunner.state().map((t) => ({ type: 'task' as const, data: t })) });
 
 const getStep = () => settings.get<SetupStep>('setup.step', 'mode');
-/** Mode choisi pendant l'installation (null tant que la question n'a pas été posée). */
+/** Mode chosen during setup (null until the question is asked). */
 const chosenMode = () => settings.get<ServerMode | null>('server.mode', null);
 const setStep = (s: SetupStep) => settings.set('setup.step', s);
 
@@ -68,32 +69,32 @@ function fail(reply: FastifyReply, code: number, error: string, details?: unknow
 }
 
 export async function setupRoutes(app: FastifyInstance) {
-  // Toutes les routes (sauf état et jeton) exigent la session d'installation, et plus rien n'est possible une fois fini.
+  // Every route (except state and token) needs the setup session, and nothing is possible once finished.
   app.addHook('preHandler', async (req, reply) => {
     const route = req.routeOptions.url ?? '';
     if (route.endsWith('/state')) return;
-    if (isSetupDone()) return fail(reply, 410, "L'installation est déjà terminée");
+    if (isSetupDone()) return fail(reply, 410, 'Setup is already finished');
     if (route.endsWith('/token')) return;
-    if (!hasSetupSession(req)) return fail(reply, 401, "Jeton d'installation requis");
+    if (!hasSetupSession(req)) return fail(reply, 401, 'Setup token required');
   });
 
   app.get('/state', async (req) => state(req));
 
   app.post('/token', { config: { rateLimit: { max: 10, timeWindow: '10 minutes' } } }, async (req, reply) => {
     const body = setupTokenSchema.safeParse(req.body);
-    if (!body.success || !checkSetupToken(body.data.token)) return fail(reply, 403, 'Jeton invalide');
+    if (!body.success || !checkSetupToken(body.data.token)) return fail(reply, 403, 'Invalid token');
     grantSetupSession(reply);
     if (!settings.get('setup.step', null)) setStep('mode');
     return { ok: true };
   });
 
-  /* Première question : installer un nouveau serveur, connecter un serveur existant, ou le site seul. */
+  /* First question: install a new server, connect an existing server, or the website only. */
   app.post('/mode', async (req, reply) => {
     const step = getStep();
     const canChoose = ['mode', 'server', 'external'].includes(step) || (step === 'install' && !setupRunner.running);
-    if (!canChoose) return fail(reply, 409, 'Le choix du serveur ne peut plus être modifié à cette étape');
+    if (!canChoose) return fail(reply, 409, 'The server choice can no longer be changed at this step');
     const body = serverModeSchema.safeParse(req.body);
-    if (!body.success) return fail(reply, 400, 'Choix invalide');
+    if (!body.success) return fail(reply, 400, 'Invalid choice');
     setServerMode(body.data.mode);
     setStep(body.data.mode === 'managed' ? 'server' : body.data.mode === 'external' ? 'external' : 'admin');
     return { ok: true };
@@ -101,26 +102,26 @@ export async function setupRoutes(app: FastifyInstance) {
 
   app.post('/connection/test', async (req, reply) => {
     const body = connectionTestSchema.safeParse(req.body);
-    if (!body.success) return fail(reply, 400, 'Formulaire invalide', body.error.flatten());
+    if (!body.success) return fail(reply, 400, 'Invalid form', body.error.flatten());
     return testConnection({ host: body.data.apiHost, port: body.data.apiPort, password: body.data.adminPassword });
   });
 
   app.post('/external', async (req, reply) => {
-    if (getStep() !== 'external') return fail(reply, 409, "Ce n'est pas l'étape du serveur existant");
+    if (getStep() !== 'external') return fail(reply, 409, 'This is not the existing server step');
     const body = externalServerSchema.safeParse(req.body);
-    if (!body.success) return fail(reply, 400, 'Formulaire invalide', body.error.flatten());
+    if (!body.success) return fail(reply, 400, 'Invalid form', body.error.flatten());
     saveExternalServer(body.data);
     setStep('admin');
     return { ok: true };
   });
 
   app.post('/server', async (req, reply) => {
-    if (chosenMode() !== 'managed') return fail(reply, 409, "L'installation d'un serveur n'a pas été choisie");
+    if (chosenMode() !== 'managed') return fail(reply, 409, 'Installing a server was not chosen');
     const step = getStep();
     const canEdit = step === 'server' || (step === 'install' && !setupRunner.running && !setupRunner.allDone());
-    if (!canEdit) return fail(reply, 409, 'Le serveur ne peut plus être modifié à cette étape');
+    if (!canEdit) return fail(reply, 409, 'The server can no longer be changed at this step');
     const body = palworldSetupSchema.safeParse(req.body);
-    if (!body.success) return fail(reply, 400, 'Formulaire invalide', body.error.flatten());
+    if (!body.success) return fail(reply, 400, 'Invalid form', body.error.flatten());
     savePalworldConfig(body.data);
     store.reset(CONFIG_DEPENDENT_STEPS);
     setStep('install');
@@ -130,8 +131,8 @@ export async function setupRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/logs/:id', async (req) => ({ log: store.getLog(req.params.id) }));
 
   app.post('/install', async (req, reply) => {
-    if (getStep() !== 'install') return fail(reply, 409, "Ce n'est pas l'étape d'installation");
-    if (setupRunner.running) return fail(reply, 409, 'Installation déjà en cours');
+    if (getStep() !== 'install') return fail(reply, 409, 'This is not the install step');
+    if (setupRunner.running) return fail(reply, 409, 'Install already running');
     void setupRunner.runAll().then((ok) => {
       if (ok) setStep('admin');
     });
@@ -139,11 +140,11 @@ export async function setupRoutes(app: FastifyInstance) {
   });
 
   app.post('/admin', async (req, reply) => {
-    if (getStep() !== 'admin') return fail(reply, 409, "Ce n'est pas l'étape du compte administrateur");
+    if (getStep() !== 'admin') return fail(reply, 409, 'This is not the administrator account step');
     const body = adminSetupSchema.safeParse(req.body);
-    if (!body.success) return fail(reply, 400, 'Formulaire invalide', body.error.flatten());
+    if (!body.success) return fail(reply, 400, 'Invalid form', body.error.flatten());
     const { username, email, password } = body.data;
-    if (usernameTaken(username) || emailTaken(email)) return fail(reply, 409, 'Ce compte existe déjà');
+    if (usernameTaken(username) || emailTaken(email)) return fail(reply, 409, 'This account already exists');
     const id = createUser({
       username,
       displayName: username,
@@ -160,7 +161,7 @@ export async function setupRoutes(app: FastifyInstance) {
 
   app.post('/upload', async (req, reply) => {
     const file = await req.file();
-    if (!file) return fail(reply, 400, 'Aucun fichier');
+    if (!file) return fail(reply, 400, 'No file');
     try {
       return { url: await saveImageUpload(file) };
     } catch (e) {
@@ -169,21 +170,33 @@ export async function setupRoutes(app: FastifyInstance) {
   });
 
   app.post('/site', async (req, reply) => {
-    if (getStep() !== 'site') return fail(reply, 409, "Ce n'est pas l'étape du site");
+    if (getStep() !== 'site') return fail(reply, 409, 'This is not the website step');
     const body = siteSetupSchema.safeParse(req.body);
-    if (!body.success) return fail(reply, 400, 'Formulaire invalide', body.error.flatten());
-    // On part du menu actuel pour ne pas écraser d'éventuelles entrées déjà ajoutées.
-    const menu = [...getSiteSettings().menu];
+    if (!body.success) return fail(reply, 400, 'Invalid form', body.error.flatten());
+    const current = getSiteSettings();
+    const defaults = defaultSite(body.data.language);
+    // Texts still at a default value (in either language) switch to the chosen language.
+    const untouched = <K extends 'heroTitle' | 'heroText' | 'joinUrl'>(key: K) =>
+      current[key] === defaultSite('en')[key] || current[key] === defaultSite('fr')[key];
+    const sameMenu = (a: { url: string }[], b: { url: string }[]) => JSON.stringify(a.map((m) => m.url)) === JSON.stringify(b.map((m) => m.url));
+    const menu = sameMenu(current.menu, defaultSite('en').menu) || sameMenu(current.menu, defaultSite('fr').menu) ? defaults.menu : [...current.menu];
     if (body.data.discordUrl && !menu.some((m) => m.label === 'Discord')) menu.push({ label: 'Discord', url: body.data.discordUrl });
-    saveSiteSettings({ ...getSiteSettings(), ...body.data, menu });
+    saveSiteSettings({
+      ...current,
+      ...body.data,
+      heroTitle: untouched('heroTitle') ? defaults.heroTitle : current.heroTitle,
+      heroText: untouched('heroText') ? defaults.heroText : current.heroText,
+      joinUrl: untouched('joinUrl') ? defaults.joinUrl : current.joinUrl,
+      menu,
+    });
     setStep('finish');
     return { ok: true };
   });
 
   app.post('/finish', async (req, reply) => {
-    if (getStep() !== 'finish') return fail(reply, 409, 'Toutes les étapes ne sont pas terminées');
+    if (getStep() !== 'finish') return fail(reply, 409, 'Not every step is finished');
     modules.installAll();
-    seedContent(settings.get<number | null>('setup.adminId', null), getSiteSettings().discordUrl);
+    seedContent(settings.get<number | null>('setup.adminId', null), getSiteSettings().discordUrl, getSiteSettings().language);
     settings.set('setup.done', true);
     removeSetupToken();
     reply.clearCookie(SETUP_COOKIE, cookieOptions());

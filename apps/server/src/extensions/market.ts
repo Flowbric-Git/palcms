@@ -5,7 +5,7 @@ import { config } from '../config';
 import { MAX_PACKAGE_BYTES, PackageError, readPackage, sha256, verifySignature } from './package';
 import { installPackage, listExtensions } from './store';
 
-/** Clé publique du market officiel (palcms.online) : seuls les paquets signés avec sa clé privée sont "vérifiés". */
+/** Public key of the official market (palcms.online): only packages signed with its private key are "verified". */
 export const MARKET_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAlINUr5GPJh4QHwBNSsYWUpOvEgw5xouIWL584M/zQcc=
 -----END PUBLIC KEY-----`;
@@ -15,7 +15,7 @@ export function trustedKeys(): string[] {
     try {
       return [fs.readFileSync(f, 'utf8')];
     } catch {
-      console.warn(`[extensions] clé de confiance illisible : ${f}`);
+      console.warn(`[extensions] unreadable trusted key: ${f}`);
       return [];
     }
   });
@@ -48,11 +48,11 @@ const CACHE_MS = 10 * 60_000;
 
 async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
   const res = await fetch(url, { signal: AbortSignal.timeout(ms), headers: { 'User-Agent': `PalCMS/${config.version}` } });
-  if (!res.ok) throw new PackageError(`Le market a répondu ${res.status}`);
+  if (!res.ok) throw new PackageError(`The market answered ${res.status}`);
   return res;
 }
 
-/** Catalogue du market (mis en cache 10 minutes). Les entrées mal formées sont ignorées. */
+/** Market catalog (cached for 10 minutes). Malformed entries are ignored. */
 export async function fetchCatalog(force = false): Promise<MarketResource[]> {
   if (!force && cache && Date.now() - cache.at < CACHE_MS) return cache.resources;
   let json: unknown;
@@ -60,10 +60,10 @@ export async function fetchCatalog(force = false): Promise<MarketResource[]> {
     json = await (await fetchWithTimeout(`${config.marketUrl}/resources`, 10_000)).json();
   } catch (e) {
     if (e instanceof PackageError) throw e;
-    throw new PackageError('Le market est injoignable pour le moment');
+    throw new PackageError('The market cannot be reached right now');
   }
   const parsed = catalogSchema.safeParse(json);
-  if (!parsed.success) throw new PackageError('Réponse du market illisible');
+  if (!parsed.success) throw new PackageError('Unreadable market response');
   const resources = parsed.data.resources.flatMap((r) => {
     const res = resourceSchema.safeParse(r);
     return res.success ? [res.data as MarketResource] : [];
@@ -88,27 +88,27 @@ export function annotate(resources: MarketResource[], installed: InstalledExtens
 async function download(url: string): Promise<Uint8Array> {
   const res = await fetchWithTimeout(url, 60_000);
   const len = Number(res.headers.get('content-length') ?? 0);
-  if (len > MAX_PACKAGE_BYTES) throw new PackageError('Paquet trop volumineux (20 Mo maximum)');
+  if (len > MAX_PACKAGE_BYTES) throw new PackageError('Package too large (20 MB maximum)');
   const buf = new Uint8Array(await res.arrayBuffer());
-  if (buf.byteLength > MAX_PACKAGE_BYTES) throw new PackageError('Paquet trop volumineux (20 Mo maximum)');
+  if (buf.byteLength > MAX_PACKAGE_BYTES) throw new PackageError('Package too large (20 MB maximum)');
   return buf;
 }
 
-/** Télécharge, vérifie (empreinte + signature) et installe une ressource du market. */
+/** Downloads, checks (checksum + signature) and installs a market resource. */
 export async function installFromMarket(id: string): Promise<InstalledExtension> {
   const resource = (await fetchCatalog()).find((r) => r.id === id);
-  if (!resource) throw new PackageError('Ressource introuvable sur le market');
+  if (!resource) throw new PackageError('Resource not found on the market');
   if (!satisfiesVersion(config.version, resource.palcms)) {
-    throw new PackageError(`Cette ressource demande PalCMS ${resource.palcms} (version installée : ${config.version})`);
+    throw new PackageError(`This resource requires PalCMS ${resource.palcms} (installed version: ${config.version})`);
   }
   const data = await download(resource.download);
-  if (sha256(data) !== resource.sha256.toLowerCase()) throw new PackageError('Le fichier téléchargé est corrompu (empreinte différente)');
+  if (sha256(data) !== resource.sha256.toLowerCase()) throw new PackageError('The downloaded file is corrupted (checksum mismatch)');
   if (!verifySignature(data, resource.signature, trustedKeys())) {
-    throw new PackageError('Signature invalide : ce paquet n’a pas été validé par le market');
+    throw new PackageError('Invalid signature: this package was not approved by the market');
   }
   const pkg = readPackage(data);
   if (pkg.manifest.id !== resource.id || pkg.manifest.type !== resource.type) {
-    throw new PackageError('Le paquet ne correspond pas à la ressource annoncée');
+    throw new PackageError('The package does not match the listed resource');
   }
   return installPackage(pkg, { source: 'market', verified: true });
 }

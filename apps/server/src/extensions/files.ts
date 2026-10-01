@@ -25,23 +25,23 @@ const TYPES: Record<string, string> = {
   '.webm': 'video/webm',
 };
 
-/** Fichiers publics des extensions : web.js, style.css et le dossier assets/ (jamais server.js). */
+/** Public extension files: web.js, style.css and the assets/ folder (never server.js). */
 export async function extensionFiles(app: FastifyInstance) {
   app.get<{ Params: { id: string; '*': string } }>('/:id/*', async (req, reply) => {
     const { id } = req.params;
     const file = req.params['*'];
-    if (!EXTENSION_ID_RE.test(id) || !getExtension(id)) return reply.code(404).send({ error: 'Introuvable' });
+    if (!EXTENSION_ID_RE.test(id) || !getExtension(id)) return reply.code(404).send({ error: 'Not found' });
     if (!(file === 'web.js' || file === 'style.css' || /^assets\/[\w./-]+$/.test(file)) || file.split('/').includes('..')) {
-      return reply.code(404).send({ error: 'Introuvable' });
+      return reply.code(404).send({ error: 'Not found' });
     }
     const type = TYPES[path.extname(file).toLowerCase()];
-    // Pas de SVG ni de HTML : ils pourraient exécuter du script sur le domaine du site.
-    if (!type) return reply.code(404).send({ error: 'Type de fichier non servi' });
+    // No SVG or HTML: they could run scripts on the site's domain.
+    if (!type) return reply.code(404).send({ error: 'File type not served' });
     const full = extensionPath(id, file);
     if (!full.startsWith(extensionPath(id)) || !fs.existsSync(full) || !fs.statSync(full).isFile()) {
-      return reply.code(404).send({ error: 'Introuvable' });
+      return reply.code(404).send({ error: 'Not found' });
     }
-    // L'URL porte la version (?v=1.2.3) : le navigateur peut garder le fichier en cache.
+    // The URL carries the version (?v=1.2.3): the browser may cache the file.
     return reply
       .type(type)
       .header('Cache-Control', req.query && (req.query as { v?: string }).v ? 'public, max-age=604800' : 'no-cache')

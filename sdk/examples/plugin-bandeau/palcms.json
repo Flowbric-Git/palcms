@@ -1,29 +1,29 @@
 {
   "id": "bandeau",
   "type": "plugin",
-  "name": "Bandeau d'annonce",
-  "version": "1.0.0",
-  "description": "Un bandeau en haut de toutes les pages du site pour annoncer un événement, une maintenance ou un wipe, avec un lien et le nombre de clics.",
+  "name": "Announcement banner",
+  "version": "1.1.0",
+  "description": "A banner at the top of every page of the site to announce an event, a maintenance or a wipe, with a link and a click counter.",
   "author": "PalCMS",
   "palcms": ">=1.0.1",
   "icon": "assets/icon.png",
   "settings": [
-    { "key": "message", "type": "text", "label": "Message", "default": "Bienvenue sur le serveur ! Rejoins-nous sur Discord." },
-    { "key": "link", "type": "text", "label": "Lien (facultatif)", "description": "Adresse ouverte au clic, ex. /evenements ou https://discord.gg/…" },
-    { "key": "linkLabel", "type": "text", "label": "Texte du bouton", "default": "En savoir plus" },
+    { "key": "message", "type": "text", "label": "Message", "default": "Welcome to the server! Join us on Discord." },
+    { "key": "link", "type": "text", "label": "Link (optional)", "description": "Address opened on click, e.g. /events or https://discord.gg/…" },
+    { "key": "linkLabel", "type": "text", "label": "Button text", "default": "Learn more" },
     {
       "key": "style",
       "type": "select",
-      "label": "Couleur",
+      "label": "Color",
       "default": "accent",
       "options": [
-        { "value": "accent", "label": "Couleur principale du site" },
-        { "value": "info", "label": "Bleu (information)" },
-        { "value": "warning", "label": "Orange (maintenance, attention)" },
-        { "value": "danger", "label": "Rouge (important)" }
+        { "value": "accent", "label": "Main color of the site" },
+        { "value": "info", "label": "Blue (information)" },
+        { "value": "warning", "label": "Orange (maintenance, warning)" },
+        { "value": "danger", "label": "Red (important)" }
       ]
     },
-    { "key": "dismissible", "type": "toggle", "label": "Les visiteurs peuvent le fermer", "default": true },
-    { "key": "until", "type": "text", "label": "Afficher jusqu'au (facultatif)", "description": "Date au format AAAA-MM-JJ : le bandeau disparaît tout seul après ce jour." }
+    { "key": "dismissible", "type": "toggle", "label": "Visitors can close it", "default": true },
+    { "key": "until", "type": "text", "label": "Show until (optional)", "description": "Date as YYYY-MM-DD: the banner disappears on its own after that day." }
   ]
 }

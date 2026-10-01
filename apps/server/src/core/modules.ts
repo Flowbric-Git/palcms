@@ -3,8 +3,8 @@ import { db } from '../db';
 import { MODULES as FEATURE_MODULES } from '../features/schema';
 
 /**
- * Une fonctionnalité affichée dans "Gestion du site > Modules".
- * Les modules "toggleable" peuvent être activés ou désactivés par l'admin.
+ * A feature listed in "Website > Modules" (name and description are translated on display).
+ * "toggleable" modules can be turned on or off by the admin.
  */
 export interface ModuleDef {
   id: string;
@@ -18,32 +18,32 @@ export interface ModuleDef {
 export const CORE_MODULES: ModuleDef[] = [
   {
     id: 'status',
-    name: 'Statut en direct',
-    description: "Statut du serveur, joueurs en ligne et IP à copier sur l'accueil.",
+    name: 'Live status',
+    description: 'Server status, online players and address to copy on the home page.',
     area: 'public',
     toggleable: true,
     defaultEnabled: true,
   },
   {
     id: 'leaderboard',
-    name: 'Classement',
-    description: 'Classement des joueurs en temps réel (par niveau).',
+    name: 'Leaderboard',
+    description: 'Live player leaderboard (by level).',
     area: 'public',
     toggleable: true,
     defaultEnabled: true,
   },
   {
     id: 'news',
-    name: 'Actualités',
-    description: 'Articles publiés sur le site.',
+    name: 'News',
+    description: 'Articles published on the site.',
     area: 'public',
     toggleable: true,
     defaultEnabled: true,
   },
   {
     id: 'registration',
-    name: 'Inscription des joueurs',
-    description: 'Comptes joueurs (Steam validé automatiquement, email validé par un admin).',
+    name: 'Player registration',
+    description: 'Player accounts (Steam approved automatically, email approved by an admin).',
     area: 'public',
     toggleable: true,
     defaultEnabled: true,
@@ -51,31 +51,31 @@ export const CORE_MODULES: ModuleDef[] = [
   {
     id: 'pages',
     name: 'Pages',
-    description: 'Pages libres (règles, rejoindre…).',
+    description: 'Free pages (rules, how to join…).',
     area: 'site',
     toggleable: false,
     defaultEnabled: true,
   },
   {
     id: 'server-control',
-    name: 'Contrôle du serveur',
-    description: 'Démarrer, arrêter, redémarrer le serveur Palworld.',
+    name: 'Server control',
+    description: 'Start, stop and restart the Palworld server.',
     area: 'server',
     toggleable: false,
     defaultEnabled: true,
   },
   {
     id: 'server-config',
-    name: 'Configuration du serveur',
-    description: 'Éditeur de PalWorldSettings.ini.',
+    name: 'Server configuration',
+    description: 'PalWorldSettings.ini editor.',
     area: 'server',
     toggleable: false,
     defaultEnabled: true,
   },
   {
     id: 'players',
-    name: 'Joueurs',
-    description: 'Joueurs connectés et historique.',
+    name: 'Players',
+    description: 'Online players and history.',
     area: 'server',
     toggleable: false,
     defaultEnabled: true,
@@ -83,7 +83,7 @@ export const CORE_MODULES: ModuleDef[] = [
   {
     id: 'logs',
     name: 'Logs',
-    description: 'Logs du serveur en direct.',
+    description: 'Live server logs.',
     area: 'server',
     toggleable: false,
     defaultEnabled: true,
@@ -101,7 +101,7 @@ class ModuleRegistry {
     return this.defs.get(id);
   }
 
-  /** Enregistre l'état par défaut de chaque module (sans écraser un choix existant). */
+  /** Stores the default state of each module (without overwriting an existing choice). */
   installAll(): void {
     const insert = db.prepare('INSERT OR IGNORE INTO modules (id, enabled) VALUES (?, ?)');
     for (const def of this.defs.values()) insert.run(def.id, def.defaultEnabled ? 1 : 0);
@@ -117,7 +117,7 @@ class ModuleRegistry {
 
   setEnabled(id: string, enabled: boolean): void {
     const def = this.defs.get(id);
-    if (!def || !def.toggleable) throw new Error('Module inconnu ou non désactivable');
+    if (!def || !def.toggleable) throw new Error('Unknown module or module that cannot be turned off');
     db.prepare('INSERT INTO modules (id, enabled) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET enabled = excluded.enabled').run(
       id,
       enabled ? 1 : 0,

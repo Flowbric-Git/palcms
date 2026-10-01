@@ -7,3 +7,4 @@ export * from './features';
 export * from './mapCoords';
 export * from './paldexData';
 export * from './extensions';
+export * from './i18n';

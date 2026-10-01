@@ -1,9 +1,9 @@
 import type { PalworldSetup } from '@palcms/shared';
 
 /**
- * Lecture / écriture de PalWorldSettings.ini.
- * Le fichier contient une seule ligne utile : OptionSettings=(Cle=Valeur,Cle="texte",Cle=(A,B),...)
- * Les valeurs peuvent contenir des virgules (entre guillemets ou parenthèses) : on tokenise à la main.
+ * Reads / writes PalWorldSettings.ini.
+ * The file has a single useful line: OptionSettings=(Key=Value,Key="text",Key=(A,B),...)
+ * Values may contain commas (inside quotes or parentheses): tokenized by hand.
  */
 export const INI_HEADER = '[/Script/Pal.PalGameWorldSettings]';
 
@@ -18,7 +18,7 @@ export type IniValue =
   | { type: 'string'; value: string }
   | { type: 'raw'; value: string };
 
-/** Réglages par défaut du serveur dédié (DefaultPalWorldSettings.ini). */
+/** Default dedicated server settings (DefaultPalWorldSettings.ini). */
 export const DEFAULT_OPTIONS =
   'Difficulty=None,RandomizerType=None,RandomizerSeed="",bIsRandomizerPalLevelRandom=False,DayTimeSpeedRate=1.000000,' +
   'NightTimeSpeedRate=1.000000,ExpRate=1.000000,PalCaptureRate=1.000000,PalSpawnNumRate=1.000000,' +
@@ -47,7 +47,7 @@ export const DEFAULT_OPTIONS =
 export function parseOptionSettings(text: string): IniEntry[] {
   const marker = 'OptionSettings=(';
   const start = text.indexOf(marker);
-  if (start < 0) throw new Error('OptionSettings introuvable dans le fichier de configuration');
+  if (start < 0) throw new Error('OptionSettings not found in the configuration file');
 
   const entries: IniEntry[] = [];
   let depth = 0;
@@ -86,7 +86,7 @@ export function parseOptionSettings(text: string): IniEntry[] {
       cur += ch;
     }
   }
-  throw new Error('OptionSettings non terminé (parenthèse manquante)');
+  throw new Error('OptionSettings not closed (missing parenthesis)');
 }
 
 export function serializeOptionSettings(entries: IniEntry[]): string {
@@ -109,13 +109,13 @@ export function encodeValue(v: IniValue): string {
     case 'bool':
       return v.value ? 'True' : 'False';
     case 'number':
-      if (!Number.isFinite(v.value)) throw new Error('Nombre invalide');
+      if (!Number.isFinite(v.value)) throw new Error('Invalid number');
       return v.decimals ? v.value.toFixed(6) : String(Math.trunc(v.value));
     case 'string':
       return `"${v.value.replace(/["\\\r\n]/g, '')}"`;
     case 'raw':
-      if (!/^[A-Za-z0-9_(),. -]*$/.test(v.value)) throw new Error(`Valeur non autorisée : ${v.value}`);
-      if (!balancedParens(v.value)) throw new Error(`Parenthèses non équilibrées : ${v.value}`);
+      if (!/^[A-Za-z0-9_(),. -]*$/.test(v.value)) throw new Error(`Value not allowed: ${v.value}`);
+      if (!balancedParens(v.value)) throw new Error(`Unbalanced parentheses: ${v.value}`);
       return v.value;
   }
 }
@@ -130,11 +130,11 @@ function balancedParens(s: string): boolean {
 }
 
 /**
- * Modifie (ou ajoute) une clé en conservant le type existant.
- * Une chaîne sur une valeur "raw" (ex. Difficulty=Hard) reste raw, sur une valeur texte reste entre guillemets.
+ * Changes (or adds) a key, keeping its existing type.
+ * A string on a "raw" value (e.g. Difficulty=Hard) stays raw; on a text value it stays quoted.
  */
 export function setValue(entries: IniEntry[], key: string, value: boolean | number | string): void {
-  if (!/^[A-Za-z0-9_]+$/.test(key)) throw new Error(`Clé invalide : ${key}`);
+  if (!/^[A-Za-z0-9_]+$/.test(key)) throw new Error(`Invalid key: ${key}`);
   const entry = entries.find((e) => e.key === key);
   const current = entry ? decodeValue(entry.raw) : null;
   let next: IniValue;
@@ -148,7 +148,7 @@ export function setValue(entries: IniEntry[], key: string, value: boolean | numb
     next = { type: 'bool', value: value.toLowerCase() === 'true' };
   } else if (current?.type === 'number') {
     const n = Number(value.replace(',', '.'));
-    if (!Number.isFinite(n)) throw new Error(`${key} : nombre attendu`);
+    if (!Number.isFinite(n)) throw new Error(`${key}: number expected`);
     next = { type: 'number', value: n, decimals: current.decimals };
   } else if (current?.type === 'raw') {
     next = { type: 'raw', value };
@@ -166,10 +166,10 @@ export function getValue(entries: IniEntry[], key: string): IniValue | null {
   return e ? decodeValue(e.raw) : null;
 }
 
-/** Construit le fichier complet à partir du formulaire d'installation. */
+/** Builds the full file from the setup form. */
 export function buildIniFromSetup(setup: PalworldSetup, base: IniEntry[] = defaultEntries(), publicIp = ''): string {
   const entries = base.map((e) => ({ ...e }));
-  // IP annoncée dans la liste des serveurs communautaires (Xbox, Game Pass PC, PS5).
+  // IP advertised in the community server list (Xbox, Game Pass PC, PS5).
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(publicIp)) setValue(entries, 'PublicIP', publicIp);
   setValue(entries, 'ServerName', setup.serverName);
   setValue(entries, 'ServerDescription', setup.description);
@@ -189,7 +189,7 @@ export function buildIniFromSetup(setup: PalworldSetup, base: IniEntry[] = defau
   return serializeOptionSettings(entries);
 }
 
-/** Réglages indispensables au CMS : l'API REST doit rester active sur le port choisi. */
+/** Settings the CMS needs: the REST API must stay on, on the chosen port. */
 export function forceCmsKeys(entries: IniEntry[], restApiPort: number): void {
   setValue(entries, 'RESTAPIEnabled', true);
   setValue(entries, 'RESTAPIPort', restApiPort);

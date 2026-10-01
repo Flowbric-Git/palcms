@@ -8,7 +8,7 @@ export interface ThemeSettings {
   customCss: string;
 }
 
-// Le panel admin garde un style sobre : les effets ne s'appliquent qu'au site public.
+// The admin panel keeps a plain style: the effects only apply to the public site.
 const PUBLIC = 'body:not(.palcms-admin)';
 
 function styleTag(id: string): HTMLStyleElement {

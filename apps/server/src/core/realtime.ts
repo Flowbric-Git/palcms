@@ -11,25 +11,25 @@ interface Client {
 }
 
 interface ChannelHooks {
-  /** Messages envoyés immédiatement à un nouvel abonné (état courant). */
+  /** Messages sent right away to a new subscriber (current state). */
   snapshot?: () => WsServerMessage[];
-  /** Appelé au premier abonné (ex. démarrer le suivi des logs). */
+  /** Called on the first subscriber (e.g. start following logs). */
   onFirst?: () => void;
-  /** Appelé quand le dernier abonné part. */
+  /** Called when the last subscriber leaves. */
   onLast?: () => void;
 }
 
 /**
- * Hub WebSocket.
- * - "public" : tout le monde (statut, joueurs, classement, carte publique…)
- * - "setup"  : assistant d'installation
- * - "logs"   : logs du serveur (permission server.logs)
- * - "admin"  : événements réservés à l'équipe (carte privée…)
+ * WebSocket hub.
+ * - "public": everyone (status, players, leaderboard, public map…)
+ * - "setup" : setup wizard
+ * - "logs"  : server logs (server.logs permission)
+ * - "admin" : team-only events (private map…)
  */
 class RealtimeHub {
   private clients = new Set<Client>();
   private hooks = new Map<Channel, ChannelHooks>();
-  /** Instantanés supplémentaires fournis par des modules (ex. positions de la carte). */
+  /** Extra snapshots provided by modules (e.g. map positions). */
   private extraSnapshots = new Map<Channel, Map<string, () => WsServerMessage[]>>();
 
   setHooks(channel: Channel, hooks: ChannelHooks): void {
@@ -80,7 +80,7 @@ class RealtimeHub {
 
   private subscribe(client: Client, channel: Channel): void {
     if (!this.allowed(client, channel)) {
-      this.send(client, { type: 'error', data: `Accès refusé au canal ${channel}` });
+      this.send(client, { type: 'error', data: `Access denied to channel ${channel}` });
       return;
     }
     if (client.channels.has(channel)) return;
@@ -93,7 +93,7 @@ class RealtimeHub {
       try {
         for (const m of fn()) this.send(client, m);
       } catch {
-        /* un module défaillant ne doit pas couper la connexion */
+        /* a failing module must not close the connection */
       }
     }
   }

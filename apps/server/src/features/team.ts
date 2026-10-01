@@ -14,7 +14,7 @@ const roleSchema = z.object({
   permissions: z.array(z.enum(ALL_PERMISSIONS as [Permission, ...Permission[]])).max(ALL_PERMISSIONS.length),
 });
 
-/** Rôles de l'équipe : Administrateur, Modérateur, Rédacteur, plus des rôles personnalisés. */
+/** Team roles: Administrator, Moderator, Editor, plus custom roles. */
 export function createTeam(host: FeatureHost): Feature & { hasPermission(user: HostUser, p: Permission): boolean } {
   const { db } = host;
   let cache: Map<number, Set<string>> | null = null;
@@ -34,7 +34,7 @@ export function createTeam(host: FeatureHost): Feature & { hasPermission(user: H
     if (user.role === 'superadmin') return true;
     if (user.role !== 'admin') return false;
     const row = db.prepare('SELECT admin_role_id FROM users WHERE id = ?').get(user.id) as { admin_role_id: number | null } | undefined;
-    // Un admin sans rôle attribué (ex. créé avant l'arrivée des rôles) garde tous les droits.
+    // An admin without a role (e.g. created before roles existed) keeps every permission.
     if (!row || row.admin_role_id === null) return true;
     const perms = roles().get(row.admin_role_id);
     return !!perms && (perms.has('*') || perms.has(p));
@@ -100,15 +100,15 @@ export function createTeam(host: FeatureHost): Feature & { hasPermission(user: H
           const target = db.prepare('SELECT id, username, role, status FROM users WHERE id = ?').get(id) as
             | { id: number; username: string; role: string; status: string }
             | undefined;
-          if (!target) throw httpError(404, 'Compte introuvable');
-          if (target.role === 'superadmin') throw httpError(403, 'Le compte administrateur principal ne peut pas être modifié');
-          if (target.id === user!.id) throw httpError(403, 'Tu ne peux pas modifier ton propre rôle');
-          if (target.status !== 'active') throw httpError(400, 'Le compte doit être actif');
+          if (!target) throw httpError(404, 'Account not found');
+          if (target.role === 'superadmin') throw httpError(403, 'The main administrator account cannot be changed');
+          if (target.id === user!.id) throw httpError(403, 'You cannot change your own role');
+          if (target.status !== 'active') throw httpError(400, 'The account must be active');
           if (roleId === null) {
             db.prepare("UPDATE users SET role = 'player', admin_role_id = NULL WHERE id = ?").run(id);
             audit(user, 'team.remove', target.username);
           } else {
-            if (!db.prepare('SELECT 1 FROM pro_roles WHERE id = ?').get(roleId)) throw httpError(400, 'Rôle introuvable');
+            if (!db.prepare('SELECT 1 FROM pro_roles WHERE id = ?').get(roleId)) throw httpError(400, 'Role not found');
             db.prepare("UPDATE users SET role = 'admin', admin_role_id = ? WHERE id = ?").run(roleId, id);
             audit(user, 'team.set-role', target.username);
           }
@@ -122,7 +122,7 @@ export function createTeam(host: FeatureHost): Feature & { hasPermission(user: H
         permission: 'admin.team',
         handler: ({ body, user }) => {
           const r = parseBody(roleSchema, body);
-          if (db.prepare('SELECT 1 FROM pro_roles WHERE name = ?').get(r.name)) throw httpError(409, 'Ce rôle existe déjà');
+          if (db.prepare('SELECT 1 FROM pro_roles WHERE name = ?').get(r.name)) throw httpError(409, 'This role already exists');
           db.prepare('INSERT INTO pro_roles (name, permissions, builtin, created_at) VALUES (?, ?, 0, ?)').run(
             r.name,
             JSON.stringify(r.permissions),
@@ -141,9 +141,9 @@ export function createTeam(host: FeatureHost): Feature & { hasPermission(user: H
         handler: ({ params, body, user }) => {
           const r = parseBody(roleSchema, body);
           const current = db.prepare('SELECT * FROM pro_roles WHERE id = ?').get(Number(params.id)) as RoleRow | undefined;
-          if (!current) throw httpError(404, 'Rôle introuvable');
-          if (current.builtin && current.permissions === '["*"]') throw httpError(403, 'Le rôle Administrateur a toujours tous les droits');
-          if (db.prepare('SELECT 1 FROM pro_roles WHERE name = ? AND id != ?').get(r.name, current.id)) throw httpError(409, 'Ce nom est déjà pris');
+          if (!current) throw httpError(404, 'Role not found');
+          if (current.builtin && current.permissions === '["*"]') throw httpError(403, 'The Administrator role always has every permission');
+          if (db.prepare('SELECT 1 FROM pro_roles WHERE name = ? AND id != ?').get(r.name, current.id)) throw httpError(409, 'This name is already taken');
           db.prepare('UPDATE pro_roles SET name = ?, permissions = ? WHERE id = ?').run(
             current.builtin ? current.name : r.name,
             JSON.stringify(r.permissions),
@@ -161,10 +161,10 @@ export function createTeam(host: FeatureHost): Feature & { hasPermission(user: H
         permission: 'admin.team',
         handler: ({ params, user }) => {
           const current = db.prepare('SELECT * FROM pro_roles WHERE id = ?').get(Number(params.id)) as RoleRow | undefined;
-          if (!current) throw httpError(404, 'Rôle introuvable');
-          if (current.builtin) throw httpError(403, 'Les rôles prêts à l’emploi ne peuvent pas être supprimés');
+          if (!current) throw httpError(404, 'Role not found');
+          if (current.builtin) throw httpError(403, 'Built-in roles cannot be deleted');
           const used = (db.prepare('SELECT COUNT(*) AS c FROM users WHERE admin_role_id = ?').get(current.id) as { c: number }).c;
-          if (used > 0) throw httpError(409, 'Ce rôle est encore attribué à des membres de l’équipe');
+          if (used > 0) throw httpError(409, 'This role is still assigned to team members');
           db.prepare('DELETE FROM pro_roles WHERE id = ?').run(current.id);
           invalidate();
           audit(user, 'role.delete', current.name);
@@ -175,7 +175,7 @@ export function createTeam(host: FeatureHost): Feature & { hasPermission(user: H
   };
 }
 
-/** Journal des actions de l'équipe (conservé 180 jours). */
+/** Team audit log (kept for 180 days). */
 export function createAudit(host: FeatureHost): Feature {
   const { db } = host;
   const stops: (() => void)[] = [];

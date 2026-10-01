@@ -34,9 +34,9 @@ export async function authRoutes(app: FastifyInstance) {
     if (!body) return;
     const user = findUserByLogin(body.login);
     const ok = await verifyPassword(body.password, user?.password_hash ?? DUMMY_HASH);
-    if (!user || !ok) return reply.code(401).send({ error: 'Identifiants incorrects' });
-    if (user.status === 'banned') return reply.code(403).send({ error: 'Ce compte est banni' });
-    if (user.status === 'rejected') return reply.code(403).send({ error: "Ton inscription a été refusée par l'équipe" });
+    if (!user || !ok) return reply.code(401).send({ error: 'Wrong login or password' });
+    if (user.status === 'banned') return reply.code(403).send({ error: 'This account is banned' });
+    if (user.status === 'rejected') return reply.code(403).send({ error: 'Your sign-up was refused by the team' });
     createSession(reply, user.id);
     return { user: toPublicUser(user) };
   });
@@ -47,11 +47,11 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   app.post('/register', strict, async (req, reply) => {
-    if (!registrationOpen('email')) return reply.code(403).send({ error: "L'inscription par email est fermée" });
+    if (!registrationOpen('email')) return reply.code(403).send({ error: 'Email sign-up is closed' });
     const body = parse(registerSchema, req.body, reply);
     if (!body) return;
-    if (usernameTaken(body.username)) return reply.code(409).send({ error: "Ce nom d'utilisateur est déjà pris" });
-    if (emailTaken(body.email)) return reply.code(409).send({ error: 'Cet email est déjà utilisé' });
+    if (usernameTaken(body.username)) return reply.code(409).send({ error: 'This username is already taken' });
+    if (emailTaken(body.email)) return reply.code(409).send({ error: 'This email is already used' });
     const id = createUser({
       username: body.username,
       displayName: body.username,
@@ -74,9 +74,9 @@ export async function authRoutes(app: FastifyInstance) {
     const user = req.user!;
     if (body.displayName) db.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(body.displayName, user.id);
     if (body.newPassword) {
-      // Un compte créé via Steam n'a pas de mot de passe : il peut en définir un sans l'ancien.
+      // An account created through Steam has no password: it may set one without the old one.
       if (user.password_hash && !(await verifyPassword(body.currentPassword ?? '', user.password_hash))) {
-        return reply.code(400).send({ error: 'Mot de passe actuel incorrect' });
+        return reply.code(400).send({ error: 'Wrong current password' });
       }
       db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(await hashPassword(body.newPassword), user.id);
       destroyUserSessions(user.id);
@@ -85,17 +85,17 @@ export async function authRoutes(app: FastifyInstance) {
     return { user: toPublicUser(findUserById(user.id)!) };
   });
 
-  // Steam (inscription validée automatiquement)
+  // Steam (sign-up approved automatically)
 
   app.get('/steam', async (req, reply) => {
     if (!registrationOpen('steam') && !req.user) {
-      return reply.redirect(`${config.basePath}connexion?erreur=${encodeURIComponent('Connexion Steam désactivée')}`);
+      return reply.redirect(`${config.basePath}login?error=${encodeURIComponent('Steam login disabled')}`);
     }
     return reply.redirect(steamLoginUrl(steamReturnTo(), `${config.publicUrl}/`));
   });
 
   app.get<{ Querystring: Record<string, string> }>('/steam/callback', strict, async (req, reply) => {
-    const fail = (msg: string) => reply.redirect(`${config.basePath}connexion?erreur=${encodeURIComponent(msg)}`);
+    const fail = (msg: string) => reply.redirect(`${config.basePath}login?error=${encodeURIComponent(msg)}`);
     let steamId: string;
     try {
       steamId = await verifySteamResponse(req.query, steamReturnTo());
@@ -105,23 +105,23 @@ export async function authRoutes(app: FastifyInstance) {
     const playerUid = palworldUidFromSteam(steamId);
     const existing = findUserBySteamId(steamId);
 
-    // Déjà connecté : on lie Steam au compte courant, ce qui le valide automatiquement.
+    // Already logged in: link Steam to the current account, which approves it automatically.
     if (req.user) {
-      if (existing && existing.id !== req.user.id) return fail('Ce compte Steam est déjà lié à un autre compte');
+      if (existing && existing.id !== req.user.id) return fail('This Steam account is already linked to another account');
       const status = req.user.status === 'pending' ? 'active' : req.user.status;
       db.prepare('UPDATE users SET steam_id = ?, player_uid = ?, status = ? WHERE id = ?').run(steamId, playerUid, status, req.user.id);
-      return reply.redirect(`${config.basePath}profil`);
+      return reply.redirect(`${config.basePath}profile`);
     }
 
     if (existing) {
-      if (existing.status === 'banned') return fail('Ce compte est banni');
+      if (existing.status === 'banned') return fail('This account is banned');
       createSession(reply, existing.id);
-      return reply.redirect(`${config.basePath}profil`);
+      return reply.redirect(`${config.basePath}profile`);
     }
 
-    if (!registrationOpen('steam')) return fail('Les inscriptions via Steam sont fermées');
+    if (!registrationOpen('steam')) return fail('Steam sign-ups are closed');
     const profile = await fetchSteamProfile(steamId, steamApiKey());
-    const base = profile?.personaName || `joueur${steamId.slice(-6)}`;
+    const base = profile?.personaName || `player${steamId.slice(-6)}`;
     const id = createUser({
       username: uniqueUsername(base),
       displayName: (profile?.personaName || base).slice(0, 32),
@@ -132,6 +132,6 @@ export async function authRoutes(app: FastifyInstance) {
       avatarUrl: profile?.avatarUrl ?? null,
     });
     createSession(reply, id);
-    return reply.redirect(`${config.basePath}profil?bienvenue=1`);
+    return reply.redirect(`${config.basePath}profile?welcome=1`);
   });
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Faux palctl pour le développement : même interface que scripts/palctl, mais ne touche à rien.
-// Il simule l'installation (avec délais) et le service palworld via tools/.dev-data/state.json.
+// Fake palctl for development: same interface as scripts/palctl, but touches nothing.
+// It simulates the install (with delays) and the palworld service through tools/.dev-data/state.json.
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -17,7 +17,7 @@ const die = (msg, code = 2) => {
   process.exit(code);
 };
 
-// Monde simulé au format de sav_cli, cohérent avec les joueurs du faux serveur (tools/fake-palworld-api).
+// Simulated world in the sav_cli format, matching the players of the fake server (tools/fake-palworld-api).
 const PLAYER_NAMES = ['Lyra', 'Kaito', 'Nova', 'Bastien', 'Mira', 'Oskar', 'Zelie', 'Tanuki'];
 const PAL_TYPES = ['SheepBall', 'PinkCat', 'ChickenPal', 'Kitsunebi', 'Penguin', 'Carbunclo', 'Anubis', 'BOSS_Anubis', 'JetDragon', 'Garm', 'WoolFox', 'Mutant', 'FlameBuffalo', 'LazyDragon', 'ThunderDragonMan', 'HadesBird', 'SakuraSaurus', 'Alpaca', 'GrassMammoth', 'NightFox'];
 const PASSIVES = ['Rare', 'Legend', 'CraftSpeed_up2', 'PAL_ALLAttack_up2', 'Deffence_up1', 'ElementBoost_Fire_2_PAL', 'Nocturnal', 'TrainerMining_up1'];
@@ -51,7 +51,7 @@ function fakeWorld() {
     }));
     for (const p of pals) p.is_boss = p.type.startsWith('BOSS_');
     const common = ITEMS.filter(() => rnd() < 0.7).map(([id, max], slot) => ({ SlotIndex: slot, ItemId: id, StackCount: 1 + Math.floor(rnd() * max) }));
-    // Nova a un stock anormal : l'anti-triche doit la repérer.
+    // Nova has an abnormal stock: the anti-cheat must spot it.
     if (name === 'Nova') common.push({ SlotIndex: 20, ItemId: 'palsphere_legend', StackCount: 45000 });
     return {
       player_uid: String(0xa1b2c3 + i),
@@ -87,8 +87,8 @@ function fakeWorld() {
   return {
     players,
     guilds: [
-      guild('Les Pionniers', [0, 1, 2], 18, [[-250000, 150000], [-180000, 60000]]),
-      guild('Ordre du Phénix', [3, 4, 5], 14, [[-420000, -60000]]),
+      guild('The Pioneers', [0, 1, 2], 18, [[-250000, 150000], [-180000, 60000]]),
+      guild('Order of the Phoenix', [3, 4, 5], 14, [[-420000, -60000]]),
       guild('Tanuki Corp', [6, 7], 7, [[-60000, 220000]]),
     ],
   };
@@ -101,14 +101,14 @@ async function main() {
   switch (cmd) {
     case 'install-deps': {
       for (const l of [
-        "==> Activation du dépôt multiverse et de l'architecture i386",
+        '==> Enabling the multiverse repository and the i386 architecture',
         'Hit:1 http://archive.ubuntu.com/ubuntu noble InRelease',
         'Reading package lists... Done',
-        '==> Installation de steamcmd et lib32gcc-s1',
+        '==> Installing steamcmd and lib32gcc-s1',
         'Setting up lib32gcc-s1 (14.2.0-4ubuntu2) ...',
         'Setting up steamcmd:i386 (0~20180105-5) ...',
-        "==> Création de l'utilisateur steam",
-        '✔ Dépendances installées (simulation)',
+        '==> Creating the steam user',
+        '✔ Dependencies installed (simulation)',
       ]) {
         out(l);
         await sleep(350);
@@ -117,7 +117,7 @@ async function main() {
       break;
     }
     case 'install-palworld': {
-      if (!state.depsInstalled) die('steamcmd absent : lancer install-deps avant', 3);
+      if (!state.depsInstalled) die('steamcmd missing: run install-deps first', 3);
       out('Redirecting stderr to /home/steam/Steam/logs/stderr.txt');
       out('[  0%] Checking for available updates...');
       await sleep(400);
@@ -126,7 +126,7 @@ async function main() {
         await sleep(250);
       }
       out(" Success! App '2394010' fully installed.");
-      out('==> steamclient.so copié dans ~/.steam/sdk64');
+      out('==> steamclient.so copied to ~/.steam/sdk64');
       state.palworldInstalled = true;
       break;
     }
@@ -139,7 +139,7 @@ async function main() {
       const [port, players] = args;
       state.service.port = Number(port);
       state.service.players = Number(players);
-      out(`==> /etc/systemd/system/palworld.service écrit (port ${port}, ${players} joueurs)`);
+      out(`==> /etc/systemd/system/palworld.service written (port ${port}, ${players} players)`);
       break;
     }
     case 'service': {
@@ -156,8 +156,8 @@ async function main() {
         break;
       }
       if (action === 'start' || action === 'restart') {
-        if (!state.palworldInstalled) die('Palworld non installé', 5);
-        if (!fs.existsSync(INI_FILE)) die('PalWorldSettings.ini absent', 5);
+        if (!state.palworldInstalled) die('Palworld not installed', 5);
+        if (!fs.existsSync(INI_FILE)) die('PalWorldSettings.ini missing', 5);
         await sleep(600);
         s.active = true;
         appendLog(action === 'restart' ? 'Server restarted' : 'Server started');
@@ -170,7 +170,7 @@ async function main() {
         appendLog('Server stopped');
         break;
       }
-      die(`action inconnue : ${action}`);
+      die(`unknown action: ${action}`);
       break;
     }
     case 'firewall-open':
@@ -180,14 +180,14 @@ async function main() {
       const chunks = [];
       for await (const c of process.stdin) chunks.push(c);
       const content = Buffer.concat(chunks).toString('utf8');
-      if (content.length > 65536) die('configuration trop grande');
-      if (!content.startsWith('[/Script/Pal.PalGameWorldSettings]') || !content.includes('OptionSettings=(')) die('configuration invalide');
+      if (content.length > 65536) die('configuration too large');
+      if (!content.startsWith('[/Script/Pal.PalGameWorldSettings]') || !content.includes('OptionSettings=(')) die('invalid configuration');
       fs.writeFileSync(INI_FILE, content);
-      out('==> PalWorldSettings.ini mis à jour');
+      out('==> PalWorldSettings.ini updated');
       break;
     }
     case 'read-config':
-      if (!fs.existsSync(INI_FILE)) die('PalWorldSettings.ini introuvable', 3);
+      if (!fs.existsSync(INI_FILE)) die('PalWorldSettings.ini not found', 3);
       process.stdout.write(fs.readFileSync(INI_FILE, 'utf8'));
       break;
     case 'logs': {
@@ -206,13 +206,13 @@ async function main() {
       }
     }
     case 'backup-create': {
-      if (!['manual', 'auto', 'prerestart', 'preupdate', 'prerestore'].includes(args[0])) die('type de sauvegarde invalide');
+      if (!['manual', 'auto', 'prerestart', 'preupdate', 'prerestore'].includes(args[0])) die('invalid backup type');
       fs.mkdirSync(BACKUP_DIR, { recursive: true });
       const d = new Date();
       const p = (n) => String(n).padStart(2, '0');
       const name = `palworld-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${args[0]}.tar.gz`;
       await sleep(500);
-      fs.writeFileSync(path.join(BACKUP_DIR, name), zlib.gzipSync(`Sauvegarde simulée du ${d.toISOString()}\n`.repeat(2000)));
+      fs.writeFileSync(path.join(BACKUP_DIR, name), zlib.gzipSync(`Simulated backup from ${d.toISOString()}\n`.repeat(2000)));
       out(name);
       break;
     }
@@ -228,12 +228,12 @@ async function main() {
     case 'backup-restore':
     case 'backup-delete':
     case 'backup-download': {
-      if (!BACKUP_RE.test(args[0] ?? '')) die('nom de sauvegarde invalide');
+      if (!BACKUP_RE.test(args[0] ?? '')) die('invalid backup name');
       const file = path.join(BACKUP_DIR, args[0]);
-      if (!fs.existsSync(file)) die('sauvegarde introuvable');
+      if (!fs.existsSync(file)) die('backup not found');
       if (cmd === 'backup-delete') {
         fs.rmSync(file);
-        out(`==> ${args[0]} supprimée`);
+        out(`==> ${args[0]} deleted`);
       } else if (cmd === 'backup-download') {
         process.stdout.write(fs.readFileSync(file));
       } else {
@@ -242,20 +242,20 @@ async function main() {
         await sleep(800);
         appendLog(`World restored from ${args[0]}`);
         state.service.active = wasActive;
-        out(`==> Monde restauré depuis ${args[0]}`);
+        out(`==> World restored from ${args[0]}`);
       }
       break;
     }
     case 'savtools-install':
       await sleep(800);
       state.savtools = true;
-      out('✔ sav_cli installé (simulation)');
+      out('✔ sav_cli installed (simulation)');
       break;
     case 'savtools-status':
       out(state.savtools ? 'installed v0.12.2' : 'missing');
       break;
     case 'world-export': {
-      if (!state.savtools) die('sav_cli absent (lancer savtools-install)');
+      if (!state.savtools) die('sav_cli missing (run savtools-install)');
       await sleep(1500);
       process.stdout.write(JSON.stringify(fakeWorld()));
       break;
@@ -265,11 +265,11 @@ async function main() {
       out(`latest=${state.palworldUpdated ? '20111111' : '20222222'}`);
       break;
     case 'self-update':
-      if (!/^v\d+\.\d+\.\d+$/.test(args[0] ?? '')) die('version invalide');
-      out(`==> Mise à jour vers ${args[0]} lancée (simulation : rien n'est installé)`);
+      if (!/^v\d+\.\d+\.\d+$/.test(args[0] ?? '')) die('invalid version');
+      out(`==> Update to ${args[0]} started (simulation: nothing is installed)`);
       break;
     default:
-      die(`commande inconnue : ${cmd ?? '(vide)'}`);
+      die(`unknown command: ${cmd ?? '(empty)'}`);
   }
   writeState(state);
 }

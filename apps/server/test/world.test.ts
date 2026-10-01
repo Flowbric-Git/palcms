@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { translateMessage } from '@palcms/shared';
 import { itemName, palName, passiveName } from '../src/gamedata';
 import { buildPaldex, parseWorld, worldUidFromPlayerId } from '../src/features/world';
 import { itemAnomalies, levelAnomalies } from '../src/features/sanctions';
@@ -7,15 +8,15 @@ import { compareVersions, parseBuildIds } from '../src/features/updates';
 import { conflicts, describeValues, filterGameValues } from '../src/features/events';
 import { validatePalctlArgs } from '../src/palworld/palctlArgs';
 
-describe('données du monde', () => {
-  it('relie le PlayerUId de l’API REST à l’identifiant de sav_cli', () => {
+describe('world data', () => {
+  it('links the REST API PlayerUId to the sav_cli id', () => {
     expect(worldUidFromPlayerId('9E967EB0000000000000000000000000')).toBe(String(0x9e967eb0));
     expect(worldUidFromPlayerId('9e967eb0-0000-0000-0000-000000000000')).toBe(String(0x9e967eb0));
     expect(worldUidFromPlayerId('')).toBeNull();
     expect(worldUidFromPlayerId('xyz')).toBeNull();
   });
 
-  it('nettoie l’export de sav_cli', () => {
+  it('cleans the sav_cli export', () => {
     const w = parseWorld(
       JSON.stringify({
         players: [{ player_uid: '42', nickname: 'Lyra', level: 12, pals: [{ type: 'SheepBall', level: 3 }, { level: 1 }], items: {} }, { nickname: 'sans uid' }],
@@ -28,7 +29,7 @@ describe('données du monde', () => {
     expect(() => parseWorld('{"players": 1}')).toThrow();
   });
 
-  it('construit le Paldex complet par numéro, alphas comptés avec leur espèce', () => {
+  it('builds the full Paldex by number, alphas counted with their species', () => {
     const dex = buildPaldex([
       { type: 'SheepBall', owner: '1', lucky: 0, alpha: 0, level: 5 },
       { type: 'BOSS_SheepBall', owner: '2', lucky: 1, alpha: 1, level: 12 },
@@ -39,27 +40,27 @@ describe('données du monde', () => {
     expect(dex.filter((e) => e.count > 0)).toHaveLength(1);
   });
 
-  it('traduit les identifiants du jeu en noms', () => {
+  it('turns game ids into names', () => {
     expect(palName('SheepBall')).toBe('Lamball');
     expect(palName('BOSS_Anubis')).toBe('Anubis');
-    expect(palName('UnePalInconnue')).toBe('Une Pal Inconnue');
+    expect(palName('SomeUnknownPal')).toBe('Some Unknown Pal');
     expect(itemName('palsphere')).toBe('Pal Sphere');
     expect(itemName('inconnu_42')).toBe('inconnu_42');
     expect(passiveName('Legend')).toBe('Legend');
   });
 });
 
-describe('anti-triche', () => {
+describe('anti-cheat', () => {
   const s = { levelJump: 6, levelsPerHour: 20, itemStack: 20000, money: 10_000_000 };
   const now = 10_000_000;
 
-  it('repère une montée de niveau trop rapide', () => {
+  it('spots levelling that is too fast', () => {
     expect(levelAnomalies([{ ts: now - 120_000, level: 10 }, { ts: now, level: 17 }], now, s)[0].kind).toBe('level-jump');
     expect(levelAnomalies([{ ts: now - 50 * 60_000, level: 10 }, { ts: now - 20 * 60_000, level: 20 }, { ts: now, level: 31 }], now, s)[0].kind).toBe('level-rate');
     expect(levelAnomalies([{ ts: now - 50 * 60_000, level: 10 }, { ts: now, level: 14 }], now, s)).toEqual([]);
   });
 
-  it('repère des quantités d’objets anormales', () => {
+  it('spots abnormal item amounts', () => {
     const found = itemAnomalies(
       {
         CommonContainerId: [
@@ -74,8 +75,8 @@ describe('anti-triche', () => {
   });
 });
 
-describe('fréquentation', () => {
-  it('compte les heures de présence par jour de la semaine', () => {
+describe('attendance', () => {
+  it('counts the hours played per weekday', () => {
     // Lundi 5 janvier 2026, 20 h -> 22 h (heure locale)
     const start = new Date(2026, 0, 5, 20, 0).getTime();
     const grid = attendanceHeatmap([{ started_at: start, ended_at: start + 2 * 3600_000 }], start - 86_400_000, start + 6 * 86_400_000);
@@ -85,19 +86,19 @@ describe('fréquentation', () => {
   });
 });
 
-describe('mises à jour', () => {
-  it('compare les versions', () => {
+describe('updates', () => {
+  it('compares versions', () => {
     expect(compareVersions('v1.2.0', '1.0.2')).toBeGreaterThan(0);
     expect(compareVersions('1.0.2', 'v1.0.2')).toBe(0);
     expect(compareVersions('1.0.9', '1.0.10')).toBeLessThan(0);
   });
 
-  it('lit la sortie de palctl check-update', () => {
+  it('reads the palctl check-update output', () => {
     expect(parseBuildIds('installed=123\nlatest=456\n')).toEqual({ installed: '123', latest: '456' });
     expect(parseBuildIds('installed=\nlatest=\n')).toEqual({ installed: null, latest: null });
   });
 
-  it('autorise les nouvelles commandes palctl avec des arguments sûrs', () => {
+  it('allows the new palctl commands with safe arguments', () => {
     expect(validatePalctlArgs(['world-export'])).toBeNull();
     expect(validatePalctlArgs(['self-update', 'v1.2.0'])).toBeNull();
     expect(validatePalctlArgs(['self-update', '1.2.0; rm -rf /'])).not.toBeNull();
@@ -105,20 +106,21 @@ describe('mises à jour', () => {
   });
 });
 
-describe('événements et préréglages', () => {
-  it('ne garde que les réglages de jeu', () => {
+describe('events and presets', () => {
+  it('only keeps gameplay settings', () => {
     const known = new Set(['ExpRate', 'AdminPassword', 'PublicPort', 'Difficulty']);
     expect(filterGameValues({ ExpRate: 3, AdminPassword: 'x', PublicPort: 1, Inconnu: 1, Difficulty: 'Hard' }, known)).toEqual({ ExpRate: 3, Difficulty: 'Hard' });
   });
 
-  it('détecte deux événements qui se chevauchent sur un même réglage', () => {
+  it('detects two events overlapping on the same setting', () => {
     const a = { startsAt: 0, endsAt: 100, values: { ExpRate: 3 } };
     expect(conflicts(a, { startsAt: 50, endsAt: 150, values: { ExpRate: 2 } })).toEqual(['ExpRate']);
     expect(conflicts(a, { startsAt: 100, endsAt: 150, values: { ExpRate: 2 } })).toEqual([]);
     expect(conflicts(a, { startsAt: 50, endsAt: 150, values: { PalCaptureRate: 2 } })).toEqual([]);
   });
 
-  it('décrit les changements en français', () => {
-    expect(describeValues({ ExpRate: 3, bIsPvP: true })).toEqual(["Taux d'expérience : x3", 'PvP : activé']);
+  it('describes the changes, in English or translated', () => {
+    expect(describeValues({ ExpRate: 3, bIsPvP: true })).toEqual(['Experience rate: x3', 'PvP: on']);
+    expect(describeValues({ ExpRate: 3, bIsPvP: true }).map((m) => translateMessage('fr', m))).toEqual(["Taux d'expérience : x3", 'PvP : activé']);
   });
 });

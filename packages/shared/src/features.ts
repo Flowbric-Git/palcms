@@ -1,15 +1,16 @@
 /**
- * Interface interne entre le cœur du CMS et ses fonctionnalités (carte, sauvegardes, équipe…).
- * Chaque fonctionnalité reçoit un FeatureHost et déclare ses routes, modules et tâches de fond.
+ * Internal interface between the CMS core and its features (map, backups, team…).
+ * Each feature receives a FeatureHost and declares its routes, modules and background tasks.
  */
 import type { Permission } from './permissions';
+import type { Lang, Vars } from './i18n';
 import type { Channel, LeaderboardEntry, ServerStatus, WsServerMessage } from './types';
 
-/** Flux binaire (sous-ensemble de stream.Readable de Node), sans dépendre des types Node. */
+/** Binary stream (subset of Node's stream.Readable), without depending on Node types. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface ByteStream { pipe(dest: any): any; on(event: string, fn: (...args: any[]) => void): any }
 
-// Données partagées
+// Shared data
 
 export interface HostPlayer {
   name: string;
@@ -56,7 +57,7 @@ export interface HostEvents {
 
 export type HostEventName = keyof HostEvents;
 
-/** Accès minimal à la base SQLite (sous-ensemble de better-sqlite3). */
+/** Minimal access to the SQLite database (subset of better-sqlite3). */
 export interface HostStatement {
   run(...params: unknown[]): { changes: number; lastInsertRowid: number | bigint };
   get(...params: unknown[]): unknown;
@@ -82,7 +83,7 @@ export interface HostModuleDef {
   defaultEnabled: boolean;
 }
 
-/** Services du CMS mis à disposition des fonctionnalités. */
+/** CMS services available to features. */
 export interface FeatureHost {
   version: string;
   basePath: string;
@@ -108,25 +109,25 @@ export interface FeatureHost {
     ban(userid: string, message: string): Promise<void>;
     unban(userid: string): Promise<void>;
     save(): Promise<void>;
-    /** Arrêt propre : le serveur prévient les joueurs, attend "waittime" secondes puis sauvegarde et s'arrête. */
+    /** Clean shutdown: the server warns players, waits "waittime" seconds, then saves and stops. */
     shutdown(waittime: number, message: string): Promise<void>;
   };
   palctl(args: string[], opts?: { onLine?: (l: string) => void; timeoutMs?: number }): Promise<string>;
-  /** Commande palctl dont la sortie est binaire (ex. téléchargement d'une sauvegarde). */
+  /** palctl command with binary output (e.g. downloading a backup). */
   palctlStream(args: string[]): ByteStream;
-  /** Sortie texte complète d'une commande palctl, sans limite de taille (ex. export JSON du monde). */
+  /** Full text output of a palctl command, without size limit (e.g. world JSON export). */
   palctlText(args: string[], opts?: { timeoutMs?: number }): Promise<string>;
   server: {
-    /** managed : géré par PalCMS (palctl disponible) ; external : serveur existant ; none : aucun serveur. */
+    /** managed: run by PalCMS (palctl available); external: existing server; none: no server. */
     mode(): import('./schemas').ServerMode;
-    /** Connexion au serveur externe (null si le serveur est géré par PalCMS ou absent). */
+    /** Connection to the external server (null when the server is run by PalCMS or absent). */
     external(): import('./schemas').ExternalServer | null;
     state(): Promise<string>;
     start(): Promise<void>;
     stop(): Promise<void>;
     restart(): Promise<void>;
     status(): ServerStatus;
-    /** Dernières métriques brutes de l'API REST (null si le serveur ne répond pas). */
+    /** Latest raw REST API metrics (null when the server does not answer). */
     metrics(): HostMetrics | null;
     onlinePlayers(): HostPlayer[];
     leaderboardRows(): { public_id: string; name: string; level: number; online: number; playtime_seconds: number }[];
@@ -141,10 +142,16 @@ export interface FeatureHost {
   modules: {
     isEnabled(id: string): boolean;
   };
+  /** Language of the site. */
+  lang(): Lang;
+  /** Translates an English text into the site language (Discord, in-game messages…). */
+  t(text: string, vars?: Vars): string;
+  /** Translates a message that was already filled in (e.g. a stored English alert) into the site language. */
+  tMessage(message: string): string;
   log(message: string): void;
 }
 
-// Routes des fonctionnalités
+// Feature routes
 
 export interface FeatureContext {
   params: Record<string, string>;
@@ -152,9 +159,9 @@ export interface FeatureContext {
   body: unknown;
   user: HostUser | null;
   can(permission: Permission): boolean;
-  /** Récupère une image envoyée (multipart) et renvoie son URL publique. */
+  /** Stores an uploaded image (multipart) and returns its public URL. */
   saveUpload(maxBytes: number): Promise<string>;
-  /** Lit un fichier envoyé (multipart) sans l'enregistrer, ex. un paquet d'extension. */
+  /** Reads an uploaded file (multipart) without storing it, e.g. an extension package. */
   readUpload(maxBytes: number): Promise<{ filename: string; data: Uint8Array }>;
 }
 
@@ -167,9 +174,9 @@ export interface FeatureFile {
 
 export interface FeatureRoute {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  /** Chemin relatif à /api/features, avec paramètres ":nom". */
+  /** Path relative to /api/features, with ":name" parameters. */
   path: string;
-  /** public : tout le monde ; user : connecté ; staff : équipe (avec permission éventuelle). */
+  /** public: everyone; user: signed in; staff: team (with an optional permission). */
   access: 'public' | 'user' | 'staff';
   permission?: Permission;
   handler(ctx: FeatureContext): Promise<unknown> | unknown;
@@ -180,7 +187,7 @@ export interface FeatureSet {
   modules: HostModuleDef[];
   migrations: HostMigration[];
   routes: FeatureRoute[];
-  /** Répartition des permissions entre les membres de l'équipe (rôles). */
+  /** How permissions are shared between team members (roles). */
   hasPermission(user: HostUser, permission: Permission): boolean;
   start(): void;
   stop(): void;

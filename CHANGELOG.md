@@ -1,56 +1,84 @@
 # Changelog
 
+## 1.1.0
+
+**English and French**
+- PalCMS is now in English by default, with a full French translation: setup wizard, public site, admin panel, error messages, Discord notifications and in-game announcements
+- The site language is chosen in the setup wizard and can be changed in *Website > Appearance*; each visitor can switch with the EN / FR button (saved in their browser)
+- Dates and numbers follow the chosen language
+- Existing sites keep French: nothing changes until the language is switched
+
+**English addresses**
+- Public pages: `/news`, `/leaderboard`, `/map`, `/players/…`, `/guilds`, `/events`, `/uptime`, `/report`, `/login`, `/register`, `/profile`
+- Admin panel: `/admin/server/…` and `/admin/site/…`
+- Old French addresses keep working and redirect; the stored menu is converted automatically on first start
+- New "Join the server" button link setting (*Website > Appearance*)
+
+**Extensions**
+- `lang()` and `t()` in `@palcms/sdk`: extensions can follow the visitor's language and reuse the PalCMS translations
+- Example plugin (Announcement banner) and theme (Aurora) in English with French texts, using the new addresses
+
+**Demo**
+- The online demo is in English, with a FR button
+
+**Fixes**
+- Event changes ("Experience rate: x3") are shown in the visitor's language
+- Some server error messages were not translated
+
+**Code**
+- Code comments, test names, scripts (`install.sh`, `palctl`, `palcms-config`) and documentation are in English; the French README is in `README.fr.md`
+
 ## 1.0.1
 
-**Plugins et thèmes**
-- Market dans le panel (*Extensions > Market*) : plugins et thèmes de palcms.online, filtres, recherche, installation et mise à jour en un clic
-- Chaque ressource du market est signée : PalCMS vérifie la signature et l’empreinte avant d’installer
-- Page *Plugins* : activer, désactiver, régler, supprimer, installer un fichier .zip. Les plugins se chargent sans redémarrer le CMS, et une erreur dans un plugin ne casse pas le site
-- Page *Thèmes* : thèmes installés, activation et personnalisation (couleurs, images, textes), en plus des réglages avancés existants
-- Un plugin peut ajouter des routes API, des tables, des pages publiques, des pages dans le panel et des blocs sur le site ; un thème peut remplacer l’en-tête, le pied de page et l’accueil
-- Les fichiers non signés sont refusés, sauf si l’admin autorise les extensions non vérifiées
-- Nouvelle permission « Plugins, thèmes et market »
-- Kit de création (`sdk/`) : construction du paquet avec Tailwind, un plugin d’exemple (Bandeau d’annonce) et un thème d’exemple (Aurora), documentation
-- Format de l’API du market et outils de signature pour palcms.online (`docs/market-api.md`)
+**Plugins and themes**
+- Market in the panel (*Extensions > Market*): plugins and themes from palcms.online, filters, search, one-click install and update
+- Every market resource is signed: PalCMS checks the signature and the checksum before installing
+- *Plugins* page: turn on, turn off, configure, delete, install a .zip file. Plugins load without restarting the CMS, and an error in a plugin does not break the site
+- *Themes* page: installed themes, activation and customization (colors, images, texts), on top of the existing advanced settings
+- A plugin can add API routes, tables, public pages, panel pages and blocks on the site; a theme can replace the header, the footer and the home page
+- Unsigned files are refused, unless the admin allows unverified extensions
+- New "Plugins, themes and market" permission
+- Creator kit (`sdk/`): package build with Tailwind, an example plugin (Announcement banner) and an example theme (Aurora), documentation
+- Market API format and signing tools for palcms.online (`docs/market-api.md`)
 
 ## 1.0.0
 
-Première version.
+First release.
 
-**Installation**
-- Une commande sur Ubuntu 22.04 / 24.04 (`install.sh`) : IP ou domaine, racine ou sous-chemin (`/cms`), HTTPS avec Let's Encrypt, auto-signé ou sans
-- Attend tout seul la fin des mises à jour automatiques d'Ubuntu sur un VPS tout neuf
-- Assistant web protégé par un jeton à usage unique
-- Au choix : installer un nouveau serveur Palworld, connecter un serveur existant, ou juste le site (serveur à connecter plus tard)
-- `palcms-config` pour changer l'adresse, le chemin ou le HTTPS après coup
-- Crossplay : le serveur apparaît dans la liste des serveurs communautaires (Xbox, Game Pass PC et PS5 ne peuvent pas se connecter par IP)
+**Install**
+- One command on Ubuntu 22.04 / 24.04 (`install.sh`): IP or domain, root or sub-path (`/cms`), HTTPS with Let's Encrypt, self-signed or none
+- Waits on its own for Ubuntu's automatic updates to finish on a brand new VPS
+- Web wizard protected by a one-time token
+- Your choice: install a new Palworld server, connect an existing server, or only the website (server connected later)
+- `palcms-config` to change the address, the path or HTTPS afterwards
+- Crossplay: the server shows up in the community server list (Xbox, Game Pass PC and PS5 cannot connect by IP)
 
-**Site public**
-- Accueil, actus, pages, menu modifiable, thème clair / sombre
-- Statut et joueurs connectés en temps réel
-- Carte en direct : joueurs, points d'intérêt, bases des guildes, points de voyage rapide et tours de boss
-- Classement (niveau, temps de jeu, ancienneté, constructions) et profils de joueurs avec graphiques
-- Guildes : membres, niveau, bases
-- Paldex façon boîte à Pals : les 288 Pals par numéro avec leur image, silhouettes pour ceux pas encore capturés, Paldex du serveur, de chaque joueur et de chaque guilde, classements des collectionneurs
-- Calendrier des événements avec compte à rebours sur l'accueil
-- Page de disponibilité (30 jours, fréquentation par heure, prochain redémarrage)
-- Comptes joueurs via Steam (validés automatiquement) ou par email (validés par l'équipe), avec leurs Pals, leur inventaire et leur guilde
-- Signalements et suggestions envoyés à l'équipe
+**Public site**
+- Home page, news, pages, editable menu, light / dark theme
+- Live status and online players
+- Live map: players, points of interest, guild bases, fast travel points and boss towers
+- Leaderboard (level, playtime, seniority, buildings) and player profiles with charts
+- Guilds: members, level, bases
+- Paldex like a Pal box: the 288 Pals by number with their picture, silhouettes for the ones not caught yet, Paldex of the server, of each player and of each guild, collector rankings
+- Events calendar with a countdown on the home page
+- Uptime page (30 days, attendance by hour, next restart)
+- Player accounts through Steam (approved automatically) or by email (approved by the team), with their Pals, inventory and guild
+- Reports and suggestions sent to the team
 
-**Panel admin**
-- Serveur : tableau de bord, démarrage / arrêt / redémarrage, éditeur de `PalWorldSettings.ini`, joueurs, logs en direct, sauvegardes auto avec restauration, redémarrages programmés avec annonces, annonces en jeu, console RCON
-- Surveillance : jauges (FPS, temps de frame, joueurs, bases, processeur, mémoire, disque), alertes avec seuils réglables, détection des plantages, historique sur 30 jours, sauvegarde du monde en un clic, arrêt propre avec compte à rebours
-- Statistiques de fréquentation : heures de pointe, joueurs uniques, nouveaux joueurs, joueurs qui reviennent
-- Données du monde (lecture des sauvegardes avec `sav_cli`) : inventaire, Pals et guilde de chaque joueur, recherche d'un objet chez tous les joueurs
-- Événements et préréglages : week-end XP x3 et autres réglages temporaires remis à la fin, préréglages Détente / Normal / Difficile / x2 / x3, import / export de la configuration (sans les mots de passe)
-- Modération : kick / ban / whitelist, avertissements, notes privées, bans temporaires levés automatiquement, historique par joueur, anti-triche léger (niveaux, quantités d'objets)
-- Site : pages, actus, menu, apparence, thèmes, carte, Discord (notifications et alertes), modules, membres, signalements
-- Mise à jour automatique du serveur Palworld et mise à jour de PalCMS en un clic
-- Équipe avec rôles (Administrateur, Modérateur, Rédacteur + rôles perso) et journal des actions
+**Admin panel**
+- Server: dashboard, start / stop / restart, `PalWorldSettings.ini` editor, players, live logs, automatic backups with restore, scheduled restarts with announcements, in-game announcements, RCON console
+- Monitoring: gauges (FPS, frame time, players, bases, CPU, memory, disk), alerts with adjustable thresholds, crash detection, 30-day history, one-click world save, clean shutdown with countdown
+- Attendance statistics: peak hours, unique players, new players, returning players
+- World data (reading saves with `sav_cli`): inventory, Pals and guild of each player, search an item across all players
+- Events and presets: XP x3 weekend and other temporary settings put back at the end, Casual / Normal / Hard / x2 / x3 presets, configuration import / export (without passwords)
+- Moderation: kick / ban / whitelist, warnings, private notes, temporary bans lifted automatically, history per player, light anti-cheat (levels, item amounts)
+- Website: pages, news, menu, appearance, themes, map, Discord (notifications and alerts), modules, members, reports
+- Automatic Palworld server updates and one-click PalCMS updates
+- Team with roles (Administrator, Moderator, Editor + custom roles) and audit log
 
-**Démo**
-- Démo en ligne sur [demo.palcms.online](https://demo.palcms.online/) : site public et panel admin avec des données fictives, sans serveur
+**Demo**
+- Online demo at [demo.palcms.online](https://demo.palcms.online/): public site and admin panel with fake data, no server
 
-**Sécurité**
-- Le CMS ne tourne pas en root, les actions système passent par `palctl` (liste blanche de commandes)
-- Protection CSRF, HTML nettoyé côté serveur, vérification des images, mots de passe hachés (scrypt)
+**Security**
+- The CMS does not run as root, system actions go through `palctl` (command whitelist)
+- CSRF protection, HTML sanitized server-side, image checks, hashed passwords (scrypt)

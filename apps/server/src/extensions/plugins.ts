@@ -13,8 +13,8 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 
 /**
- * Plugins côté serveur : chaque server.js exporte une fonction qui reçoit l'API des plugins.
- * Ils s'activent et se désactivent sans redémarrer le CMS.
+ * Server-side plugins: each server.js exports a function that receives the plugin API.
+ * They are enabled and disabled without restarting the CMS.
  */
 export class PluginRuntime {
   private loaded = new Map<string, LoadedPlugin>();
@@ -40,7 +40,7 @@ export class PluginRuntime {
     for (const id of [...this.loaded.keys()]) this.unload(id);
   }
 
-  /** Aligne les plugins chargés sur ceux activés (après une activation, une mise à jour ou une suppression). */
+  /** Aligns loaded plugins with enabled ones (after enabling, updating or removing one). */
   async sync(): Promise<void> {
     if (!this.running) return;
     const wanted = new Map(enabledPlugins().filter((p) => p.hasServer).map((p) => [p.id, p]));
@@ -51,7 +51,7 @@ export class PluginRuntime {
     for (const p of wanted.values()) {
       if (!this.loaded.has(p.id)) await this.load(p.id, p.version);
     }
-    // Un plugin sans code serveur n'a pas d'erreur de chargement.
+    // A plugin without server code has no loading error.
     for (const id of loadErrors.keys()) if (!wanted.has(id)) loadErrors.delete(id);
   }
 
@@ -62,7 +62,7 @@ export class PluginRuntime {
       try {
         fn();
       } catch (e) {
-        console.error(`[plugin ${id}] arrêt :`, e);
+        console.error(`[plugin ${id}] stop:`, e);
       }
     }
     this.loaded.delete(id);
@@ -100,7 +100,7 @@ export class PluginRuntime {
           () =>
             void Promise.resolve()
               .then(fn)
-              .catch((e) => console.error(`[plugin ${id}] tâche :`, e)),
+              .catch((e) => console.error(`[plugin ${id}] task:`, e)),
           Math.max(1000, ms),
         );
         t.unref?.();
@@ -113,20 +113,20 @@ export class PluginRuntime {
     };
 
     try {
-      // Le paramètre de version force Node à recharger le fichier après une mise à jour.
+      // The version parameter forces Node to reload the file after an update.
       const url = `${pathToFileURL(extensionPath(id, 'server.js')).href}?rev=${version}-${Date.now()}`;
       const mod = (await import(/* @vite-ignore */ url)) as { default?: unknown };
-      if (typeof mod.default !== 'function') throw new Error('server.js doit exporter une fonction par défaut');
+      if (typeof mod.default !== 'function') throw new Error('server.js must export a default function');
       await (mod.default as (api: PluginServerApi) => unknown)(api);
       this.loaded.set(id, plugin);
       loadErrors.delete(id);
-      console.log(`[extensions] plugin ${id} ${version} chargé`);
+      console.log(`[extensions] plugin ${id} ${version} loaded`);
     } catch (e) {
       for (const fn of plugin.cleanups) {
         try {
           fn();
         } catch {
-          /* déjà en erreur */
+          /* already failing */
         }
       }
       loadErrors.set(id, errorText(e));

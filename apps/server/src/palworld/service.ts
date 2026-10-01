@@ -16,18 +16,18 @@ export async function serviceState(): Promise<ServiceState> {
   try {
     out = lastLine(await runPalctl(['service', 'is-active']));
   } catch (e) {
-    // systemctl is-active renvoie un code non nul quand le service est arrêté.
+    // systemctl is-active returns a non-zero code when the service is stopped.
     out = lastLine((e as { output?: string }).output);
   }
   return (KNOWN as string[]).includes(out) ? (out as ServiceState) : 'unknown';
 }
 
-/** Sauvegarde le monde avant un arrêt si l'API répond (sinon on arrête quand même). */
+/** Saves the world before a stop if the API answers (stops anyway otherwise). */
 async function trySave(): Promise<void> {
   try {
     await palworld.save();
   } catch {
-    /* serveur déjà arrêté ou injoignable */
+    /* server already stopped or unreachable */
   }
 }
 
@@ -45,14 +45,14 @@ export async function restartServer(): Promise<void> {
   await runPalctl(['service', 'restart'], { timeoutMs: 120_000 });
 }
 
-// Logs en direct (canal « logs »)
+// Live logs ("logs" channel)
 
 let stopTail: (() => void) | null = null;
 
 realtime.setHooks('logs', {
   onFirst: () => {
     if (!isManaged()) {
-      realtime.broadcast('logs', { type: 'error', data: 'Logs indisponibles : le serveur n’est pas géré par PalCMS.' });
+      realtime.broadcast('logs', { type: 'error', data: 'Logs unavailable: the server is not run by PalCMS.' });
       return;
     }
     try {

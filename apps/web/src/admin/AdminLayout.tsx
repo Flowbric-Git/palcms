@@ -42,6 +42,8 @@ import { useApp } from '../lib/app';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Badge, cx } from '../components/ui';
 import { registry } from '../lib/extensions';
+import { t } from '../lib/i18n';
+import { LanguageSwitch } from '../components/LanguageSwitch';
 
 export { useLoad } from '../lib/useLoad';
 
@@ -49,9 +51,9 @@ interface NavEntry {
   to: string;
   label: string;
   icon: typeof Gauge;
-  /** Sans permission : visible par toute l'équipe. */
+  /** Without a permission: visible to the whole team. */
   permission?: Permission;
-  /** Uniquement pour un serveur installé et géré par PalCMS (masqué pour un serveur externe). */
+  /** Only for a server installed and run by PalCMS (hidden for an external server). */
   managedOnly?: boolean;
   badge?: ReactNode;
 }
@@ -60,7 +62,7 @@ function Item({ to, icon: Icon, children, badge }: { to: string; icon: typeof Ga
   return (
     <NavLink
       to={to}
-      end={to === '/admin/serveur'}
+      end={to === '/admin/server'}
       className={({ isActive }) =>
         cx(
           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
@@ -92,10 +94,10 @@ export function AdminLayout() {
   const location = useLocation();
 
   useEffect(() => setOpen(false), [location.pathname]);
-  // Les thèmes du site public (fond, CSS perso) ne s'appliquent pas au panel.
+  // Public site themes (background, custom CSS) do not apply to the panel.
   useEffect(() => {
     document.body.classList.add('palcms-admin');
-    // Le CSS du thème installé ne s'applique pas non plus au panel.
+    // Nor does the installed theme's CSS.
     const links = [...document.querySelectorAll<HTMLLinkElement>('link[data-palcms-theme]')];
     links.forEach((link) => (link.disabled = true));
     return () => {
@@ -118,74 +120,74 @@ export function AdminLayout() {
       .catch(() => {});
   }, [isAdmin, boot.user, location.pathname]);
 
-  if (!boot.user) return <Navigate to="/connexion" replace />;
+  if (!boot.user) return <Navigate to="/login" replace />;
   if (!isAdmin) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-lg font-semibold">Accès réservé aux administrateurs.</p>
+        <p className="text-lg font-semibold">{t('Administrators only.')}</p>
         <Link to="/" className="text-accent">
-          Retour au site
+          {t('Back to the site')}
         </Link>
       </div>
     );
   }
 
-  // Chaque membre de l'équipe ne voit que les rubriques autorisées par son rôle.
+  // Each team member only sees the sections their role allows (labels are translated here).
   const perms = new Set(boot.user.permissions);
   const managed = boot.serverMode === 'managed';
   const visible = (list: NavEntry[]) => list.filter((e) => (!e.permission || perms.has(e.permission)) && (managed || !e.managedOnly));
   const render = (e: NavEntry) => (
     <Item key={e.to} to={e.to} icon={e.icon} badge={e.badge}>
-      {e.label}
+      {t(e.label)}
     </Item>
   );
 
   const server = visible([
-    { to: '/admin/serveur', label: 'Tableau de bord', icon: Gauge },
-    { to: '/admin/serveur/surveillance', label: 'Surveillance', icon: Activity, permission: 'server.players' },
-    { to: '/admin/serveur/statistiques', label: 'Statistiques', icon: BarChart3, permission: 'server.players' },
-    { to: '/admin/serveur/connexion', label: 'Connexion au serveur', icon: PlugZap, permission: 'server.config' },
-    { to: '/admin/serveur/configuration', label: 'Configuration', icon: Settings2, permission: 'server.config', managedOnly: true },
-    { to: '/admin/serveur/evenements', label: 'Événements', icon: PartyPopper, permission: 'server.events', managedOnly: true },
-    { to: '/admin/serveur/joueurs', label: 'Joueurs', icon: Users, permission: 'server.players' },
-    { to: '/admin/serveur/monde', label: 'Données du monde', icon: Globe, permission: 'server.world', managedOnly: true },
-    { to: '/admin/serveur/logs', label: 'Logs', icon: ScrollText, permission: 'server.logs', managedOnly: true },
-    { to: '/admin/serveur/sauvegardes', label: 'Sauvegardes', icon: Archive, permission: 'server.backups', managedOnly: true },
-    { to: '/admin/serveur/programmation', label: 'Programmation', icon: CalendarClock, permission: 'server.schedules', managedOnly: true },
-    { to: '/admin/serveur/annonces', label: 'Annonces en jeu', icon: Megaphone, permission: 'server.announce' },
-    { to: '/admin/serveur/moderation', label: 'Modération', icon: ShieldAlert, permission: 'server.moderation' },
-    { to: '/admin/serveur/sanctions', label: 'Sanctions', icon: Gavel, permission: 'server.moderation' },
-    { to: '/admin/serveur/anti-triche', label: 'Anti-triche', icon: Radar, permission: 'server.moderation' },
-    { to: '/admin/serveur/rcon', label: 'Console RCON', icon: Terminal, permission: 'server.rcon' },
+    { to: '/admin/server', label: 'Dashboard', icon: Gauge },
+    { to: '/admin/server/monitoring', label: 'Monitoring', icon: Activity, permission: 'server.players' },
+    { to: '/admin/server/stats', label: 'Statistics', icon: BarChart3, permission: 'server.players' },
+    { to: '/admin/server/connection', label: 'Server connection', icon: PlugZap, permission: 'server.config' },
+    { to: '/admin/server/config', label: 'Configuration', icon: Settings2, permission: 'server.config', managedOnly: true },
+    { to: '/admin/server/events', label: 'Events', icon: PartyPopper, permission: 'server.events', managedOnly: true },
+    { to: '/admin/server/players', label: 'Players', icon: Users, permission: 'server.players' },
+    { to: '/admin/server/world', label: 'World data', icon: Globe, permission: 'server.world', managedOnly: true },
+    { to: '/admin/server/logs', label: 'Logs', icon: ScrollText, permission: 'server.logs', managedOnly: true },
+    { to: '/admin/server/backups', label: 'Backups', icon: Archive, permission: 'server.backups', managedOnly: true },
+    { to: '/admin/server/schedules', label: 'Schedules', icon: CalendarClock, permission: 'server.schedules', managedOnly: true },
+    { to: '/admin/server/announcements', label: 'In-game announcements', icon: Megaphone, permission: 'server.announce' },
+    { to: '/admin/server/moderation', label: 'Moderation', icon: ShieldAlert, permission: 'server.moderation' },
+    { to: '/admin/server/sanctions', label: 'Sanctions', icon: Gavel, permission: 'server.moderation' },
+    { to: '/admin/server/anti-cheat', label: 'Anti-cheat', icon: Radar, permission: 'server.moderation' },
+    { to: '/admin/server/rcon', label: 'RCON console', icon: Terminal, permission: 'server.rcon' },
   ]);
   const site = visible([
     { to: '/admin/site/pages', label: 'Pages', icon: FileText, permission: 'site.pages' },
-    { to: '/admin/site/actualites', label: 'Actualités', icon: Newspaper, permission: 'site.news' },
+    { to: '/admin/site/news', label: 'News', icon: Newspaper, permission: 'site.news' },
     { to: '/admin/site/menu', label: 'Menu', icon: LayoutList, permission: 'site.appearance' },
-    { to: '/admin/site/apparence', label: 'Apparence', icon: Palette, permission: 'site.appearance' },
-    { to: '/admin/site/themes', label: 'Thèmes', icon: Sparkles, permission: 'site.appearance' },
-    { to: '/admin/site/carte', label: 'Carte', icon: MapIcon, permission: 'site.map' },
+    { to: '/admin/site/appearance', label: 'Appearance', icon: Palette, permission: 'site.appearance' },
+    { to: '/admin/site/themes', label: 'Themes', icon: Sparkles, permission: 'site.appearance' },
+    { to: '/admin/site/map', label: 'Map', icon: MapIcon, permission: 'site.map' },
     { to: '/admin/site/discord', label: 'Discord', icon: MessageSquare, permission: 'site.discord' },
     { to: '/admin/site/modules', label: 'Modules', icon: Blocks, permission: 'site.modules' },
     {
-      to: '/admin/site/membres',
-      label: 'Membres',
+      to: '/admin/site/members',
+      label: 'Members',
       icon: UsersRound,
       permission: 'site.members',
       badge: pending > 0 ? <Badge tone="amber">{pending}</Badge> : undefined,
     },
     {
-      to: '/admin/site/signalements',
-      label: 'Signalements',
+      to: '/admin/site/reports',
+      label: 'Reports',
       icon: Flag,
       permission: 'site.tickets',
       badge: openTickets > 0 ? <Badge tone="amber">{openTickets}</Badge> : undefined,
     },
   ]);
   const admin = visible([
-    { to: '/admin/equipe', label: 'Équipe et rôles', icon: Shield, permission: 'admin.team' },
-    { to: '/admin/journal', label: 'Journal des actions', icon: ScrollText, permission: 'admin.audit' },
-    { to: '/admin/mises-a-jour', label: 'Mises à jour', icon: Download, permission: 'admin.updates' },
+    { to: '/admin/team', label: 'Team and roles', icon: Shield, permission: 'admin.team' },
+    { to: '/admin/audit', label: 'Audit log', icon: ScrollText, permission: 'admin.audit' },
+    { to: '/admin/updates', label: 'Updates', icon: Download, permission: 'admin.updates' },
   ]);
   const extensions = visible([
     { to: '/admin/market', label: 'Market', icon: Store, permission: 'admin.extensions' },
@@ -196,18 +198,18 @@ export function AdminLayout() {
   const nav = (
     <nav className="flex h-full flex-col gap-6 p-4">
       <Link to="/admin" className="flex items-center gap-2 px-3 text-lg font-bold">
-        <span className="text-2xl">🐾</span> Panel admin
+        <span className="text-2xl">🐾</span> {t('Admin panel')}
       </Link>
-      <Section title="Gestion du serveur">{server.map(render)}</Section>
-      {site.length > 0 && <Section title="Gestion du site">{site.map(render)}</Section>}
-      {extensions.length > 0 && <Section title="Extensions">{extensions.map(render)}</Section>}
+      <Section title={t('Server')}>{server.map(render)}</Section>
+      {site.length > 0 && <Section title={t('Website')}>{site.map(render)}</Section>}
+      {extensions.length > 0 && <Section title={t('Extensions')}>{extensions.map(render)}</Section>}
       <div className="mt-auto space-y-0.5 border-t border-slate-200 pt-4 dark:border-slate-800">
         {admin.map(render)}
-        <Item to="/admin/compte" icon={UserCircle}>
-          Mon compte
+        <Item to="/admin/account" icon={UserCircle}>
+          {t('My account')}
         </Item>
         <Link to="/" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
-          <ExternalLink className="h-4 w-4" /> Voir le site
+          <ExternalLink className="h-4 w-4" /> {t('View the site')}
         </Link>
       </div>
     </nav>
@@ -226,11 +228,12 @@ export function AdminLayout() {
       )}
       <div className="min-w-0">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-slate-200 bg-white/80 px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
-          <button className="rounded-lg p-2 lg:hidden" onClick={() => setOpen(true)} aria-label="Menu">
+          <button className="rounded-lg p-2 lg:hidden" onClick={() => setOpen(true)} aria-label={t('Menu')}>
             {open ? <X className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
           </button>
           <span className="truncate text-sm text-slate-500">{boot.site.name}</span>
           <div className="ml-auto flex items-center gap-2">
+            <LanguageSwitch />
             <ThemeToggle />
             <span className="hidden text-sm font-medium sm:inline">{boot.user.displayName}</span>
           </div>

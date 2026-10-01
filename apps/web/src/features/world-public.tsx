@@ -7,6 +7,7 @@ import * as format from '../lib/format';
 import * as ui from '../components/ui';
 import { BarChart } from './components';
 import { LiveMap, type MapData } from './map/LiveMap';
+import { num, t, tm } from '../lib/i18n';
 
 const { Alert, Badge, Button, Card, Empty, Field, Input, Select, Spinner, Textarea, cx } = ui;
 
@@ -39,9 +40,9 @@ function useGet<T>(path: string | null) {
   return { data, error };
 }
 
-const synced = (ts: number | null) => (ts ? `Données du monde mises à jour ${format.timeAgo(ts)}` : 'Données du monde pas encore disponibles');
+const synced = (ts: number | null) => (ts ? t('World data updated {when}', { when: format.timeAgo(ts) }) : t('World data not available yet'));
 
-// Guildes
+// Guilds
 
 interface GuildSummary {
   id: string;
@@ -55,17 +56,17 @@ interface GuildSummary {
 export function GuildsPage() {
   const { data, error } = useGet<{ syncedAt: number | null; guilds: GuildSummary[] }>('features/guilds');
   return (
-    <Page icon={<Castle className="h-8 w-8 text-accent" />} title="Guildes" subtitle={data ? synced(data.syncedAt) : undefined}>
+    <Page icon={<Castle className="h-8 w-8 text-accent" />} title={t('Guilds')} subtitle={data ? synced(data.syncedAt) : undefined}>
       {error ? (
         <Alert kind="info">{error}</Alert>
       ) : !data ? (
         <Spinner />
       ) : data.guilds.length === 0 ? (
-        <Empty>Aucune guilde pour le moment.</Empty>
+        <Empty>{t('No guild yet.')}</Empty>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.guilds.map((g, i) => (
-            <Link key={g.id} to={`/guildes/${g.id}`} className="group">
+            <Link key={g.id} to={`/guilds/${g.id}`} className="group">
               <Card className="h-full transition group-hover:ring-accent">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -79,9 +80,9 @@ export function GuildsPage() {
                   {i < 3 && <Badge tone="accent">#{i + 1}</Badge>}
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                  <Stat label="Niveau" value={g.level} />
-                  <Stat label="Membres" value={g.memberCount} />
-                  <Stat label="Bases" value={g.baseCount} />
+                  <Stat label={t('Level')} value={g.level} />
+                  <Stat label={t('Members')} value={g.memberCount} />
+                  <Stat label={t('Bases')} value={g.baseCount} />
                 </div>
               </Card>
             </Link>
@@ -115,39 +116,39 @@ export function GuildPage() {
   const { id } = useParams();
   const { data, error } = useGet<GuildDetail>(`features/guilds/${id}`);
   const map = useGet<MapData>(data && data.bases.length ? 'features/map' : null);
-  if (error) return <Page icon={<Castle className="h-8 w-8 text-accent" />} title="Guilde">{<Alert kind="info">{error}</Alert>}</Page>;
+  if (error) return <Page icon={<Castle className="h-8 w-8 text-accent" />} title={t('Guild')}>{<Alert kind="info">{error}</Alert>}</Page>;
   if (!data) return <Spinner />;
   const layers = { bases: data.bases.map((b) => ({ ...b, guild: data.name, guildId: data.id, level: data.level })) };
   return (
     <Page icon={<Castle className="h-8 w-8 text-accent" />} title={data.name} subtitle={synced(data.syncedAt)}>
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Niveau de la guilde" value={data.level} />
-        <Stat label="Membres" value={data.members.length} />
-        <Stat label="Bases" value={data.baseCount} />
+        <Stat label={t('Guild level')} value={data.level} />
+        <Stat label={t('Members')} value={data.members.length} />
+        <Stat label={t('Bases')} value={data.baseCount} />
       </div>
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <Card title={<span className="flex items-center gap-2"><Users className="h-4 w-4" /> Membres</span>}>
+        <Card title={<span className="flex items-center gap-2"><Users className="h-4 w-4" /> {t('Members')}</span>}>
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {data.members.map((m) => (
               <li key={m.name} className="flex items-center gap-3 py-2 text-sm">
                 {m.leader ? <Crown className="h-4 w-4 text-yellow-500" /> : <span className="w-4" />}
                 <span className="flex-1 font-medium">
                   {m.publicId ? (
-                    <Link to={`/joueurs/${m.publicId}`} className="hover:text-accent">
+                    <Link to={`/players/${m.publicId}`} className="hover:text-accent">
                       {m.name}
                     </Link>
                   ) : (
                     m.name
                   )}
                 </span>
-                {m.level !== null && <span className="text-xs text-slate-500">niv. {m.level}</span>}
+                {m.level !== null && <span className="text-xs text-slate-500">{t('lvl {level}', { level: m.level })}</span>}
                 <Badge>{m.pals} Pals</Badge>
               </li>
             ))}
           </ul>
         </Card>
         {data.bases.length > 0 && map.data && (
-          <Card title="Bases">
+          <Card title={t('Bases')}>
             <div className="overflow-hidden rounded-lg">
               <LiveMap data={{ ...map.data, pois: [] }} players={[]} layers={layers} height={380} focus={data.bases[0]} />
             </div>
@@ -160,7 +161,7 @@ export function GuildPage() {
 
 // Paldex
 
-/** Image du Pal (public/pals/<type>.png) ; si elle manque, un emplacement neutre la remplace. */
+/** Pal image (public/pals/<type>.png); a neutral placeholder replaces it when missing. */
 export function PalIcon({ type, size = 48 }: { type: string; size?: number }) {
   const [missing, setMissing] = useState(false);
   const file = type.replace(/^boss_/i, '').toLowerCase();
@@ -207,14 +208,14 @@ interface DexData {
 }
 
 const ELEMENTS: Record<string, { label: string; color: string }> = {
-  neutral: { label: 'Neutre', color: '#a8a29e' },
-  grass: { label: 'Plante', color: '#22c55e' },
-  water: { label: 'Eau', color: '#3b82f6' },
-  fire: { label: 'Feu', color: '#ef4444' },
-  electric: { label: 'Électrique', color: '#eab308' },
-  dark: { label: 'Ténèbres', color: '#7c3aed' },
-  ground: { label: 'Terre', color: '#a16207' },
-  ice: { label: 'Glace', color: '#38bdf8' },
+  neutral: { label: 'Neutral', color: '#a8a29e' },
+  grass: { label: 'Grass', color: '#22c55e' },
+  water: { label: 'Water', color: '#3b82f6' },
+  fire: { label: 'Fire', color: '#ef4444' },
+  electric: { label: 'Electric', color: '#eab308' },
+  dark: { label: 'Dark|element', color: '#7c3aed' },
+  ground: { label: 'Ground', color: '#a16207' },
+  ice: { label: 'Ice', color: '#38bdf8' },
   dragon: { label: 'Dragon', color: '#c026d3' },
 };
 
@@ -224,19 +225,19 @@ function ElementBadge({ element }: { element: string }) {
   const e = ELEMENTS[element] ?? { label: element, color: '#64748b' };
   return (
     <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ background: e.color }}>
-      {e.label}
+      {t(e.label)}
     </span>
   );
 }
 
-/** Case de la grille, façon boîte à Pals : silhouette tant que le Pal n'a pas été capturé. */
+/** Grid cell, like the Palbox: a silhouette until the Pal has been caught. */
 function DexCell({ e, selected, onClick }: { e: DexEntry; selected: boolean; onClick: () => void }) {
   const caught = e.count > 0;
   const [missing, setMissing] = useState(false);
   return (
     <button
       onClick={onClick}
-      title={caught ? `${e.name} · ×${e.count}` : `n° ${e.no} · pas encore capturé`}
+      title={caught ? `${e.name} · ×${e.count}` : t('No. {no} · not caught yet', { no: e.no })}
       className={cx(
         'group relative flex aspect-square flex-col items-center justify-center rounded-xl p-1 ring-1 transition',
         caught ? 'bg-slate-50 ring-slate-200 hover:ring-accent dark:bg-slate-800/70 dark:ring-slate-700' : 'bg-slate-100/60 ring-slate-200/60 dark:bg-slate-900 dark:ring-slate-800',
@@ -264,9 +265,10 @@ function DexCell({ e, selected, onClick }: { e: DexEntry; selected: boolean; onC
 
 export function PaldexPage() {
   const [params, setParams] = useSearchParams();
-  const joueur = params.get('joueur');
-  const guilde = params.get('guilde');
-  const query = joueur ? `?joueur=${encodeURIComponent(joueur)}` : guilde ? `?guilde=${encodeURIComponent(guilde)}` : '';
+  // "joueur" / "guilde": parameter names used before 1.1.0, still accepted in links.
+  const player = params.get('player') ?? params.get('joueur');
+  const guild = params.get('guild') ?? params.get('guilde');
+  const query = player ? `?player=${encodeURIComponent(player)}` : guild ? `?guild=${encodeURIComponent(guild)}` : '';
   const { data, error } = useGet<DexData>(`features/paldex${query}`);
   const [q, setQ] = useState('');
   const [onlyCaught, setOnlyCaught] = useState(false);
@@ -285,13 +287,18 @@ export function PaldexPage() {
 
   const go = (next: Record<string, string | null>) => {
     const p = new URLSearchParams();
-    const merged = { joueur, guilde, page: null as string | null, ...next };
+    const merged = { player, guild, page: null as string | null, ...next };
     for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v);
     setParams(p);
     setSelected(null);
   };
 
-  const title = !data || data.scope.type === 'server' ? 'Paldex du serveur' : data.scope.type === 'player' ? `Paldex de ${data.scope.name}` : `Paldex de la guilde ${data.scope.name}`;
+  const title =
+    !data || data.scope.type === 'server'
+      ? t('Server Paldex')
+      : data.scope.type === 'player'
+        ? t("{name}'s Paldex", { name: data.scope.name })
+        : t('Paldex of the guild {name}', { name: data.scope.name });
 
   return (
     <Page icon={<BookOpen className="h-8 w-8 text-accent" />} title={title} subtitle={data ? synced(data.syncedAt) : undefined}>
@@ -304,24 +311,24 @@ export function PaldexPage() {
           <div>
             {data.scope.type !== 'server' && (
               <div className="mb-4 flex flex-wrap gap-2">
-                <Button variant="secondary" onClick={() => go({ joueur: null, guilde: null })}>
-                  ← Paldex du serveur
+                <Button variant="secondary" onClick={() => go({ player: null, guild: null })}>
+                  ← {t('Server Paldex')}
                 </Button>
                 {data.scope.guild && (
-                  <Button variant="secondary" onClick={() => go({ joueur: null, guilde: data.scope.guild!.id })}>
-                    <Castle className="h-4 w-4" /> Paldex de sa guilde ({data.scope.guild.name})
+                  <Button variant="secondary" onClick={() => go({ player: null, guild: data.scope.guild!.id })}>
+                    <Castle className="h-4 w-4" /> {t('Their guild Paldex ({name})', { name: data.scope.guild.name })}
                   </Button>
                 )}
                 {data.scope.type === 'player' && data.scope.id && (
-                  <Link to={`/joueurs/${data.scope.id}`}>
-                    <Button variant="ghost">Profil du joueur</Button>
+                  <Link to={`/players/${data.scope.id}`}>
+                    <Button variant="ghost">{t('Player profile')}</Button>
                   </Link>
                 )}
               </div>
             )}
             <div className="mb-4 grid grid-cols-3 gap-3">
               <div className="rounded-lg bg-slate-50 p-2 dark:bg-slate-800/60">
-                <p className="text-[11px] text-slate-500">Espèces capturées</p>
+                <p className="text-[11px] text-slate-500">{t('Species caught')}</p>
                 <p className="text-lg font-bold">
                   {data.caught} <span className="text-sm font-medium text-slate-500">/ {data.total}</span>
                 </p>
@@ -329,8 +336,8 @@ export function PaldexPage() {
                   <div className="h-full rounded-full bg-accent" style={{ width: `${(data.caught / data.total) * 100}%` }} />
                 </div>
               </div>
-              <Stat label="Pals capturés" value={data.pals} />
-              <Stat label="Chanceux ✨" value={data.lucky} />
+              <Stat label={t('Pals caught')} value={data.pals} />
+              <Stat label={`${t('Lucky')} ✨`} value={data.lucky} />
             </div>
             <div className="mb-3 flex flex-wrap items-center gap-3">
               <div className="relative min-w-48 flex-1">
@@ -341,7 +348,7 @@ export function PaldexPage() {
                     setQ(e.target.value);
                     go({ page: null });
                   }}
-                  placeholder="Nom ou numéro…"
+                  placeholder={t('Name or number…')}
                   className="pl-9"
                 />
               </div>
@@ -355,13 +362,13 @@ export function PaldexPage() {
                   }}
                   className="accent-[var(--accent)]"
                 />
-                Capturés seulement
+                {t('Caught only')}
               </label>
             </div>
 
             <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
               {shown.length === 0 ? (
-                <Empty>Aucun Pal.</Empty>
+                <Empty>{t('No Pal.')}</Empty>
               ) : (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 md:grid-cols-6">
                   {shown.map((e) => (
@@ -371,7 +378,7 @@ export function PaldexPage() {
               )}
               <div className="mt-3 flex items-center justify-between gap-2">
                 <Button variant="ghost" disabled={current <= 1} onClick={() => go({ page: String(current - 1) })}>
-                  ‹ Précédente
+                  ‹ {t('Previous')}
                 </Button>
                 <div className="flex flex-wrap justify-center gap-1">
                   {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
@@ -385,7 +392,7 @@ export function PaldexPage() {
                   ))}
                 </div>
                 <Button variant="ghost" disabled={current >= pages} onClick={() => go({ page: String(current + 1) })}>
-                  Suivante ›
+                  {t('Next')} ›
                 </Button>
               </div>
             </div>
@@ -395,7 +402,7 @@ export function PaldexPage() {
                 <div className="flex flex-wrap items-center gap-4">
                   <PalIcon type={detail.id} size={80} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-slate-500">n° {detail.no}</p>
+                    <p className="text-xs font-bold text-slate-500">{t('No. {no}', { no: detail.no })}</p>
                     <p className="text-xl font-bold">{detail.count > 0 ? detail.name : '???'}</p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {detail.elements.map((el) => (
@@ -405,13 +412,13 @@ export function PaldexPage() {
                   </div>
                   {detail.count > 0 ? (
                     <div className="grid grid-cols-2 gap-2 text-center text-sm sm:grid-cols-4">
-                      <Stat label="Capturés" value={detail.count} />
-                      <Stat label={data.scope.type === 'player' ? 'Niveau max' : 'Dresseurs'} value={data.scope.type === 'player' ? detail.maxLevel : detail.owners} />
-                      <Stat label="Chanceux" value={detail.lucky} />
-                      <Stat label="Alphas" value={detail.alpha} />
+                      <Stat label={t('Caught')} value={detail.count} />
+                      <Stat label={data.scope.type === 'player' ? t('Max level') : t('Tamers')} value={data.scope.type === 'player' ? detail.maxLevel : detail.owners} />
+                      <Stat label={t('Lucky')} value={detail.lucky} />
+                      <Stat label={t('Alphas')} value={detail.alpha} />
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-500">Pas encore capturé{data.scope.type === 'server' ? ' sur le serveur' : ''}.</p>
+                    <p className="text-sm text-slate-500">{data.scope.type === 'server' ? t('Not caught on the server yet.') : t('Not caught yet.')}</p>
                   )}
                 </div>
               </Card>
@@ -419,21 +426,21 @@ export function PaldexPage() {
           </div>
 
           <div className="space-y-6">
-            <Card title={<span className="flex items-center gap-2"><Star className="h-4 w-4 text-yellow-500" /> Collectionneurs</span>}>
+            <Card title={<span className="flex items-center gap-2"><Star className="h-4 w-4 text-yellow-500" /> {t('Collectors')}</span>}>
               {data.collectors.length === 0 ? (
-                <Empty>Personne pour l’instant.</Empty>
+                <Empty>{t('Nobody yet.')}</Empty>
               ) : (
                 <ol className="space-y-0.5">
                   {data.collectors.map((c, i) => (
                     <li key={c.id}>
                       <button
-                        onClick={() => go({ joueur: c.id, guilde: null })}
-                        className={cx('flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800', joueur === c.id && 'bg-accent/10 text-accent')}
+                        onClick={() => go({ player: c.id, guild: null })}
+                        className={cx('flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800', player === c.id && 'bg-accent/10 text-accent')}
                       >
                         <span className="w-5 text-right font-semibold text-slate-500">{i + 1}</span>
                         <span className="flex-1 truncate font-medium">{c.name}</span>
                         <span className="text-xs tabular-nums text-slate-500" title={`${c.pals} Pals`}>
-                          {c.species} esp.
+                          {t('{n} sp.', { n: c.species })}
                         </span>
                       </button>
                     </li>
@@ -442,17 +449,17 @@ export function PaldexPage() {
               )}
             </Card>
             {data.guilds.length > 0 && (
-              <Card title={<span className="flex items-center gap-2"><Castle className="h-4 w-4" /> Guildes</span>}>
+              <Card title={<span className="flex items-center gap-2"><Castle className="h-4 w-4" /> {t('Guilds')}</span>}>
                 <ol className="space-y-0.5">
                   {data.guilds.map((g, i) => (
                     <li key={g.id}>
                       <button
-                        onClick={() => go({ guilde: g.id, joueur: null })}
-                        className={cx('flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800', guilde === g.id && 'bg-accent/10 text-accent')}
+                        onClick={() => go({ guild: g.id, player: null })}
+                        className={cx('flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800', guild === g.id && 'bg-accent/10 text-accent')}
                       >
                         <span className="w-5 text-right font-semibold text-slate-500">{i + 1}</span>
                         <span className="flex-1 truncate font-medium">{g.name}</span>
-                        <span className="text-xs tabular-nums text-slate-500">{g.species} esp.</span>
+                        <span className="text-xs tabular-nums text-slate-500">{t('{n} sp.', { n: g.species })}</span>
                       </button>
                     </li>
                   ))}
@@ -467,7 +474,7 @@ export function PaldexPage() {
 }
 
 
-// Événements
+// Events
 
 interface PublicEvent {
   id: number;
@@ -479,13 +486,13 @@ interface PublicEvent {
   changes: string[];
 }
 
-/** "2 j 4 h", "3 h 12 min", "45 s" */
+/** "2 d 4 h", "3 h 12 min", "45 s" */
 export function countdown(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
-  if (d) return `${d} j ${h} h`;
+  if (d) return t('{d} d {h} h', { d, h });
   if (h) return `${h} h ${String(m).padStart(2, '0')} min`;
   if (m) return `${m} min ${String(s % 60).padStart(2, '0')} s`;
   return `${s} s`;
@@ -512,11 +519,11 @@ function EventCard({ e, now }: { e: PublicEvent; now: number }) {
           </p>
         </div>
         {active ? (
-          <Badge tone="green">En cours · encore {countdown(e.endsAt - now)}</Badge>
+          <Badge tone="green">{t('Running · {time} left', { time: countdown(e.endsAt - now) })}</Badge>
         ) : e.status === 'done' ? (
-          <Badge>Terminé</Badge>
+          <Badge>{t('Over')}</Badge>
         ) : (
-          <Badge tone="accent">Dans {countdown(e.startsAt - now)}</Badge>
+          <Badge tone="accent">{t('In {time}', { time: countdown(e.startsAt - now) })}</Badge>
         )}
       </div>
       {e.description && <p className="mt-3 text-sm">{e.description}</p>}
@@ -524,7 +531,7 @@ function EventCard({ e, now }: { e: PublicEvent; now: number }) {
         <ul className="mt-3 flex flex-wrap gap-2">
           {e.changes.map((c) => (
             <li key={c}>
-              <Badge tone="blue">{c}</Badge>
+              <Badge tone="blue">{tm(c)}</Badge>
             </li>
           ))}
         </ul>
@@ -537,17 +544,17 @@ export function CalendarPage() {
   const { data, error } = useGet<{ upcoming: PublicEvent[]; past: PublicEvent[] }>('features/calendar');
   const now = useNow();
   return (
-    <Page icon={<CalendarDays className="h-8 w-8 text-accent" />} title="Événements" subtitle="Les réglages du serveur changent pendant les événements (XP, captures, butin…).">
+    <Page icon={<CalendarDays className="h-8 w-8 text-accent" />} title={t('Events')} subtitle={t('Server settings change during events (XP, captures, loot…).')}>
       {error ? (
         <Alert kind="info">{error}</Alert>
       ) : !data ? (
         <Spinner />
       ) : (
         <div className="space-y-4">
-          {data.upcoming.length === 0 ? <Empty>Aucun événement prévu pour le moment. Reviens bientôt !</Empty> : data.upcoming.map((e) => <EventCard key={e.id} e={e} now={now} />)}
+          {data.upcoming.length === 0 ? <Empty>{t('No event planned right now. Check back soon!')}</Empty> : data.upcoming.map((e) => <EventCard key={e.id} e={e} now={now} />)}
           {data.past.length > 0 && (
             <>
-              <h2 className="pt-6 text-lg font-semibold text-slate-500">Derniers événements</h2>
+              <h2 className="pt-6 text-lg font-semibold text-slate-500">{t('Recent events')}</h2>
               {data.past.map((e) => (
                 <EventCard key={e.id} e={e} now={now} />
               ))}
@@ -559,7 +566,7 @@ export function CalendarPage() {
   );
 }
 
-/** Bandeau de l'accueil : événement en cours ou prochain événement, avec compte à rebours. */
+/** Home page banner: current or next event, with a countdown. */
 export function EventBanner() {
   const { data } = useGet<{ upcoming: PublicEvent[] }>('features/calendar');
   const now = useNow();
@@ -568,22 +575,22 @@ export function EventBanner() {
   const active = e.startsAt <= now;
   return (
     <Link
-      to="/evenements"
+      to="/events"
       className="flex flex-wrap items-center gap-3 rounded-xl bg-gradient-to-r from-accent/20 to-transparent p-4 ring-1 ring-accent/40 transition hover:ring-accent"
     >
       <PartyPopper className="h-6 w-6 text-accent" />
       <div className="min-w-0 flex-1">
-        <p className="font-semibold">{active ? `Événement en cours : ${e.name}` : `Prochain événement : ${e.name}`}</p>
-        {e.changes.length > 0 && <p className="truncate text-sm text-slate-500">{e.changes.join(' · ')}</p>}
+        <p className="font-semibold">{active ? t('Event running: {name}', { name: e.name }) : t('Next event: {name}', { name: e.name })}</p>
+        {e.changes.length > 0 && <p className="truncate text-sm text-slate-500">{e.changes.map(tm).join(' · ')}</p>}
       </div>
       <span className="rounded-lg bg-accent px-3 py-1.5 text-sm font-bold text-accent-fg tabular-nums">
-        {active ? `Fin dans ${countdown(e.endsAt - now)}` : `Dans ${countdown(e.startsAt - now)}`}
+        {active ? t('Ends in {time}', { time: countdown(e.endsAt - now) }) : t('In {time}', { time: countdown(e.startsAt - now) })}
       </span>
     </Link>
   );
 }
 
-// Disponibilité
+// Uptime
 
 interface UptimeData {
   status: { online: boolean; players: number; maxPlayers: number };
@@ -597,7 +604,7 @@ export function UptimePage() {
   const { data, error } = useGet<UptimeData>('features/uptime');
   const tone = (p: number | null) => (p === null ? 'bg-slate-300 dark:bg-slate-700' : p >= 99 ? 'bg-green-500' : p >= 90 ? 'bg-amber-400' : 'bg-red-500');
   return (
-    <Page icon={<Activity className="h-8 w-8 text-accent" />} title="Disponibilité" subtitle="État du serveur sur les 30 derniers jours.">
+    <Page icon={<Activity className="h-8 w-8 text-accent" />} title={t('Uptime')} subtitle={t('Server status over the last 30 days.')}>
       {error ? (
         <Alert kind="info">{error}</Alert>
       ) : !data ? (
@@ -606,41 +613,41 @@ export function UptimePage() {
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
             <Card>
-              <p className="text-xs text-slate-500">Maintenant</p>
-              <p className={cx('mt-1 text-2xl font-bold', data.status.online ? 'text-green-500' : 'text-red-500')}>{data.status.online ? 'En ligne' : 'Hors ligne'}</p>
+              <p className="text-xs text-slate-500">{t('Now')}</p>
+              <p className={cx('mt-1 text-2xl font-bold', data.status.online ? 'text-green-500' : 'text-red-500')}>{data.status.online ? t('Online') : t('Offline')}</p>
               {data.status.online && (
                 <p className="text-sm text-slate-500">
-                  {data.status.players} / {data.status.maxPlayers} joueurs
+                  {t('{n} / {max} players', { n: data.status.players, max: data.status.maxPlayers })}
                 </p>
               )}
             </Card>
             <Card>
-              <p className="text-xs text-slate-500">Disponibilité (30 jours)</p>
+              <p className="text-xs text-slate-500">{t('Uptime (30 days)')}</p>
               <p className="mt-1 text-2xl font-bold">{data.uptimePercent === null ? '—' : `${data.uptimePercent} %`}</p>
             </Card>
             <Card>
-              <p className="text-xs text-slate-500">Prochain redémarrage</p>
-              <p className="mt-1 text-2xl font-bold">{data.nextRestart ? format.formatDateTime(data.nextRestart) : 'Aucun prévu'}</p>
+              <p className="text-xs text-slate-500">{t('Next restart')}</p>
+              <p className="mt-1 text-2xl font-bold">{data.nextRestart ? format.formatDateTime(data.nextRestart) : t('None planned')}</p>
             </Card>
           </div>
-          <Card title="Jour par jour">
+          <Card title={t('Day by day')}>
             {data.days.length === 0 ? (
-              <Empty>Pas encore de données.</Empty>
+              <Empty>{t('No data yet.')}</Empty>
             ) : (
               <div className="flex h-12 items-end gap-1">
                 {data.days.map((d) => (
-                  <div key={d.day} title={`${format.formatDate(new Date(d.day).getTime())} : ${d.percent ?? '—'} %`} className={cx('h-full flex-1 rounded-sm', tone(d.percent))} />
+                  <div key={d.day} title={`${format.formatDate(new Date(d.day).getTime())}: ${d.percent ?? '—'} %`} className={cx('h-full flex-1 rounded-sm', tone(d.percent))} />
                 ))}
               </div>
             )}
             <div className="mt-2 flex gap-4 text-xs text-slate-500">
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-green-500" /> ≥ 99 %</span>
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-amber-400" /> ≥ 90 %</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-red-500" /> moins</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-red-500" /> {t('less')}</span>
             </div>
           </Card>
-          <Card title={<span className="flex items-center gap-2"><Clock className="h-4 w-4" /> Fréquentation moyenne par heure</span>}>
-            <BarChart points={data.hourly.map((v, h) => ({ label: `${h} h`, value: v }))} format={(v) => `${v} joueurs`} />
+          <Card title={<span className="flex items-center gap-2"><Clock className="h-4 w-4" /> {t('Average attendance per hour')}</span>}>
+            <BarChart points={data.hourly.map((v, h) => ({ label: `${h} h`, value: v }))} format={(v) => t('{n} players', { n: v })} />
           </Card>
         </div>
       )}
@@ -648,7 +655,7 @@ export function UptimePage() {
   );
 }
 
-// Signalements et suggestions
+// Reports and suggestions
 
 interface MyTicket {
   id: number;
@@ -662,9 +669,9 @@ interface MyTicket {
 }
 
 const TICKET_STATUS: Record<MyTicket['status'], { label: string; tone: 'amber' | 'green' | 'slate' }> = {
-  open: { label: 'En attente', tone: 'amber' },
-  answered: { label: 'Réponse reçue', tone: 'green' },
-  closed: { label: 'Fermée', tone: 'slate' },
+  open: { label: 'Waiting', tone: 'amber' },
+  answered: { label: 'Answered', tone: 'green' },
+  closed: { label: 'Closed', tone: 'slate' },
 };
 
 export function TicketsPage() {
@@ -685,12 +692,12 @@ export function TicketsPage() {
 
   if (!boot.user) {
     return (
-      <Page icon={<Flag className="h-8 w-8 text-accent" />} title="Signaler ou suggérer">
+      <Page icon={<Flag className="h-8 w-8 text-accent" />} title={t('Report or suggest')}>
         <Alert kind="info">
-          <Link to="/connexion" className="font-semibold underline">
-            Connecte-toi
+          <Link to="/login" className="font-semibold underline">
+            {t('Log in')}
           </Link>{' '}
-          pour signaler un problème ou proposer une idée à l’équipe.
+          {t('to report a problem or suggest an idea to the team.')}
         </Alert>
       </Page>
     );
@@ -702,7 +709,7 @@ export function TicketsPage() {
     try {
       await api.post('features/tickets', { ...form, target: form.target || undefined });
       setForm({ ...form, subject: '', target: '', message: '' });
-      setMsg({ kind: 'success', text: 'Merci ! L’équipe a bien reçu ton message.' });
+      setMsg({ kind: 'success', text: t('Thanks! The team got your message.') });
       load();
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
@@ -712,15 +719,15 @@ export function TicketsPage() {
   };
 
   return (
-    <Page icon={<Flag className="h-8 w-8 text-accent" />} title="Signaler ou suggérer" subtitle="Un problème en jeu, un tricheur, une idée pour le serveur ? Écris à l’équipe.">
+    <Page icon={<Flag className="h-8 w-8 text-accent" />} title={t('Report or suggest')} subtitle={t('A problem in game, a cheater, an idea for the server? Write to the team.')}>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-2">
               {(
                 [
-                  ['report', 'Signaler', Flag],
-                  ['suggestion', 'Suggérer', Lightbulb],
+                  ['report', 'Report', Flag],
+                  ['suggestion', 'Suggest', Lightbulb],
                 ] as const
               ).map(([k, label, Icon]) => (
                 <button
@@ -731,45 +738,45 @@ export function TicketsPage() {
                     form.kind === k ? 'bg-accent text-accent-fg ring-accent' : 'ring-slate-200 dark:ring-slate-800',
                   )}
                 >
-                  <Icon className="h-4 w-4" /> {label}
+                  <Icon className="h-4 w-4" /> {t(label)}
                 </button>
               ))}
             </div>
-            <Field label="Sujet">{(id) => <Input id={id} value={form.subject} maxLength={120} onChange={(e) => setForm({ ...form, subject: e.target.value })} />}</Field>
+            <Field label={t('Subject')}>{(id) => <Input id={id} value={form.subject} maxLength={120} onChange={(e) => setForm({ ...form, subject: e.target.value })} />}</Field>
             {form.kind === 'report' && (
-              <Field label="Joueur concerné (facultatif)">
-                {(id) => <Input id={id} value={form.target} maxLength={64} onChange={(e) => setForm({ ...form, target: e.target.value })} placeholder="Pseudo en jeu" />}
+              <Field label={t('Player involved (optional)')}>
+                {(id) => <Input id={id} value={form.target} maxLength={64} onChange={(e) => setForm({ ...form, target: e.target.value })} placeholder={t('In-game name')} />}
               </Field>
             )}
-            <Field label="Message" help="Donne un maximum de détails : où, quand, ce qui s’est passé.">
+            <Field label={t('Message')} help={t('Give as many details as you can: where, when, what happened.')}>
               {(id) => <Textarea id={id} rows={6} value={form.message} maxLength={3000} onChange={(e) => setForm({ ...form, message: e.target.value })} />}
             </Field>
             {msg && <Alert kind={msg.kind}>{msg.text}</Alert>}
             <Button loading={busy} onClick={() => void submit()} disabled={form.subject.length < 3 || form.message.length < 10}>
-              Envoyer
+              {t('Send')}
             </Button>
           </div>
         </Card>
-        <Card title="Mes demandes">
+        <Card title={t('My requests')}>
           {!mine ? (
             <Spinner />
           ) : mine.length === 0 ? (
-            <Empty>Aucune demande envoyée.</Empty>
+            <Empty>{t('No request sent.')}</Empty>
           ) : (
             <ul className="space-y-3">
-              {mine.map((t) => (
-                <li key={t.id} className="rounded-lg p-3 ring-1 ring-slate-200 dark:ring-slate-800">
+              {mine.map((tk) => (
+                <li key={tk.id} className="rounded-lg p-3 ring-1 ring-slate-200 dark:ring-slate-800">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-semibold">
-                      {t.kind === 'report' ? '🚩' : '💡'} {t.subject}
+                      {tk.kind === 'report' ? '🚩' : '💡'} {tk.subject}
                     </p>
-                    <Badge tone={TICKET_STATUS[t.status].tone}>{TICKET_STATUS[t.status].label}</Badge>
+                    <Badge tone={TICKET_STATUS[tk.status].tone}>{t(TICKET_STATUS[tk.status].label)}</Badge>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">{format.formatDateTime(t.createdAt)}</p>
-                  {t.reply && (
+                  <p className="mt-1 text-xs text-slate-500">{format.formatDateTime(tk.createdAt)}</p>
+                  {tk.reply && (
                     <div className="mt-2 rounded-lg bg-accent/10 p-2 text-sm">
-                      <p className="text-xs font-semibold text-accent">Réponse de {t.repliedBy}</p>
-                      <p className="whitespace-pre-line">{t.reply}</p>
+                      <p className="text-xs font-semibold text-accent">{t('Answer from {name}', { name: tk.repliedBy })}</p>
+                      <p className="whitespace-pre-line">{tk.reply}</p>
                     </div>
                   )}
                 </li>
@@ -782,7 +789,7 @@ export function TicketsPage() {
   );
 }
 
-// Mon personnage (profil)
+// My character (profile)
 
 export interface PalView {
   type: string;
@@ -803,18 +810,18 @@ export interface InventoryGroup {
 }
 
 const STAT_NAMES: Record<string, string> = {
-  最大HP: 'Vie',
-  最大SP: 'Endurance',
-  攻撃力: 'Attaque',
-  所持重量: 'Poids',
+  最大HP: 'Health',
+  最大SP: 'Stamina',
+  攻撃力: 'Attack',
+  所持重量: 'Weight',
   捕獲率: 'Capture',
-  作業速度: 'Travail',
+  作業速度: 'Work',
 };
-export const statName = (k: string) => STAT_NAMES[k] ?? k;
+export const statName = (k: string) => (STAT_NAMES[k] ? t(STAT_NAMES[k]) : k);
 
 export function PalTable({ pals }: { pals: PalView[] }) {
   const [all, setAll] = useState(false);
-  if (pals.length === 0) return <Empty>Aucun Pal.</Empty>;
+  if (pals.length === 0) return <Empty>{t('No Pal.')}</Empty>;
   const shown = all ? pals : pals.slice(0, 12);
   return (
     <>
@@ -823,9 +830,9 @@ export function PalTable({ pals }: { pals: PalView[] }) {
           <thead className="text-left text-xs text-slate-500">
             <tr>
               <th className="py-1">Pal</th>
-              <th className="py-1">Niv.</th>
-              <th className="py-1">Talents (vie / att. / déf.)</th>
-              <th className="py-1">Passifs</th>
+              <th className="py-1">{t('Lvl')}</th>
+              <th className="py-1">{t('Talents (HP / atk / def)')}</th>
+              <th className="py-1">{t('Passives')}</th>
             </tr>
           </thead>
           <tbody>
@@ -834,7 +841,7 @@ export function PalTable({ pals }: { pals: PalView[] }) {
                 <td className="py-1.5">
                   <span className="font-medium">{p.nickname || p.name}</span>
                   {p.nickname && <span className="text-xs text-slate-500"> ({p.name})</span>}
-                  {p.lucky && <span title="Chanceux"> ✨</span>}
+                  {p.lucky && <span title={t('Lucky')}> ✨</span>}
                   {p.boss && <Badge tone="red">alpha</Badge>}
                   {p.rank > 1 && <span className="ml-1 text-xs text-amber-500">{'★'.repeat(Math.min(4, p.rank - 1))}</span>}
                 </td>
@@ -850,7 +857,7 @@ export function PalTable({ pals }: { pals: PalView[] }) {
       </div>
       {pals.length > 12 && (
         <button className="mt-2 text-sm font-medium text-accent" onClick={() => setAll(!all)}>
-          {all ? 'Réduire' : `Voir les ${pals.length} Pals`}
+          {all ? t('Show less') : t('See all {n} Pals', { n: pals.length })}
         </button>
       )}
     </>
@@ -858,17 +865,17 @@ export function PalTable({ pals }: { pals: PalView[] }) {
 }
 
 export function InventoryView({ inventory }: { inventory: InventoryGroup[] }) {
-  if (inventory.length === 0) return <Empty>Inventaire vide.</Empty>;
+  if (inventory.length === 0) return <Empty>{t('Empty inventory.')}</Empty>;
   return (
     <div className="space-y-4">
       {inventory.map((c) => (
         <div key={c.key}>
-          <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">{c.label}</p>
+          <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">{t(c.label)}</p>
           <div className="flex flex-wrap gap-1.5">
             {c.items.map((i) => (
               <span key={`${i.slot}-${i.id}`} className="rounded-md bg-slate-100 px-2 py-1 text-xs dark:bg-slate-800">
                 {i.name}
-                {i.count > 1 && <span className="ml-1 font-semibold tabular-nums">×{i.count.toLocaleString('fr-FR')}</span>}
+                {i.count > 1 && <span className="ml-1 font-semibold tabular-nums">×{num(i.count)}</span>}
               </span>
             ))}
           </div>
@@ -903,23 +910,23 @@ export function CharacterSection() {
   if (!c || !c.linked) return null;
   if (!c.world) {
     return (
-      <Card title={<span className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> Mes Pals et mon inventaire</span>}>
-        <p className="text-sm text-slate-500">Ton personnage apparaîtra ici après la prochaine lecture de la sauvegarde du monde.</p>
+      <Card title={<span className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> {t('My Pals and inventory')}</span>}>
+        <p className="text-sm text-slate-500">{t('Your character will show up here after the next read of the world save.')}</p>
       </Card>
     );
   }
   const w = c.world;
   return (
-    <Card title={<span className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> Mes Pals et mon inventaire</span>} actions={<span className="text-xs text-slate-500">{c.syncedAt ? `mis à jour ${format.timeAgo(c.syncedAt)}` : ''}</span>}>
+    <Card title={<span className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> {t('My Pals and inventory')}</span>} actions={<span className="text-xs text-slate-500">{c.syncedAt ? t('updated {when}', { when: format.timeAgo(c.syncedAt) }) : ''}</span>}>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Niveau" value={w.level} />
-        <Stat label="Pals" value={w.pals.length} />
-        <Stat label="Chanceux" value={w.pals.filter((p) => p.lucky).length} />
+        <Stat label={t('Level')} value={w.level} />
+        <Stat label={t('Pals')} value={w.pals.length} />
+        <Stat label={t('Lucky')} value={w.pals.filter((p) => p.lucky).length} />
         <Stat
-          label="Guilde"
+          label={t('Guild')}
           value={
             w.guild ? (
-              <Link to={`/guildes/${w.guild.id}`} className="text-base text-accent">
+              <Link to={`/guilds/${w.guild.id}`} className="text-base text-accent">
                 {w.guild.name}
               </Link>
             ) : (
@@ -940,12 +947,12 @@ export function CharacterSection() {
       <div className="mt-5 flex gap-2">
         {(
           [
-            ['pals', 'Mes Pals'],
-            ['inventory', 'Inventaire'],
+            ['pals', 'My Pals'],
+            ['inventory', 'Inventory'],
           ] as const
         ).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)} className={cx('rounded-lg px-3 py-1.5 text-sm font-medium', tab === k ? 'bg-accent text-accent-fg' : 'ring-1 ring-slate-200 dark:ring-slate-800')}>
-            {label}
+            {t(label)}
           </button>
         ))}
       </div>

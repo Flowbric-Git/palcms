@@ -1,7 +1,7 @@
 /**
- * Ce que le site met à disposition des extensions dans window.PalCMS.
- * Le kit de création (sdk/) redirige les imports "react", "react-router-dom" et "@palcms/sdk"
- * d'un plugin vers ces objets : le plugin utilise la même copie de React que le site.
+ * What the site makes available to extensions in window.PalCMS.
+ * The creator kit (sdk/) maps the "react", "react-router-dom" and "@palcms/sdk" imports
+ * of a plugin to these objects: the plugin uses the same copy of React as the site.
  */
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -13,6 +13,7 @@ import { useLiveServer } from './live';
 import { useLoad } from './useLoad';
 import { useRealtime } from './ws';
 import { formatBytes, formatDate, formatDateTime, formatDuration, timeAgo } from './format';
+import { lang, t } from './i18n';
 import { ExtensionBoundary, Slot, useThemeSettings } from './extensions';
 import { Alert, Badge, Button, Card, Empty, Field, Input, PageHeader, Prose, Select, Spinner, Textarea, Toggle, cx } from '../components/ui';
 import { CopyAddress, LeaderboardTable, OnlinePlayers, ServerStatusCard, StatusDot } from '../components/live';
@@ -21,7 +22,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { DefaultFooter, DefaultHeader, MenuLink } from '../public/PublicLayout';
 import { DefaultHome, DefaultHomeHero } from '../public/Home';
 
-/** Version de l'API des extensions : augmentée seulement si un changement casse les extensions existantes. */
+/** Extension API version: only increased when a change breaks existing extensions. */
 export const SDK_VERSION = 1;
 
 export const sdk = {
@@ -42,6 +43,9 @@ export const sdk = {
   formatDateTime,
   formatDuration,
   timeAgo,
+  // Language of the visitor ("en" or "fr") and the CMS translations (since 1.1.0).
+  lang,
+  t,
   Alert,
   Badge,
   Button,

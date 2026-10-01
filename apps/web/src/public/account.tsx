@@ -5,6 +5,7 @@ import type { PlayerProfile, PublicUser } from '@palcms/shared';
 import { api, ApiError, errorText, url } from '../lib/api';
 import { useApp } from '../lib/app';
 import { formatDuration } from '../lib/format';
+import { t, tm } from '../lib/i18n';
 import { Alert, Badge, Button, Card, Field, Input } from '../components/ui';
 import { Container, NotFound } from './pages';
 import { Slot } from '../lib/extensions';
@@ -38,14 +39,15 @@ function Divider({ text }: { text: string }) {
 export function LoginPage() {
   const { boot, setUser, isAdmin } = useApp();
   const [params] = useSearchParams();
-  const navigate = useNavigate();
   const [form, setForm] = useState({ login: '', password: '' });
-  const [error, setError] = useState(params.get('erreur') ?? '');
+  // Steam errors come back in the URL (English text from the server).
+  const urlError = params.get('error') ?? params.get('erreur');
+  const [error, setError] = useState(urlError ? tm(urlError) : '');
   const [busy, setBusy] = useState(false);
   const reg = boot.site.registration;
 
-  // Déjà connecté (ou juste après la connexion) : l'équipe va au panel, les joueurs à leur profil.
-  if (boot.user) return <Navigate to={isAdmin ? '/admin' : '/profil'} replace />;
+  // Already logged in (or right after logging in): the team goes to the panel, players to their profile.
+  if (boot.user) return <Navigate to={isAdmin ? '/admin' : '/profile'} replace />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -64,33 +66,33 @@ export function LoginPage() {
   return (
     <Container narrow>
       <div className="mx-auto max-w-md">
-        <h1 className="text-center text-3xl font-bold">Connexion</h1>
+        <h1 className="text-center text-3xl font-bold">{t('Log in')}</h1>
         <Card className="mt-8">
           {reg.steam && boot.modules.registration && (
             <>
-              <SteamButton label="Se connecter avec Steam" />
-              <Divider text="ou avec ton compte" />
+              <SteamButton label={t('Sign in with Steam')} />
+              <Divider text={t('or with your account')} />
             </>
           )}
           <form onSubmit={(e) => void submit(e)} className="space-y-4">
-            <Field label="Nom d'utilisateur ou email">
+            <Field label={t('Username or email')}>
               {(id) => <Input id={id} value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} autoComplete="username" required />}
             </Field>
-            <Field label="Mot de passe">
+            <Field label={t('Password')}>
               {(id) => (
                 <Input id={id} type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="current-password" required />
               )}
             </Field>
             {error && <Alert kind="error">{error}</Alert>}
             <Button type="submit" loading={busy} className="w-full">
-              Se connecter
+              {t('Log in')}
             </Button>
           </form>
           {boot.modules.registration && (reg.email || reg.steam) && (
             <p className="mt-6 text-center text-sm text-slate-500">
-              Pas encore de compte ?{' '}
-              <Link to="/inscription" className="font-medium text-accent">
-                Inscris-toi
+              {t('No account yet?')}{' '}
+              <Link to="/register" className="font-medium text-accent">
+                {t('Sign up')}
               </Link>
             </p>
           )}
@@ -110,7 +112,7 @@ export function RegisterPage() {
   const [busy, setBusy] = useState(false);
 
   if (!boot.modules.registration || (!reg.steam && !reg.email)) return <NotFound />;
-  if (boot.user) return <Navigate to="/profil" replace />;
+  if (boot.user) return <Navigate to="/profile" replace />;
 
   const field = (n: string) => (error instanceof ApiError ? error.field(n) : undefined);
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value });
@@ -122,7 +124,7 @@ export function RegisterPage() {
     try {
       const { user } = await api.post<{ user: PublicUser }>('auth/register', form);
       setUser(user);
-      navigate('/profil');
+      navigate('/profile');
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -149,61 +151,59 @@ export function RegisterPage() {
   return (
     <Container narrow>
       <div className="mx-auto max-w-md">
-        <h1 className="text-center text-3xl font-bold">Créer un compte</h1>
+        <h1 className="text-center text-3xl font-bold">{t('Create an account')}</h1>
         <Card className="mt-8">
           {method === null && (
             <div className="space-y-3">
-              <p className="text-sm text-slate-500">Comment veux-tu t'inscrire ?</p>
+              <p className="text-sm text-slate-500">{t('How do you want to sign up?')}</p>
               {choice(
                 'steam',
                 Gamepad2,
-                'Avec Steam',
-                'Ton compte est relié automatiquement à ton personnage en jeu. Rien à attendre.',
-                'Validé automatiquement',
+                t('With Steam'),
+                t('Your account is linked to your in-game character automatically. Nothing to wait for.'),
+                t('Approved automatically'),
               )}
-              {choice('email', Mail, 'Avec un email', "Un membre de l'équipe vérifie ton pseudo en jeu puis valide ton compte.", 'Validé par un admin')}
+              {choice('email', Mail, t('With an email'), t('A team member checks your in-game name, then approves your account.'), t('Approved by an admin'))}
             </div>
           )}
 
           {method === 'steam' && (
             <div className="space-y-4">
-              <Alert kind="info">
-                Tu vas être redirigé vers Steam pour te connecter. Le site ne reçoit jamais ton mot de passe Steam, uniquement ton identifiant public.
-              </Alert>
-              <SteamButton label="S'inscrire avec Steam" />
+              <Alert kind="info">{t('You will be sent to Steam to log in. The site never receives your Steam password, only your public id.')}</Alert>
+              <SteamButton label={t('Sign up with Steam')} />
             </div>
           )}
 
           {method === 'email' && (
             <form onSubmit={(e) => void submit(e)} className="space-y-4">
-              <Field label="Nom d'utilisateur" error={field('username')}>
+              <Field label={t('Username')} error={field('username')}>
                 {(id) => <Input id={id} value={form.username} onChange={set('username')} autoComplete="username" required />}
               </Field>
-              <Field label="Email" error={field('email')}>
+              <Field label={t('Email')} error={field('email')}>
                 {(id) => <Input id={id} type="email" value={form.email} onChange={set('email')} autoComplete="email" required />}
               </Field>
-              <Field label="Mot de passe" help="8 caractères minimum" error={field('password')}>
+              <Field label={t('Password')} help={t('At least 8 characters')} error={field('password')}>
                 {(id) => <Input id={id} type="password" value={form.password} onChange={set('password')} autoComplete="new-password" required />}
               </Field>
-              <Field label="Ton pseudo en jeu (Palworld)" help="Pour que l'équipe te retrouve et valide ton compte" error={field('inGameName')}>
+              <Field label={t('Your in-game name (Palworld)')} help={t('So the team can find you and approve your account')} error={field('inGameName')}>
                 {(id) => <Input id={id} value={form.inGameName} onChange={set('inGameName')} required />}
               </Field>
               {error && !field('username') && !field('email') && !field('password') && !field('inGameName') && <Alert kind="error">{error.message}</Alert>}
               <Button type="submit" loading={busy} className="w-full">
-                Créer mon compte
+                {t('Create my account')}
               </Button>
             </form>
           )}
 
           {method !== null && reg.steam && reg.email && (
             <button type="button" onClick={() => setMethod(null)} className="mt-4 w-full text-center text-sm text-slate-500 hover:text-accent">
-              ← Choisir une autre méthode
+              ← {t('Choose another method')}
             </button>
           )}
           <p className="mt-6 text-center text-sm text-slate-500">
-            Déjà inscrit ?{' '}
-            <Link to="/connexion" className="font-medium text-accent">
-              Connexion
+            {t('Already registered?')}{' '}
+            <Link to="/login" className="font-medium text-accent">
+              {t('Log in')}
             </Link>
           </p>
         </Card>
@@ -225,7 +225,7 @@ export function ProfilePage() {
     if (user?.playerPublicId) api.get<PlayerProfile>(`public/players/${user.playerPublicId}`).then(setPlayer).catch(() => {});
   }, [user?.playerPublicId]);
 
-  if (!user) return <Navigate to="/connexion" replace />;
+  if (!user) return <Navigate to="/login" replace />;
 
   const save = async (body: Record<string, string>) => {
     setMsg(null);
@@ -233,7 +233,7 @@ export function ProfilePage() {
       const r = await api.patch<{ user: PublicUser }>('auth/me', body);
       setUser(r.user);
       setPwd({ currentPassword: '', newPassword: '' });
-      setMsg({ kind: 'success', text: 'Modifications enregistrées.' });
+      setMsg({ kind: 'success', text: t('Changes saved.') });
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
     }
@@ -249,17 +249,15 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {params.get('bienvenue') && (
+      {(params.get('welcome') || params.get('bienvenue')) && (
         <Alert kind="success" className="mt-6">
-          Bienvenue ! Ton compte Steam est créé et relié automatiquement à ton personnage.
+          {t('Welcome! Your Steam account is created and linked to your character automatically.')}
         </Alert>
       )}
       {user.status === 'pending' && (
         <Alert kind="warning" className="mt-6">
-          <p className="font-semibold">Compte en attente de validation</p>
-          <p className="mt-1">
-            Un administrateur va vérifier ton pseudo en jeu. Tu peux aussi relier ton compte Steam : ton compte sera alors validé immédiatement.
-          </p>
+          <p className="font-semibold">{t('Account waiting for approval')}</p>
+          <p className="mt-1">{t('An administrator will check your in-game name. You can also link your Steam account: your account is then approved right away.')}</p>
         </Alert>
       )}
 
@@ -267,24 +265,24 @@ export function ProfilePage() {
         <Card
           title={
             <span className="flex items-center gap-2">
-              <Gamepad2 className="h-4 w-4" /> Mon personnage
+              <Gamepad2 className="h-4 w-4" /> {t('My character')}
             </span>
           }
         >
           {player ? (
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
-                <p className="text-xs text-slate-500">Personnage</p>
-                <Link to={`/joueurs/${player.id}`} className="font-semibold text-accent">
+                <p className="text-xs text-slate-500">{t('Character')}</p>
+                <Link to={`/players/${player.id}`} className="font-semibold text-accent">
                   {player.name}
                 </Link>
               </div>
               <div>
-                <p className="text-xs text-slate-500">Niveau</p>
+                <p className="text-xs text-slate-500">{t('Level')}</p>
                 <p className="font-semibold">{player.level}</p>
               </div>
               <div>
-                <p className="text-xs text-slate-500">Temps de jeu</p>
+                <p className="text-xs text-slate-500">{t('Playtime')}</p>
                 <p className="flex items-center justify-center gap-1 font-semibold">
                   <Clock className="h-3 w-3" />
                   {formatDuration(player.playtimeSeconds)}
@@ -292,20 +290,18 @@ export function ProfilePage() {
               </div>
             </div>
           ) : user.steam ? (
-            <p className="text-sm text-slate-500">
-              Ton compte Steam est relié. Ton personnage apparaîtra ici dès ta première connexion au serveur.
-            </p>
+            <p className="text-sm text-slate-500">{t('Your Steam account is linked. Your character will show up here after your first time on the server.')}</p>
           ) : (
-            <p className="text-sm text-slate-500">Aucun personnage relié pour le moment.</p>
+            <p className="text-sm text-slate-500">{t('No character linked yet.')}</p>
           )}
           {!user.steam && boot.site.registration.steam && (
             <div className="mt-4">
-              <SteamButton label="Relier mon compte Steam" />
+              <SteamButton label={t('Link my Steam account')} />
             </div>
           )}
           {user.steam && (
             <p className="mt-4 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-              <ShieldCheck className="h-4 w-4" /> Compte Steam relié
+              <ShieldCheck className="h-4 w-4" /> {t('Steam account linked')}
             </p>
           )}
         </Card>
@@ -317,12 +313,12 @@ export function ProfilePage() {
         <Slot name="profile" user={user} />
 
         {boot.modules.tickets && (
-          <Link to="/signaler" className="text-sm font-medium text-accent">
-            Signaler un problème ou proposer une idée à l’équipe →
+          <Link to="/report" className="text-sm font-medium text-accent">
+            {t('Report a problem or suggest an idea to the team')} →
           </Link>
         )}
 
-        <Card title="Mon compte">
+        <Card title={t('My account')}>
           {msg && <Alert kind={msg.kind} className="mb-4">{msg.text}</Alert>}
           <form
             className="flex flex-wrap items-end gap-3"
@@ -331,11 +327,11 @@ export function ProfilePage() {
               void save({ displayName });
             }}
           >
-            <Field label="Nom affiché" className="min-w-48 flex-1">
+            <Field label={t('Display name')} className="min-w-48 flex-1">
               {(id) => <Input id={id} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />}
             </Field>
             <Button type="submit" variant="secondary">
-              Enregistrer
+              {t('Save')}
             </Button>
           </form>
           <form
@@ -345,19 +341,19 @@ export function ProfilePage() {
               void save(user.steam && !pwd.currentPassword ? { newPassword: pwd.newPassword } : pwd);
             }}
           >
-            <Field label="Mot de passe actuel" help={user.steam ? 'Vide si tu n’en as jamais défini (compte Steam)' : undefined}>
+            <Field label={t('Current password')} help={user.steam ? t('Empty if you never set one (Steam account)') : undefined}>
               {(id) => (
                 <Input id={id} type="password" value={pwd.currentPassword} onChange={(e) => setPwd({ ...pwd, currentPassword: e.target.value })} autoComplete="current-password" />
               )}
             </Field>
-            <Field label="Nouveau mot de passe">
+            <Field label={t('New password')}>
               {(id) => (
                 <Input id={id} type="password" value={pwd.newPassword} onChange={(e) => setPwd({ ...pwd, newPassword: e.target.value })} autoComplete="new-password" />
               )}
             </Field>
             <div className="sm:col-span-2">
               <Button type="submit" variant="secondary" disabled={pwd.newPassword.length < 8}>
-                Changer le mot de passe
+                {t('Change the password')}
               </Button>
             </div>
           </form>

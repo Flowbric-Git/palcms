@@ -1,5 +1,5 @@
-// Démo : market, plugins et thèmes. Les extensions d'exemple (sdk/examples) sont copiées dans la démo
-// au build (dist-demo/extensions/<id>/) : on peut les installer, les activer et les régler pour de vrai.
+// Demo: market, plugins and themes. The example extensions (sdk/examples) are copied into the demo
+// at build time (dist-demo/extensions/<id>/): they can really be installed, turned on and configured.
 
 import type { BootExtensions, ExtensionManifest, ExtensionSettingValues, InstalledExtension, MarketEntry } from '@palcms/shared';
 import bandeau from '../../../../sdk/examples/plugin-bandeau/palcms.json';
@@ -31,7 +31,7 @@ const base = import.meta.env.BASE_URL;
 const iconOf = (m: ExtensionManifest) => (m.icon ? `extensions/${m.id}/${m.icon}` : null);
 const today = () => new Date().toISOString().slice(0, 10);
 
-// Le chargement des extensions se fait au démarrage du site : on recharge la page pour appliquer un changement.
+// Extensions load when the site starts: reload the page to apply a change.
 const reloadSoon = () => setTimeout(() => location.reload(), 400);
 
 export function createExtensionsDemo(ctx: DemoExtensionsContext) {
@@ -83,7 +83,7 @@ export function createExtensionsDemo(ctx: DemoExtensionsContext) {
 
   const list = () => Object.keys(ext().installed).filter(find).map(installed);
   const mustExist = (id: string) => {
-    if (!ext().installed[id] || !find(id)) ctx.fail(404, 'Extension introuvable');
+    if (!ext().installed[id] || !find(id)) ctx.fail(404, 'Extension not found');
   };
 
   function handle(method: string, seg: string[], body: Any, q: URLSearchParams): Any {
@@ -117,13 +117,13 @@ export function createExtensionsDemo(ctx: DemoExtensionsContext) {
       return { resources, error: null };
     }
     if (method === 'POST' && a === 'market' && c === 'install') {
-      if (!find(b)) ctx.fail(404, 'Ressource introuvable sur le market');
+      if (!find(b)) ctx.fail(404, 'Resource not found on the market');
       ext().installed[b] = { enabled: false, installedAt: Date.now(), settings: {} };
       ctx.record('extensions.install', b);
       return installed(b);
     }
     if (method === 'POST' && a === 'upload') {
-      ctx.fail(400, "L'envoi d'un fichier .zip n'est pas disponible dans la démo : installe les exemples depuis le Market.");
+      ctx.fail(400, 'Uploading a .zip file is not available in the demo: install the examples from the Market.');
     }
     if (route === 'GET themes') {
       return { items: list().filter((e) => e.type === 'theme'), active: ext().theme, allowUnverified: ext().allowUnverified };
@@ -132,7 +132,7 @@ export function createExtensionsDemo(ctx: DemoExtensionsContext) {
       const id = body?.id ?? null;
       if (id) mustExist(id);
       ext().theme = id;
-      ctx.record('theme.activate', id ?? 'défaut');
+      ctx.record('theme.activate', id ?? 'default');
       return { active: id };
     }
     if (method === 'GET' && b === 'settings') {
@@ -160,18 +160,18 @@ export function createExtensionsDemo(ctx: DemoExtensionsContext) {
       reloadSoon();
       return { ok: true };
     }
-    ctx.fail(404, 'Introuvable');
+    ctx.fail(404, 'Not found');
   }
 
-  /** Routes du plugin d'exemple "bandeau" (celles de son server.js, simulées dans le navigateur). */
+  /** Routes of the "bandeau" example plugin (those of its server.js, simulated in the browser). */
   function plugin(method: string, seg: string[]): Any {
     const [, id, path] = seg;
-    if (id !== 'bandeau' || !ext().installed.bandeau?.enabled) ctx.fail(404, 'Plugin introuvable ou désactivé');
+    if (id !== 'bandeau' || !ext().installed.bandeau?.enabled) ctx.fail(404, 'Plugin not found or turned off');
     const c = values('bandeau');
     if (method === 'GET' && path === 'config') {
       const message = String(c.message ?? '').trim();
       if (!message || (c.until && today() > String(c.until))) return null;
-      return { message, link: c.link || null, linkLabel: c.linkLabel || 'En savoir plus', style: c.style, dismissible: c.dismissible !== false };
+      return { message, link: c.link || null, linkLabel: c.linkLabel || 'Learn more', style: c.style, dismissible: c.dismissible !== false };
     }
     if (method === 'POST' && path === 'clicks') {
       ext().clicks[today()] = (ext().clicks[today()] ?? 0) + 1;
@@ -184,7 +184,7 @@ export function createExtensionsDemo(ctx: DemoExtensionsContext) {
         .map(([day, clicks]) => ({ day, clicks }));
       return { total: days.reduce((n, d) => n + d.clicks, 0), days };
     }
-    ctx.fail(404, 'Introuvable');
+    ctx.fail(404, 'Not found');
   }
 
   function boot(): BootExtensions {

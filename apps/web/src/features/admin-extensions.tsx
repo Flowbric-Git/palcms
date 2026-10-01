@@ -8,12 +8,13 @@ import { useApp } from '../lib/app';
 import { ExtensionBoundary, type ExtAdminPage } from '../lib/extensions';
 import { ImageField } from '../components/ImageField';
 import * as ui from '../components/ui';
+import { num, t, tm } from '../lib/i18n';
 
 const { Alert, Badge, Button, Card, Empty, Field, Input, PageHeader, Select, Spinner, Textarea, Toggle, cx } = ui;
 
 type Msg = { kind: 'success' | 'error' | 'warning'; text: string } | null;
 
-const TYPE_LABEL: Record<ExtensionType, string> = { plugin: 'Plugin', theme: 'Thème' };
+const TYPE_LABEL: Record<ExtensionType, string> = { plugin: 'Plugin', theme: 'Theme' };
 const iconSrc = (u: string | null | undefined) => (!u ? null : /^https?:\/\//.test(u) ? u : url(u));
 
 function ExtIcon({ src, type, className = 'h-12 w-12' }: { src: string | null | undefined; type: ExtensionType; className?: string }) {
@@ -31,17 +32,17 @@ function VerifiedBadge({ verified }: { verified: boolean }) {
   return verified ? (
     <Badge tone="green">
       <ShieldCheck className="mr-1 inline h-3 w-3" />
-      Vérifié
+      {t('Verified')}
     </Badge>
   ) : (
     <Badge tone="amber">
       <ShieldAlert className="mr-1 inline h-3 w-3" />
-      Non vérifié
+      {t('Not verified')}
     </Badge>
   );
 }
 
-/** Bouton d'installation depuis un fichier .zip. */
+/** Install button for a .zip file. */
 function UploadButton({ onDone, onError }: { onDone: (ext: InstalledExtension) => void; onError: (m: string) => void }) {
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -63,7 +64,7 @@ function UploadButton({ onDone, onError }: { onDone: (ext: InstalledExtension) =
     <>
       <input ref={ref} type="file" accept=".zip,application/zip" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
       <Button variant="secondary" loading={busy} onClick={() => ref.current?.click()}>
-        <Upload className="h-4 w-4" /> Installer un fichier .zip
+        <Upload className="h-4 w-4" /> {t('Install a .zip file')}
       </Button>
     </>
   );
@@ -102,8 +103,8 @@ export function MarketPage() {
         kind: 'success',
         text:
           ext.type === 'theme'
-            ? `${ext.name} ${ext.version} est installé. Active-le dans Gestion du site > Thèmes.`
-            : `${ext.name} ${ext.version} est installé. Active-le dans Plugins.`,
+            ? t('{name} {version} is installed. Turn it on in Website > Themes.', { name: ext.name, version: ext.version })
+            : t('{name} {version} is installed. Turn it on in Plugins.', { name: ext.name, version: ext.version }),
       });
       reload();
     } catch (e) {
@@ -117,10 +118,10 @@ export function MarketPage() {
     <>
       <PageHeader
         title="Market"
-        description="Plugins et thèmes validés par l’équipe PalCMS, prêts à installer en un clic."
+        description={t('Plugins and themes approved by the PalCMS team, ready to install in one click.')}
         actions={
           <Button variant="secondary" onClick={() => void refresh()}>
-            <RefreshCw className="h-4 w-4" /> Actualiser
+            <RefreshCw className="h-4 w-4" /> {t('Refresh')}
           </Button>
         }
       />
@@ -133,9 +134,9 @@ export function MarketPage() {
         <div className="flex rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
           {(
             [
-              ['all', 'Tout'],
-              ['plugin', 'Plugins'],
-              ['theme', 'Thèmes'],
+              ['all', t('All')],
+              ['plugin', t('Plugins')],
+              ['theme', t('Themes')],
             ] as const
           ).map(([v, label]) => (
             <button
@@ -152,7 +153,7 @@ export function MarketPage() {
         </div>
         <div className="relative min-w-56 flex-1">
           <Search className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher une ressource…" className="pl-9" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Search a resource…')} className="pl-9" />
         </div>
       </div>
 
@@ -162,10 +163,10 @@ export function MarketPage() {
         <Spinner />
       ) : data.error ? (
         <Alert kind="warning">
-          {data.error}. Réessaie plus tard, ou installe un fichier .zip depuis la page Plugins ou Thèmes.
+          {tm(data.error)}. {t('Try again later, or install a .zip file from the Plugins or Themes page.')}
         </Alert>
       ) : list.length === 0 ? (
-        <Empty>{data.resources.length === 0 ? 'Le market ne propose encore aucune ressource.' : 'Aucune ressource ne correspond.'}</Empty>
+        <Empty>{data.resources.length === 0 ? t('The market has no resource yet.') : t('No resource matches.')}</Empty>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {list.map((r) => (
@@ -193,27 +194,27 @@ function MarketCard({ r, busy, onInstall }: { r: MarketEntry; busy: boolean; onI
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{r.name}</p>
             <p className="truncate text-xs text-slate-500">
-              {r.author ? `par ${r.author} · ` : ''}v{r.version}
-              {r.downloads !== undefined ? ` · ${r.downloads.toLocaleString('fr-FR')} téléchargements` : ''}
+              {r.author ? `${t('by {name}', { name: r.author })} · ` : ''}v{r.version}
+              {r.downloads !== undefined ? ` · ${t('{n} downloads', { n: num(r.downloads) })}` : ''}
             </p>
           </div>
-          <Badge tone={r.type === 'theme' ? 'blue' : 'accent'}>{TYPE_LABEL[r.type]}</Badge>
+          <Badge tone={r.type === 'theme' ? 'blue' : 'accent'}>{t(TYPE_LABEL[r.type])}</Badge>
         </div>
         <p className="mt-3 line-clamp-3 flex-1 text-sm text-slate-600 dark:text-slate-400">{r.summary}</p>
         <div className="mt-4 flex items-center gap-2">
           {!r.compatible ? (
-            <Badge tone="red">Demande PalCMS {r.palcms}</Badge>
+            <Badge tone="red">{t('Needs PalCMS {version}', { version: r.palcms })}</Badge>
           ) : r.installed && !r.update ? (
             <span className="flex items-center gap-1 text-sm font-medium text-green-600">
-              <CheckCircle2 className="h-4 w-4" /> Installé
+              <CheckCircle2 className="h-4 w-4" /> {t('Installed')}
             </span>
           ) : (
             <Button loading={busy} onClick={onInstall}>
-              <Download className="h-4 w-4" /> {r.update ? `Mettre à jour (${r.installed} → ${r.version})` : 'Installer'}
+              <Download className="h-4 w-4" /> {r.update ? t('Update ({from} → {to})', { from: r.installed, to: r.version }) : t('Install')}
             </Button>
           )}
           {r.url && (
-            <a href={r.url} target="_blank" rel="noopener noreferrer" className="ml-auto text-slate-400 hover:text-accent" title="Page de la ressource">
+            <a href={r.url} target="_blank" rel="noopener noreferrer" className="ml-auto text-slate-400 hover:text-accent" title={t('Resource page')}>
               <ExternalLink className="h-4 w-4" />
             </a>
           )}
@@ -223,7 +224,7 @@ function MarketCard({ r, busy, onInstall }: { r: MarketEntry; busy: boolean; onI
   );
 }
 
-// Extensions installées (plugins)
+// Installed extensions (plugins)
 
 interface ExtensionsData {
   items: InstalledExtension[];
@@ -237,8 +238,8 @@ function UnverifiedOption({ value, onChange }: { value: boolean; onChange: (v: b
       <Toggle
         checked={value}
         onChange={onChange}
-        label="Autoriser les extensions non vérifiées"
-        description="Permet d’installer et d’activer des fichiers .zip qui ne viennent pas du market. Un plugin a accès à tout le CMS : n’active cette option que pour des sources de confiance (ou pour développer tes propres extensions)."
+        label={t('Allow unverified extensions')}
+        description={t('Lets you install and turn on .zip files that do not come from the market. A plugin has access to the whole CMS: only turn this on for trusted sources (or to build your own extensions).')}
       />
     </Card>
   );
@@ -259,7 +260,7 @@ export function PluginsPage() {
     setMsg(null);
     try {
       await fn();
-      setMsg({ kind: 'success', text: done });
+      setMsg({ kind: 'success', text: t(done) });
       reload();
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
@@ -281,7 +282,7 @@ export function PluginsPage() {
     <>
       <PageHeader
         title="Plugins"
-        description="Les plugins ajoutent des pages, des blocs et des fonctions au site. Recharge la page après une activation pour voir leurs pages."
+        description={t('Plugins add pages, blocks and features to the site. Reload the page after turning one on to see its pages.')}
         actions={
           <>
             <Link to="/admin/market">
@@ -291,10 +292,10 @@ export function PluginsPage() {
             </Link>
             <UploadButton
               onDone={(ext) => {
-                setMsg({ kind: 'success', text: `${ext.name} ${ext.version} est installé.` });
+                setMsg({ kind: 'success', text: t('{name} {version} is installed.', { name: ext.name, version: ext.version }) });
                 reload();
               }}
-              onError={(t) => setMsg({ kind: 'error', text: t })}
+              onError={(text) => setMsg({ kind: 'error', text })}
             />
           </>
         }
@@ -306,11 +307,11 @@ export function PluginsPage() {
       )}
       {plugins.length === 0 ? (
         <Empty>
-          Aucun plugin installé. Parcours le{' '}
+          {t('No plugin installed. Browse the')}{' '}
           <Link to="/admin/market" className="text-accent">
             market
           </Link>{' '}
-          ou installe un fichier .zip.
+          {t('or install a .zip file.')}
         </Empty>
       ) : (
         <div className="space-y-3">
@@ -322,31 +323,31 @@ export function PluginsPage() {
                   <p className="flex flex-wrap items-center gap-2 font-semibold">
                     {p.name} <span className="text-sm font-normal text-slate-500">v{p.version}</span>
                     <VerifiedBadge verified={p.verified} />
-                    {p.enabled ? <Badge tone="green">Activé</Badge> : <Badge>Désactivé</Badge>}
-                    {!p.compatible && <Badge tone="red">Demande PalCMS {p.palcms}</Badge>}
+                    {p.enabled ? <Badge tone="green">{t('On')}</Badge> : <Badge>{t('Off')}</Badge>}
+                    {!p.compatible && <Badge tone="red">{t('Needs PalCMS {version}', { version: p.palcms })}</Badge>}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{p.description || 'Pas de description.'}</p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{p.description || t('No description.')}</p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {p.author && `par ${p.author} · `}
-                    {p.source === 'market' ? 'depuis le market' : p.source === 'upload' ? 'depuis un fichier' : 'dossier local'}
+                    {p.author && `${t('by {name}', { name: p.author })} · `}
+                    {p.source === 'market' ? t('from the market') : p.source === 'upload' ? t('from a file') : t('local folder')}
                     {p.homepage && (
                       <>
                         {' · '}
                         <a href={p.homepage} target="_blank" rel="noopener noreferrer" className="hover:text-accent">
-                          site du plugin
+                          {t('plugin website')}
                         </a>
                       </>
                     )}
                   </p>
                   {p.error && (
                     <Alert kind="error" className="mt-3">
-                      Erreur au chargement : {p.error}
+                      {t('Loading error: {error}', { error: p.error })}
                     </Alert>
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {p.settings.length > 0 && (
-                    <Button variant="ghost" onClick={() => setEditing(editing === p.id ? null : p.id)} title="Réglages">
+                    <Button variant="ghost" onClick={() => setEditing(editing === p.id ? null : p.id)} title={t('Settings')}>
                       <Settings2 className="h-4 w-4" />
                     </Button>
                   )}
@@ -355,17 +356,17 @@ export function PluginsPage() {
                     loading={busy === p.id}
                     disabled={!p.compatible && !p.enabled}
                     onClick={() =>
-                      void act(p.id, () => api.put(`features/extensions/${p.id}`, { enabled: !p.enabled }), p.enabled ? `${p.name} est désactivé.` : `${p.name} est activé.`)
+                      void act(p.id, () => api.put(`features/extensions/${p.id}`, { enabled: !p.enabled }), p.enabled ? t('{name} is off.', { name: p.name }) : t('{name} is on.', { name: p.name }))
                     }
                   >
-                    <Power className="h-4 w-4" /> {p.enabled ? 'Désactiver' : 'Activer'}
+                    <Power className="h-4 w-4" /> {p.enabled ? t('Turn off') : t('Turn on')}
                   </Button>
                   <Button
                     variant="ghost"
-                    title="Supprimer"
+                    title={t('Delete')}
                     onClick={() => {
-                      if (confirm(`Supprimer ${p.name} ? Ses fichiers sont effacés ; ses données en base sont conservées.`)) {
-                        void act(p.id, () => api.del(`features/extensions/${p.id}`), `${p.name} est supprimé.`);
+                      if (confirm(t('Delete {name}? Its files are erased; its data in the database is kept.', { name: p.name }))) {
+                        void act(p.id, () => api.del(`features/extensions/${p.id}`), t('{name} is deleted.', { name: p.name }));
                       }
                     }}
                   >
@@ -373,7 +374,7 @@ export function PluginsPage() {
                   </Button>
                 </div>
               </div>
-              {editing === p.id && <ExtensionSettingsForm ext={p} onSaved={() => setMsg({ kind: 'success', text: 'Réglages enregistrés.' })} />}
+              {editing === p.id && <ExtensionSettingsForm ext={p} onSaved={() => setMsg({ kind: 'success', text: t('Settings saved.') })} />}
             </Card>
           ))}
         </div>
@@ -383,7 +384,7 @@ export function PluginsPage() {
   );
 }
 
-// Réglages d'une extension
+// Settings of an extension
 
 export function ExtensionSettingsForm({ ext, onSaved, reloadOnSave }: { ext: InstalledExtension; onSaved?: () => void; reloadOnSave?: boolean }) {
   const { data, error } = useLoad<{ settings: ExtensionSettingDef[]; values: ExtensionSettingValues }>(`features/extensions/${ext.id}/settings`);
@@ -418,7 +419,7 @@ export function ExtensionSettingsForm({ ext, onSaved, reloadOnSave }: { ext: Ins
         ))}
       </div>
       <Button loading={saving} onClick={() => void save()}>
-        Enregistrer les réglages
+        {t('Save the settings')}
       </Button>
     </div>
   );
@@ -459,7 +460,7 @@ function SettingField({ def, value, onChange }: { def: ExtensionSettingDef; valu
   );
 }
 
-// Thèmes installés (en tête de la page Thèmes)
+// Installed themes (top of the Themes page)
 
 export function InstalledThemes() {
   const { boot } = useApp();
@@ -477,31 +478,36 @@ export function InstalledThemes() {
     setMsg(null);
     try {
       await api.put('features/extensions/themes/active', { id });
-      // Le thème change la structure du site : on recharge pour l'appliquer partout.
+      // A theme changes the site layout: reload to apply it everywhere.
       location.reload();
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
       setBusy(null);
     }
   };
-  const remove = async (t: InstalledExtension) => {
-    if (!confirm(`Supprimer le thème ${t.name} ?`)) return;
+  const remove = async (theme: InstalledExtension) => {
+    if (!confirm(t('Delete the theme {name}?', { name: theme.name }))) return;
     try {
-      await api.del(`features/extensions/${t.id}`);
+      await api.del(`features/extensions/${theme.id}`);
       reload();
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
     }
   };
 
-  const editedTheme = data.items.find((t) => t.id === editing) ?? null;
-  const cards = [{ id: null as string | null, name: 'PalCMS (par défaut)', description: 'Le thème d’origine, réglable avec Apparence et les réglages avancés ci-dessous.', theme: null as InstalledExtension | null }].concat(
-    data.items.map((t) => ({ id: t.id as string | null, name: t.name, description: t.description, theme: t as InstalledExtension | null })),
-  );
+  const editedTheme = data.items.find((x) => x.id === editing) ?? null;
+  const cards = [
+    {
+      id: null as string | null,
+      name: t('PalCMS (default)'),
+      description: t('The original theme, adjustable with Appearance and the advanced settings below.'),
+      theme: null as InstalledExtension | null,
+    },
+  ].concat(data.items.map((x) => ({ id: x.id as string | null, name: x.name, description: x.description, theme: x as InstalledExtension | null })));
 
   return (
     <Card
-      title="Thèmes installés"
+      title={t('Installed themes')}
       className="mb-6"
       actions={
         canInstall && (
@@ -513,10 +519,10 @@ export function InstalledThemes() {
             </Link>
             <UploadButton
               onDone={(ext) => {
-                setMsg({ kind: 'success', text: `${ext.name} ${ext.version} est installé.` });
+                setMsg({ kind: 'success', text: t('{name} {version} is installed.', { name: ext.name, version: ext.version }) });
                 reload();
               }}
-              onError={(t) => setMsg({ kind: 'error', text: t })}
+              onError={(text) => setMsg({ kind: 'error', text })}
             />
           </div>
         )
@@ -548,22 +554,22 @@ export function InstalledThemes() {
                 </div>
               </div>
               <p className="mt-2 line-clamp-2 text-sm text-slate-600 dark:text-slate-400">{c.description}</p>
-              {c.theme && !c.theme.compatible && <Badge tone="red">Demande PalCMS {c.theme.palcms}</Badge>}
+              {c.theme && !c.theme.compatible && <Badge tone="red">{t('Needs PalCMS {version}', { version: c.theme.palcms })}</Badge>}
               <div className="mt-3 flex flex-wrap gap-2">
                 {active ? (
-                  <Badge tone="green">Thème actif</Badge>
+                  <Badge tone="green">{t('Active theme')}</Badge>
                 ) : (
                   <Button loading={busy === (c.id ?? 'default')} disabled={!!c.theme && !c.theme.compatible} onClick={() => void activate(c.id)}>
-                    Activer
+                    {t('Turn on')}
                   </Button>
                 )}
                 {c.theme && c.theme.settings.length > 0 && (
                   <Button variant="secondary" onClick={() => setEditing(editing === c.id ? null : c.id)}>
-                    <Settings2 className="h-4 w-4" /> Personnaliser
+                    <Settings2 className="h-4 w-4" /> {t('Customize')}
                   </Button>
                 )}
                 {c.theme && canInstall && !active && (
-                  <Button variant="ghost" title="Supprimer" onClick={() => void remove(c.theme!)}>
+                  <Button variant="ghost" title={t('Delete')} onClick={() => void remove(c.theme!)}>
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
                 )}
@@ -574,12 +580,12 @@ export function InstalledThemes() {
       </div>
       {editedTheme && (
         <div>
-          <p className="mt-6 font-semibold">Personnaliser {editedTheme.name}</p>
+          <p className="mt-6 font-semibold">{t('Customize {name}', { name: editedTheme.name })}</p>
           <ExtensionSettingsForm
             key={editedTheme.id}
             ext={editedTheme}
             reloadOnSave={data.active === editedTheme.id}
-            onSaved={() => setMsg({ kind: 'success', text: 'Réglages du thème enregistrés.' })}
+            onSaved={() => setMsg({ kind: 'success', text: t('Theme settings saved.') })}
           />
         </div>
       )}
@@ -587,12 +593,12 @@ export function InstalledThemes() {
   );
 }
 
-// Pages admin ajoutées par les plugins
+// Admin pages added by plugins
 
 export function PluginAdminPage({ page }: { page: ExtAdminPage }) {
   const { boot } = useApp();
   if (page.permission && !boot.user?.permissions.includes(page.permission)) {
-    return <Alert kind="error">Permission insuffisante.</Alert>;
+    return <Alert kind="error">{t('Not enough permissions.')}</Alert>;
   }
   const C = page.component;
   return (

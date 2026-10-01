@@ -1,42 +1,93 @@
 import crypto from 'node:crypto';
-import type { ExternalServer, PalworldSetup, ServerMode, SiteSettings } from '@palcms/shared';
+import type { ExternalServer, Lang, PalworldSetup, ServerMode, SiteSettings } from '@palcms/shared';
 import { settings } from '../db';
 import { config } from '../config';
 
-export const DEFAULT_SITE: SiteSettings = {
-  name: 'Mon serveur Palworld',
-  tagline: 'Un serveur communautaire Palworld',
-  accentColor: '#22c55e',
-  defaultTheme: 'dark',
-  allowThemeToggle: true,
-  discordUrl: '',
-  logoUrl: '',
-  bannerUrl: '',
-  heroTitle: 'Bienvenue sur notre serveur Palworld',
-  heroText: 'Rejoins la communauté, capture des Pals et grimpe dans le classement !',
-  footerText: '',
-  serverAddress: '',
-  menu: [
-    { label: 'Accueil', url: '/' },
-    { label: 'Actualités', url: '/actualites' },
-    { label: 'Classement', url: '/classement' },
-    { label: 'Règles', url: '/p/regles' },
-    { label: 'Rejoindre', url: '/p/rejoindre' },
-  ],
-  registration: { steam: true, email: true },
-};
+/** Default site settings, in the language chosen at setup. */
+export function defaultSite(lang: Lang): SiteSettings {
+  const fr = lang === 'fr';
+  return {
+    name: fr ? 'Mon serveur Palworld' : 'My Palworld server',
+    tagline: fr ? 'Un serveur communautaire Palworld' : 'A community Palworld server',
+    accentColor: '#22c55e',
+    defaultTheme: 'dark',
+    allowThemeToggle: true,
+    language: lang,
+    discordUrl: '',
+    logoUrl: '',
+    bannerUrl: '',
+    heroTitle: fr ? 'Bienvenue sur notre serveur Palworld' : 'Welcome to our Palworld server',
+    heroText: fr
+      ? 'Rejoins la communauté, capture des Pals et grimpe dans le classement !'
+      : 'Join the community, catch Pals and climb the leaderboard!',
+    footerText: '',
+    serverAddress: '',
+    joinUrl: fr ? '/p/rejoindre' : '/p/join',
+    menu: fr
+      ? [
+          { label: 'Accueil', url: '/' },
+          { label: 'Actualités', url: '/news' },
+          { label: 'Classement', url: '/leaderboard' },
+          { label: 'Règles', url: '/p/regles' },
+          { label: 'Rejoindre', url: '/p/rejoindre' },
+        ]
+      : [
+          { label: 'Home', url: '/' },
+          { label: 'News', url: '/news' },
+          { label: 'Leaderboard', url: '/leaderboard' },
+          { label: 'Rules', url: '/p/rules' },
+          { label: 'Join', url: '/p/join' },
+        ],
+    registration: { steam: true, email: true },
+  };
+}
+
+export function isSetupDone(): boolean {
+  return settings.get('setup.done', false);
+}
+
+/** Language before any choice is saved: French for sites installed before 1.1.0 (which were French only). */
+const legacyLang = (): Lang => (isSetupDone() ? 'fr' : 'en');
 
 export function getSiteSettings(): SiteSettings {
   const stored = settings.get<Partial<SiteSettings>>('site', {});
-  return { ...DEFAULT_SITE, ...stored, registration: { ...DEFAULT_SITE.registration, ...stored.registration } };
+  const lang = stored.language ?? legacyLang();
+  const base = defaultSite(lang);
+  return {
+    ...base,
+    ...stored,
+    language: lang,
+    registration: { ...base.registration, ...stored.registration },
+  };
 }
 
 export function saveSiteSettings(value: SiteSettings): void {
   settings.set('site', value);
 }
 
-export function isSetupDone(): boolean {
-  return settings.get('setup.done', false);
+// Old French URLs of the public site, replaced by English ones in 1.1.0 (the old ones still redirect).
+export const LEGACY_PATHS: Record<string, string> = {
+  '/actualites': '/news',
+  '/classement': '/leaderboard',
+  '/carte': '/map',
+  '/guildes': '/guilds',
+  '/evenements': '/events',
+  '/disponibilite': '/uptime',
+  '/signaler': '/report',
+  '/connexion': '/login',
+  '/inscription': '/register',
+  '/profil': '/profile',
+};
+
+/** Rewrites the menu links of a site installed before 1.1.0 to the new URLs (once). */
+export function migrateLegacyMenu(): void {
+  if (settings.get('site.menu.englishPaths', false)) return;
+  const stored = settings.get<Partial<SiteSettings> | null>('site', null);
+  if (stored?.menu) {
+    const menu = stored.menu.map((m) => ({ ...m, url: LEGACY_PATHS[m.url] ?? m.url }));
+    settings.set('site', { ...stored, menu });
+  }
+  settings.set('site.menu.englishPaths', true);
 }
 
 export function getPalworldConfig(): PalworldSetup | null {
@@ -47,12 +98,12 @@ export function savePalworldConfig(value: PalworldSetup): void {
   settings.set('palworld', value);
 }
 
-// Serveur installé ou externe
+// Installed or external server
 
 /**
- * - managed  : serveur installé et géré par PalCMS sur ce VPS (palctl, service systemd, sauvegardes…)
- * - external : serveur existant (sur ce VPS ou ailleurs), connecté par son API REST
- * - none     : site seul, aucun serveur connecté pour le moment
+ * - managed : server installed and run by PalCMS on this VPS (palctl, systemd service, backups…)
+ * - external: existing server (on this VPS or elsewhere), connected through its REST API
+ * - none    : website only, no server connected yet
  */
 export function getServerMode(): ServerMode {
   return settings.get<ServerMode>('server.mode', getPalworldConfig() ? 'managed' : 'none');
@@ -81,7 +132,7 @@ export interface PalworldConnection {
   password: string;
 }
 
-/** Où joindre l'API REST du serveur Palworld (null : aucun serveur connecté). */
+/** Where to reach the Palworld server REST API (null: no server connected). */
 export function palworldConnection(): PalworldConnection | null {
   const mode = getServerMode();
   if (mode === 'managed') {
@@ -95,7 +146,7 @@ export function palworldConnection(): PalworldConnection | null {
   return null;
 }
 
-/** Adresse affichée aux joueurs : réglage du site, sinon adresse déduite du serveur connecté. */
+/** Address shown to players: the site setting, otherwise derived from the connected server. */
 export function serverAddress(): string {
   const site = getSiteSettings();
   if (site.serverAddress) return site.serverAddress;
@@ -110,7 +161,7 @@ export function serverAddress(): string {
   return pal ? `${host}:${pal.port}` : host;
 }
 
-/** Sel secret utilisé pour dériver les identifiants publics des joueurs. */
+/** Secret salt used to derive public player ids. */
 export function secretSalt(): string {
   let salt = settings.get<string | null>('secret.playerSalt', null);
   if (!salt) {

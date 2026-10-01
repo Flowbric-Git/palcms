@@ -26,7 +26,7 @@ export function parseBackupList(output: string): BackupItem[] {
     .sort((a, b) => b.createdAt - a.createdAt);
 }
 
-/** Noms des sauvegardes automatiques à supprimer pour n'en garder que "keep". */
+/** Names of the automatic backups to delete so that only "keep" remain. */
 export function backupsToPrune(items: BackupItem[], keep: number): string[] {
   return items
     .filter((b) => b.tag === 'auto')
@@ -38,7 +38,7 @@ export function backupsToPrune(items: BackupItem[], keep: number): string[] {
 const audit = (host: FeatureHost, user: HostUser | null, action: string, target?: string) =>
   host.events.emit('audit', { userId: user?.id ?? null, username: user?.username ?? null, action, target });
 
-// Sauvegardes
+// Backups
 
 interface BackupSettings {
   enabled: boolean;
@@ -58,13 +58,13 @@ export function createBackups(host: FeatureHost, bus: FeatureBus): Feature & Bac
   let stopTimer: (() => void) | null = null;
 
   const create = async (tag: BackupTag): Promise<string> => {
-    if (running) throw httpError(409, 'Une sauvegarde est déjà en cours');
+    if (running) throw httpError(409, 'A backup is already running');
     running = true;
     try {
       try {
-        await host.palworld.save(); // écrit le monde sur le disque avant l'archivage
+        await host.palworld.save(); // writes the world to disk before archiving
       } catch {
-        /* serveur arrêté : les fichiers sont déjà à jour */
+        /* server stopped: files are already up to date */
       }
       const name = (await host.palctl(['backup-create', tag], { timeoutMs: 10 * 60_000 })).trim().split('\n').pop()!;
       host.settings.set('feature.backups.last', Date.now());
@@ -82,7 +82,7 @@ export function createBackups(host: FeatureHost, bus: FeatureBus): Feature & Bac
   };
 
   const checkName = (name: string) => {
-    if (!BACKUP_RE.test(name)) throw httpError(400, 'Nom de sauvegarde invalide');
+    if (!BACKUP_RE.test(name)) throw httpError(400, 'Invalid backup name');
   };
 
   return {
@@ -93,7 +93,7 @@ export function createBackups(host: FeatureHost, bus: FeatureBus): Feature & Bac
         if (host.server.mode() !== 'managed') return;
         const s = settings();
         const last = host.settings.get<number>('feature.backups.last', 0);
-        // Après un échec, on attend 15 minutes avant de réessayer au lieu de réessayer à chaque minute.
+        // After a failure, wait 15 minutes before trying again instead of retrying every minute.
         const due = Date.now() - last >= s.intervalMinutes * 60_000 && Date.now() - failedAt >= 15 * 60_000;
         if (s.enabled && due && !running) {
           await create('auto').catch(() => {
@@ -146,7 +146,7 @@ export function createBackups(host: FeatureHost, bus: FeatureBus): Feature & Bac
         permission: 'server.backups',
         handler: async ({ params, user }) => {
           checkName(params.name);
-          // Filet de sécurité : l'état actuel est sauvegardé avant d'être remplacé.
+          // Safety net: the current state is backed up before being replaced.
           const safety = await create('prerestore');
           bus.emit('intentional', {});
           await host.palctl(['backup-restore', params.name], { timeoutMs: 10 * 60_000 });
@@ -181,7 +181,7 @@ export function createBackups(host: FeatureHost, bus: FeatureBus): Feature & Bac
   };
 }
 
-// Redémarrages programmés et mises à jour
+// Scheduled restarts and updates
 
 interface ScheduleSettings {
   enabled: boolean;
@@ -190,15 +190,15 @@ interface ScheduleSettings {
   updateOnRestart: boolean;
   message: string;
 }
-const DEFAULT_SCHEDULE: ScheduleSettings = {
+const DEFAULT_SCHEDULE: Omit<ScheduleSettings, 'message'> = {
   enabled: false,
   times: ['06:00'],
   warnings: [15, 5, 1],
   updateOnRestart: true,
-  message: 'Redémarrage du serveur dans {min} minute(s). Pensez à vous mettre à l’abri !',
 };
+const DEFAULT_RESTART_MESSAGE = 'Server restarting in {min} minute(s). Get to safety!';
 
-/** Prochaine occurrence (ms) d'une heure "HH:MM" locale, à partir de "from". */
+/** Next occurrence (ms) of a local "HH:MM" time, from "from". */
 export function nextOccurrence(time: string, from: number): number {
   const [h, m] = time.split(':').map(Number);
   const d = new Date(from);
@@ -208,8 +208,12 @@ export function nextOccurrence(time: string, from: number): number {
 }
 
 export function createSchedules(host: FeatureHost, bus: FeatureBus, backups: BackupService): Feature {
-  const settings = () => ({ ...DEFAULT_SCHEDULE, ...host.settings.get<Partial<ScheduleSettings>>('feature.schedules', {}) });
-  /** Redémarrage en cours de compte à rebours (programmé ou manuel). */
+  const settings = (): ScheduleSettings => ({
+    ...DEFAULT_SCHEDULE,
+    message: host.t(DEFAULT_RESTART_MESSAGE),
+    ...host.settings.get<Partial<ScheduleSettings>>('feature.schedules', {}),
+  });
+  /** Restart currently counting down (scheduled or manual). */
   let pending: { at: number; update: boolean; sent: Set<number> } | null = null;
   let busy = false;
   let stopTimer: (() => void) | null = null;
@@ -291,7 +295,7 @@ export function createSchedules(host: FeatureHost, bus: FeatureBus, backups: Bac
           const s = parseBody(
             z.object({
               enabled: z.boolean(),
-              times: z.array(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Heure invalide (HH:MM)')).max(12),
+              times: z.array(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Invalid time (HH:MM)')).max(12),
               warnings: z.array(z.number().int().min(1).max(60)).max(6),
               updateOnRestart: z.boolean(),
               message: z.string().trim().min(1).max(200),
@@ -311,12 +315,12 @@ export function createSchedules(host: FeatureHost, bus: FeatureBus, backups: Bac
         permission: 'server.schedules',
         handler: ({ body, user }) => {
           const { delayMinutes, update } = parseBody(z.object({ delayMinutes: z.number().int().min(0).max(60), update: z.boolean().default(false) }), body);
-          if (busy || pending) throw httpError(409, 'Un redémarrage est déjà prévu ou en cours');
+          if (busy || pending) throw httpError(409, 'A restart is already planned or running');
           audit(host, user, update ? 'server.update' : 'server.restart-planned', `${delayMinutes} min`);
           if (delayMinutes === 0) {
             void runRestart(update);
           } else {
-            // Les avertissements plus longs que le délai choisi sont considérés comme déjà envoyés.
+            // Warnings longer than the chosen delay count as already sent.
             const sent = new Set(settings().warnings.filter((w) => w > delayMinutes));
             pending = { at: Date.now() + delayMinutes * 60_000, update, sent };
           }
@@ -329,9 +333,9 @@ export function createSchedules(host: FeatureHost, bus: FeatureBus, backups: Bac
         access: 'staff',
         permission: 'server.schedules',
         handler: async ({ user }) => {
-          if (!pending) throw httpError(404, 'Aucun redémarrage prévu');
+          if (!pending) throw httpError(404, 'No restart planned');
           pending = null;
-          await host.palworld.announce('Le redémarrage prévu est annulé.').catch(() => {});
+          await host.palworld.announce(host.t('The planned restart is cancelled.')).catch(() => {});
           audit(host, user, 'schedule.cancel');
           return { ok: true };
         },
@@ -340,7 +344,7 @@ export function createSchedules(host: FeatureHost, bus: FeatureBus, backups: Bac
   };
 }
 
-// Annonces en jeu
+// In-game announcements
 
 const announcementSchema = z.object({
   message: z.string().trim().min(1).max(200),

@@ -6,7 +6,7 @@ import { config, uploadsDir } from '../config';
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
-/** Types d'images acceptés, reconnus par leur signature binaire (pas de SVG : risque de XSS). */
+/** Accepted image types, recognized by their binary signature (no SVG: XSS risk). */
 function detectImage(buf: Buffer): string | null {
   if (buf.length >= 8 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'png';
   if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpg';
@@ -16,17 +16,17 @@ function detectImage(buf: Buffer): string | null {
   return null;
 }
 
-/** Enregistre une image envoyée et renvoie son URL publique (relative au site). */
+/** Stores an uploaded image and returns its public URL (relative to the site). */
 export async function saveImageUpload(file: MultipartFile, maxBytes = MAX_UPLOAD_BYTES): Promise<string> {
   let buf: Buffer;
   try {
     buf = await file.toBuffer();
   } catch {
-    throw new Error(`Image trop lourde (${Math.round(maxBytes / 1024 / 1024)} Mo maximum)`);
+    throw new Error(`Image too large (${Math.round(maxBytes / 1024 / 1024)} MB maximum)`);
   }
-  if (file.file.truncated || buf.length > maxBytes) throw new Error(`Image trop lourde (${Math.round(maxBytes / 1024 / 1024)} Mo maximum)`);
+  if (file.file.truncated || buf.length > maxBytes) throw new Error(`Image too large (${Math.round(maxBytes / 1024 / 1024)} MB maximum)`);
   const ext = detectImage(buf);
-  if (!ext) throw new Error('Format non supporté (PNG, JPG, GIF ou WebP uniquement)');
+  if (!ext) throw new Error('Unsupported format (PNG, JPG, GIF or WebP only)');
   fs.mkdirSync(uploadsDir, { recursive: true });
   const name = `${Date.now().toString(36)}-${crypto.randomBytes(8).toString('hex')}.${ext}`;
   fs.writeFileSync(path.join(uploadsDir, name), buf);

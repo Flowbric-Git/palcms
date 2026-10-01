@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Serveur Palworld</title>
+    <title>Palworld server</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>" />
     <script>
-      // Applique le thème avant le premier affichage (évite un flash blanc en mode sombre).
+      // Applies the theme before the first render (avoids a white flash in dark mode).
       try {
         var t = localStorage.getItem('palcms-theme');
         if (t === 'dark' || (!t && !window.matchMedia('(prefers-color-scheme: light)').matches)) document.documentElement.classList.add('dark');

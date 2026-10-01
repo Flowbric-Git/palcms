@@ -2,8 +2,9 @@ import { useRef, useState } from 'react';
 import { ImagePlus, X } from 'lucide-react';
 import { api, errorText } from '../lib/api';
 import { Button } from './ui';
+import { t } from '../lib/i18n';
 
-/** Envoi d'une image (logo, bannière, couverture) avec aperçu. */
+/** Image upload (logo, banner, cover) with preview. */
 export function ImageField({
   value,
   onChange,
@@ -41,7 +42,7 @@ export function ImageField({
             <img src={value} alt="" className={`${previewClass} rounded-lg object-contain ring-1 ring-slate-200 dark:ring-slate-700`} />
             <button
               type="button"
-              aria-label="Retirer l'image"
+              aria-label={t('Remove the image')}
               onClick={() => onChange('')}
               className="absolute -top-2 -right-2 rounded-full bg-slate-800 p-0.5 text-white"
             >
@@ -51,7 +52,7 @@ export function ImageField({
         )}
         <Button type="button" variant="secondary" loading={busy} onClick={() => ref.current?.click()}>
           <ImagePlus className="h-4 w-4" />
-          {value ? "Changer l'image" : 'Choisir une image'}
+          {value ? t('Change the image') : t('Choose an image')}
         </Button>
       </div>
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}

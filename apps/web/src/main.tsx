@@ -1,6 +1,6 @@
 import { StrictMode, Suspense, lazy, useEffect, type ComponentType, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import './index.css';
 import { api, basePath, isDemo } from './lib/api';
 import { AppProvider, useApp } from './lib/app';
@@ -13,8 +13,8 @@ import { LeaderboardPage, PlayerPage } from './features/public';
 import { applyTheme, type ThemeSettings } from './features/theme';
 import { ExtensionBoundary, registry } from './lib/extensions';
 
-// Chargés à la demande : l'assistant ne sert qu'une fois, le panel admin qu'à l'équipe,
-// et la carte (Leaflet) seulement quand on l'ouvre.
+// Loaded on demand: the wizard is used once, the admin panel only by the team,
+// and the map (Leaflet) only when it is opened.
 const SetupWizard = lazy(() => import('./setup/SetupWizard').then((m) => ({ default: m.SetupWizard })));
 const AdminApp = lazy(() => import('./admin/AdminApp'));
 const MapPage = lazy(() => import('./features/mapPages').then((m) => ({ default: m.MapPage })));
@@ -29,6 +29,27 @@ const TicketsPage = lazy(() => world().then((m) => ({ default: m.TicketsPage }))
 
 const lazyPage = (el: ReactNode) => <Suspense fallback={<Spinner />}>{el}</Suspense>;
 
+// Public URLs used before 1.1.0 (French): old links and bookmarks keep working.
+const LEGACY_PUBLIC: [string, string][] = [
+  ['actualites', 'news'],
+  ['classement', 'leaderboard'],
+  ['carte', 'map'],
+  ['joueurs', 'players'],
+  ['guildes', 'guilds'],
+  ['evenements', 'events'],
+  ['disponibilite', 'uptime'],
+  ['signaler', 'report'],
+  ['connexion', 'login'],
+  ['inscription', 'register'],
+  ['profil', 'profile'],
+];
+
+function LegacyRedirect({ from, to }: { from: string; to: string }) {
+  const { pathname, search } = useLocation();
+  const rest = pathname.slice(pathname.indexOf(`/${from}`) + from.length + 1);
+  return <Navigate to={`/${to}${rest}${search}`} replace />;
+}
+
 const extensionPage = (ext: string, Page: ComponentType) => (
   <ExtensionBoundary ext={ext}>
     <Suspense fallback={<Spinner />}>
@@ -37,7 +58,7 @@ const extensionPage = (ext: string, Page: ComponentType) => (
   </ExtensionBoundary>
 );
 
-/** Applique le thème avancé (police, fond, CSS personnalisé) choisi dans le panel. */
+/** Applies the advanced theme (font, background, custom CSS) chosen in the panel. */
 function ThemeLoader() {
   const { boot } = useApp();
   useEffect(() => {
@@ -52,7 +73,7 @@ function ThemeLoader() {
 
 function AppRoutes() {
   const { boot } = useApp();
-  // Tant que l'installation n'est pas terminée, tout le site affiche l'assistant.
+  // Until setup is finished, the whole site shows the wizard.
   if (!boot.setupDone) {
     return (
       <Suspense fallback={<Spinner />}>
@@ -67,28 +88,31 @@ function AppRoutes() {
       <Routes>
         <Route element={<PublicLayout />}>
           <Route index element={<Home />} />
-          {m.news && <Route path="actualites" element={<NewsList />} />}
-          {m.news && <Route path="actualites/:slug" element={<NewsDetail />} />}
-          {m.leaderboard && <Route path="classement" element={<LeaderboardPage />} />}
+          {m.news && <Route path="news" element={<NewsList />} />}
+          {m.news && <Route path="news/:slug" element={<NewsDetail />} />}
+          {m.leaderboard && <Route path="leaderboard" element={<LeaderboardPage />} />}
           <Route
-            path="carte"
+            path="map"
             element={
               <Suspense fallback={<Spinner />}>
                 <MapPage />
               </Suspense>
             }
           />
-          <Route path="joueurs/:id" element={<PlayerPage />} />
-          {m.guilds && <Route path="guildes" element={lazyPage(<GuildsPage />)} />}
-          {m.guilds && <Route path="guildes/:id" element={lazyPage(<GuildPage />)} />}
+          <Route path="players/:id" element={<PlayerPage />} />
+          {m.guilds && <Route path="guilds" element={lazyPage(<GuildsPage />)} />}
+          {m.guilds && <Route path="guilds/:id" element={lazyPage(<GuildPage />)} />}
           {m.paldex && <Route path="paldex" element={lazyPage(<PaldexPage />)} />}
-          {m.calendar && <Route path="evenements" element={lazyPage(<CalendarPage />)} />}
-          {m.uptime && <Route path="disponibilite" element={lazyPage(<UptimePage />)} />}
-          {m.tickets && <Route path="signaler" element={lazyPage(<TicketsPage />)} />}
+          {m.calendar && <Route path="events" element={lazyPage(<CalendarPage />)} />}
+          {m.uptime && <Route path="uptime" element={lazyPage(<UptimePage />)} />}
+          {m.tickets && <Route path="report" element={lazyPage(<TicketsPage />)} />}
           <Route path="p/:slug" element={<CmsPage />} />
-          <Route path="connexion" element={<LoginPage />} />
-          <Route path="inscription" element={<RegisterPage />} />
-          <Route path="profil" element={<ProfilePage />} />
+          <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<RegisterPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          {LEGACY_PUBLIC.map(([from, to]) => (
+            <Route key={from} path={`${from}/*`} element={<LegacyRedirect from={from} to={to} />} />
+          ))}
           <Route path="setup" element={<Navigate to="/" replace />} />
           {registry.pages
             .filter((p) => p.layout)

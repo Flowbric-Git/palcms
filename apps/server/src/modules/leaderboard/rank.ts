@@ -11,8 +11,8 @@ export interface RankablePlayer {
 export type RankCriterion = 'level';
 
 /**
- * Classement : niveau décroissant, puis temps de jeu décroissant, puis nom.
- * Les ex æquo parfaits (même niveau et même temps de jeu) partagent le même rang.
+ * Leaderboard: level descending, then playtime descending, then name.
+ * Perfect ties (same level and same playtime) share the same rank.
  */
 export function rankPlayers(rows: RankablePlayer[], limit = 50, _criterion: RankCriterion = 'level'): LeaderboardEntry[] {
   const sorted = [...rows].sort(

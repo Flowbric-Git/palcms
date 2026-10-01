@@ -1,14 +1,14 @@
-# API du market
+# Market API
 
-Ce document décrit ce que le site du market (palcms.online) doit fournir pour que chaque PalCMS affiche le catalogue et installe les ressources en un clic.
+This document describes what the market site (palcms.online) must provide so that every PalCMS can show the catalogue and install resources in one click.
 
-## Adresse
+## Address
 
-PalCMS interroge par défaut `https://palcms.online/api/market`. Pour tester avec un autre market, ajoute `PALCMS_MARKET_URL=https://…/api/market` dans `/etc/palcms/config.env`, puis redémarre le CMS avec `sudo systemctl restart palcms`.
+By default, PalCMS queries `https://palcms.online/api/market`. To test with another market, add `PALCMS_MARKET_URL=https://…/api/market` to `/etc/palcms/config.env`, then restart the CMS with `sudo systemctl restart palcms`.
 
 ## Catalogue
 
-`GET /api/market/resources` renvoie toutes les ressources publiées (JSON, code 200) :
+`GET /api/market/resources` returns every published resource (JSON, status 200):
 
 ```json
 {
@@ -16,17 +16,17 @@ PalCMS interroge par défaut `https://palcms.online/api/market`. Pour tester ave
     {
       "id": "bandeau",
       "type": "plugin",
-      "name": "Bandeau d'annonce",
-      "summary": "Un bandeau en haut du site pour annoncer un événement ou une maintenance.",
+      "name": "Announcement banner",
+      "summary": "A banner at the top of the site to announce an event or a maintenance.",
       "author": "PalCMS",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "palcms": ">=1.0.1",
       "iconUrl": "https://palcms.online/market/bandeau/icon.png",
       "screenshots": ["https://palcms.online/market/bandeau/1.png"],
       "downloads": 128,
       "price": 0,
       "url": "https://palcms.online/market/bandeau",
-      "download": "https://palcms.online/market/files/bandeau-1.0.0.zip",
+      "download": "https://palcms.online/market/files/bandeau-1.1.0.zip",
       "sha256": "9f2c…",
       "signature": "k3Jd…==",
       "updatedAt": "2026-10-01T12:00:00Z"
@@ -35,65 +35,65 @@ PalCMS interroge par défaut `https://palcms.online/api/market`. Pour tester ave
 }
 ```
 
-| Champ | Obligatoire | Rôle |
+| Field | Required | Role |
 |---|---|---|
-| `id` | oui | identique au `id` de `palcms.json` dans le paquet |
-| `type` | oui | `plugin` ou `theme`, identique au paquet |
-| `name`, `version` | oui | `version` au format `1.2.3` (dernière version publiée) |
-| `summary`, `author` | non | affichés sur la carte de la ressource |
-| `palcms` | non | versions de PalCMS compatibles (`>=1.0.1`) : le bouton Installer est masqué ailleurs |
-| `iconUrl`, `screenshots` | non | URL absolues (la première capture sert d'image de la carte) |
-| `downloads`, `price`, `url`, `updatedAt` | non | informations affichées ; `url` ouvre la page de la ressource |
-| `download` | oui | URL absolue du `.zip` (20 Mo maximum) |
-| `sha256` | oui | empreinte SHA-256 du `.zip`, en hexadécimal |
-| `signature` | oui | signature Ed25519 du `.zip`, en base64 |
+| `id` | yes | same as the `id` of `palcms.json` in the package |
+| `type` | yes | `plugin` or `theme`, same as the package |
+| `name`, `version` | yes | `version` in the `1.2.3` format (latest published version) |
+| `summary`, `author` | no | shown on the resource card |
+| `palcms` | no | compatible PalCMS versions (`>=1.0.1`): the Install button is hidden elsewhere |
+| `iconUrl`, `screenshots` | no | absolute URLs (the first screenshot is the card image) |
+| `downloads`, `price`, `url`, `updatedAt` | no | displayed information; `url` opens the resource page |
+| `download` | yes | absolute URL of the `.zip` (20 MB maximum) |
+| `sha256` | yes | SHA-256 checksum of the `.zip`, in hexadecimal |
+| `signature` | yes | Ed25519 signature of the `.zip`, in base64 |
 
-Une entrée mal formée est ignorée sans bloquer les autres. PalCMS garde le catalogue en cache 10 minutes : le bouton *Actualiser* du panel force une nouvelle lecture.
+A malformed entry is skipped without blocking the others. PalCMS caches the catalogue for 10 minutes: the panel *Refresh* button forces a new read.
 
-## Installation
+## Install
 
-Quand l'admin clique sur *Installer* (ou *Mettre à jour*), PalCMS :
+When the admin clicks *Install* (or *Update*), PalCMS:
 
-1. relit le catalogue et vérifie que la ressource est compatible avec sa version ;
-2. télécharge `download` ;
-3. compare l'empreinte SHA-256 à `sha256` ;
-4. vérifie `signature` avec la clé publique du market, intégrée au code de PalCMS (`apps/server/src/extensions/market.ts`) ;
-5. vérifie que le `id` et le `type` du paquet correspondent à l'entrée du catalogue ;
-6. installe l'extension, désactivée pour un plugin : l'admin l'active ensuite.
+1. reads the catalogue again and checks that the resource is compatible with its version;
+2. downloads `download`;
+3. compares the SHA-256 checksum with `sha256`;
+4. checks `signature` with the market public key, built into the PalCMS code (`apps/server/src/extensions/market.ts`);
+5. checks that the package `id` and `type` match the catalogue entry;
+6. installs the extension, turned off for a plugin: the admin then turns it on.
 
-Un fichier téléchargé depuis le site et installé avec *Installer un fichier .zip* est aussi reconnu comme vérifié, si son empreinte correspond à une ressource du catalogue.
+A file downloaded from the site and installed with *Install a .zip file* is also recognized as verified when its checksum matches a catalogue resource.
 
-## Signer les ressources
+## Signing resources
 
-La signature prouve que la ressource a été validée sur le market. Seule la clé privée du market peut la produire.
+The signature proves that the resource was approved on the market. Only the market private key can produce it.
 
-- **Clé privée** : `market-private.pem`. Garde-la hors de tout dépôt, sur le serveur du market ou sur ta machine.
-- **Clé publique** : copiée dans `MARKET_PUBLIC_KEY` (`apps/server/src/extensions/market.ts`).
+- **Private key**: `market-private.pem`. Keep it out of every repository, on the market server or on your machine.
+- **Public key**: copied into `MARKET_PUBLIC_KEY` (`apps/server/src/extensions/market.ts`).
 
-Pour signer un paquet validé :
+To sign an approved package:
 
 ```bash
-node sdk/palcms-ext.mjs sign bandeau-1.0.0.zip --key market-private.pem --download https://palcms.online/market/files/bandeau-1.0.0.zip
+node sdk/palcms-ext.mjs sign bandeau-1.1.0.zip --key market-private.pem --download https://palcms.online/market/files/bandeau-1.1.0.zip
 ```
 
-La commande affiche l'entrée du catalogue, avec `sha256` et `signature` déjà calculés. Il reste à compléter `iconUrl`, `screenshots` et `url`.
+The command prints the catalogue entry, with `sha256` and `signature` already computed. `iconUrl`, `screenshots` and `url` remain to be filled in.
 
-Le site du market peut aussi signer lui-même avec Node.js, au moment où tu valides une ressource :
+The market site can also sign by itself with Node.js, when you approve a resource:
 
 ```js
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 
 const key = crypto.createPrivateKey(fs.readFileSync('market-private.pem'));
-const zip = fs.readFileSync('bandeau-1.0.0.zip');
+const zip = fs.readFileSync('bandeau-1.1.0.zip');
 const sha256 = crypto.createHash('sha256').update(zip).digest('hex');
 const signature = crypto.sign(null, zip, key).toString('base64');
 ```
 
-Ne modifie jamais un `.zip` après l'avoir signé : sa signature ne serait plus valide.
+Never change a `.zip` after signing it: its signature would no longer be valid.
 
-**Si la clé privée est perdue ou volée** : crée-en une nouvelle (`node sdk/palcms-ext.mjs keygen <dossier>`), remplace la clé publique dans PalCMS, publie une nouvelle version, puis signe de nouveau toutes les ressources.
+**If the private key is lost or stolen**: create a new one (`node sdk/palcms-ext.mjs keygen <folder>`), replace the public key in PalCMS, publish a new version, then sign every resource again.
 
-## Tester en local
+## Testing locally
 
-`pnpm dev` lance aussi un faux market (`tools/fake-market`) sur `http://127.0.0.1:3100/api/market`. Il construit les exemples de `sdk/examples`, les signe avec une clé de développement et les sert au format ci-dessus. Le PalCMS de dev fait confiance à cette clé grâce à `PALCMS_TRUSTED_KEYS`, dans `apps/server/.env.development`.
+`pnpm dev` also starts a fake market (`tools/fake-market`) at `http://127.0.0.1:3100/api/market`. It builds the examples of `sdk/examples`, signs them with a development key and serves them in the format above. The dev PalCMS trusts this key through `PALCMS_TRUSTED_KEYS`, in `apps/server/.env.development`.

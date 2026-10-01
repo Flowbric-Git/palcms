@@ -67,13 +67,13 @@ export function purgeExpiredSessions(): void {
   db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now());
 }
 
-// Gardes
+// Guards
 
 export async function requireUser(req: FastifyRequest, reply: FastifyReply) {
-  if (!req.user) return reply.code(401).send({ error: 'Connexion requise' });
+  if (!req.user) return reply.code(401).send({ error: 'Login required' });
 }
 
 export async function requireAdmin(req: FastifyRequest, reply: FastifyReply) {
-  if (!req.user) return reply.code(401).send({ error: 'Connexion requise' });
-  if (!isAdmin(req.user)) return reply.code(403).send({ error: 'Accès réservé aux administrateurs' });
+  if (!req.user) return reply.code(401).send({ error: 'Login required' });
+  if (!isAdmin(req.user)) return reply.code(403).send({ error: 'Administrators only' });
 }

@@ -1,12 +1,13 @@
 import { Component, type ComponentType, type ReactNode } from 'react';
 import type { BootExtensions, ExtensionSettingValues, Permission } from '@palcms/shared';
 import { api, url } from './api';
+import { t } from './i18n';
 
-/** Emplacements où les plugins et thèmes ajoutent des blocs. */
+/** Slots where plugins and themes add blocks. */
 export const WIDGET_SLOTS = ['layout.top', 'layout.bottom', 'home.top', 'home.bottom', 'footer', 'profile'] as const;
 export type WidgetSlot = (typeof WIDGET_SLOTS)[number];
 
-/** Parties du site qu'un thème peut remplacer. */
+/** Parts of the site a theme can replace. */
 export const OVERRIDE_SLOTS = ['header', 'footer', 'home', 'home.hero'] as const;
 export type OverrideSlot = (typeof OVERRIDE_SLOTS)[number];
 
@@ -17,7 +18,7 @@ export interface ExtPage {
   ext: string;
   path: string;
   component: AnyComponent;
-  /** false : page affichée sans l'en-tête ni le pied de page du site. */
+  /** false: page shown without the site header and footer. */
   layout: boolean;
 }
 
@@ -40,21 +41,21 @@ interface Registry {
 
 export const registry: Registry = { pages: [], adminPages: [], widgets: {}, overrides: {}, themeSettings: {}, errors: [] };
 
-/** Ce que reçoit la fonction exportée par web.js. */
+/** What the function exported by web.js receives. */
 export interface ExtensionRegistrar {
   id: string;
   version: string;
   type: 'plugin' | 'theme';
-  /** Réglages de l'extension (valeurs choisies dans le panel). */
+  /** Extension settings (values chosen in the panel). */
   settings: ExtensionSettingValues;
-  /** Appels à l'API du plugin : pal.api.get('items') -> /api/plugins/<id>/items */
+  /** Calls to the plugin API: pal.api.get('items') -> /api/plugins/<id>/items */
   api: {
     get<T>(path: string): Promise<T>;
     post<T>(path: string, body?: unknown): Promise<T>;
     put<T>(path: string, body: unknown): Promise<T>;
     del<T>(path: string): Promise<T>;
   };
-  /** URL d'un fichier du dossier assets/ du paquet. */
+  /** URL of a file in the package's assets/ folder. */
   asset(path: string): string;
   page(def: { path: string; component: AnyComponent; layout?: boolean }): void;
   adminPage(def: { path: string; label: string; component: AnyComponent; permission?: Permission }): void;
@@ -87,9 +88,9 @@ function registrar(ext: { id: string; version: string; rev: string }, type: 'plu
       registry.widgets[slot].sort((a, b) => a.order - b.order);
     },
     override: (slot, component) => {
-      // Seul le thème actif remplace les parties du site : deux plugins ne peuvent pas se battre pour l'en-tête.
+      // Only the active theme replaces parts of the site: two plugins cannot fight over the header.
       if (type !== 'theme') {
-        console.warn(`[extensions] ${ext.id} : seul un thème peut remplacer "${slot}"`);
+        console.warn(`[extensions] ${ext.id}: only a theme can replace "${slot}"`);
         return;
       }
       registry.overrides[slot] = { ext: ext.id, component };
@@ -106,7 +107,7 @@ function addStylesheet(id: string, rev: string, theme: boolean) {
   document.head.appendChild(link);
 }
 
-/** Réglages du thème exposés au CSS : var(--theme-<clé>). */
+/** Theme settings exposed to CSS: var(--theme-<key>). */
 function applyThemeVariables(values: ExtensionSettingValues) {
   const root = document.documentElement;
   for (const [key, v] of Object.entries(values)) {
@@ -119,7 +120,7 @@ function applyThemeVariables(values: ExtensionSettingValues) {
 
 let loading: Promise<void> | null = null;
 
-/** Charge le thème actif puis les plugins activés, avant le premier affichage du site (une seule fois). */
+/** Loads the active theme, then enabled plugins, before the site first renders (once). */
 export function loadExtensions(boot: BootExtensions | undefined): Promise<void> {
   if (!boot || (!boot.theme && boot.plugins.length === 0)) return Promise.resolve();
   loading ??= load(boot);
@@ -147,7 +148,7 @@ async function load(boot: BootExtensions): Promise<void> {
       .map(async (ext) => {
         try {
           const mod = (await import(/* @vite-ignore */ url(`extensions/${ext.id}/web.js?v=${ext.rev}`))) as { default?: unknown };
-          if (typeof mod.default !== 'function') throw new Error('web.js doit exporter une fonction par défaut');
+          if (typeof mod.default !== 'function') throw new Error('web.js must export a default function');
           await (mod.default as (r: ExtensionRegistrar) => unknown)(registrar(ext, ext.type, ext.settings));
         } catch (e) {
           registry.errors.push({ ext: ext.id, message: (e as Error).message });
@@ -157,7 +158,7 @@ async function load(boot: BootExtensions): Promise<void> {
   );
 }
 
-/** Affiche un bloc d'extension sans que son erreur éventuelle ne casse la page. */
+/** Shows an extension block without letting its errors break the page. */
 export class ExtensionBoundary extends Component<{ ext: string; children: ReactNode; quiet?: boolean }, { error: Error | null }> {
   state = { error: null as Error | null };
   static getDerivedStateFromError(error: Error) {
@@ -171,13 +172,13 @@ export class ExtensionBoundary extends Component<{ ext: string; children: ReactN
     if (this.props.quiet) return null;
     return (
       <div className="mx-auto my-6 max-w-3xl rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-        L’extension « {this.props.ext} » a rencontré une erreur : {this.state.error.message}
+        {t('The extension "{ext}" ran into an error: {error}', { ext: this.props.ext, error: this.state.error.message })}
       </div>
     );
   }
 }
 
-/** Blocs ajoutés par les extensions à un emplacement du site. */
+/** Blocks added by extensions to a slot of the site. */
 export function Slot({ name, ...props }: { name: WidgetSlot } & Record<string, unknown>) {
   const list = registry.widgets[name];
   if (!list?.length) return null;
@@ -193,8 +194,8 @@ export function Slot({ name, ...props }: { name: WidgetSlot } & Record<string, u
 }
 
 /**
- * Remplace une partie du site par celle du thème actif, sinon affiche la version par défaut.
- * Le composant du thème reçoit les mêmes props, plus "Default" pour réutiliser l'original.
+ * Replaces a part of the site with the active theme's version, otherwise shows the default one.
+ * The theme component gets the same props, plus "Default" to reuse the original.
  */
 export function Overridable<P extends object>({ slot, fallback: Default, props }: { slot: OverrideSlot; fallback: ComponentType<P>; props: P }) {
   const o = registry.overrides[slot];
@@ -207,5 +208,5 @@ export function Overridable<P extends object>({ slot, fallback: Default, props }
   );
 }
 
-/** Réglages du thème actif (fixes pendant la visite : les changer recharge la page). */
+/** Active theme settings (fixed during a visit: changing them reloads the page). */
 export const useThemeSettings = (): ExtensionSettingValues => registry.themeSettings;

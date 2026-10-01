@@ -4,6 +4,7 @@ import { api } from './api';
 import { realtime } from './ws';
 import { applyTheme } from './theme';
 import { loadExtensions } from './extensions';
+import { initLang, t } from './i18n';
 
 interface AppState {
   boot: Bootstrap;
@@ -27,7 +28,8 @@ export function AppProvider({ children, fallback }: { children: ReactNode; fallb
   const refresh = useCallback(async () => {
     try {
       const b = await api.get<Bootstrap>('public/bootstrap');
-      // Les plugins ajoutent des pages : ils doivent être chargés avant le premier rendu des routes.
+      initLang(b.site.language);
+      // Plugins add pages: they must be loaded before the routes render for the first time.
       if (b.setupDone) await loadExtensions(b.extensions);
       setBoot(b);
       setError(null);
@@ -44,7 +46,7 @@ export function AppProvider({ children, fallback }: { children: ReactNode; fallb
 
   const setUser = useCallback((user: PublicUser | null) => {
     setBoot((b) => (b ? { ...b, user } : b));
-    // Les droits du WebSocket dépendent de la session : on se reconnecte.
+    // WebSocket permissions depend on the session: reconnect.
     realtime.reconnect();
   }, []);
 
@@ -52,10 +54,10 @@ export function AppProvider({ children, fallback }: { children: ReactNode; fallb
     return (
       <div className="flex min-h-screen items-center justify-center p-6 text-center">
         <div>
-          <p className="text-lg font-semibold">Impossible de joindre le serveur du site.</p>
+          <p className="text-lg font-semibold">{t('Cannot reach the site server.')}</p>
           <p className="mt-2 text-sm text-slate-500">{error}</p>
           <button className="mt-4 rounded-lg bg-slate-800 px-4 py-2 text-white" onClick={() => void refresh()}>
-            Réessayer
+            {t('Retry')}
           </button>
         </div>
       </div>

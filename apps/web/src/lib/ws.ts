@@ -5,8 +5,8 @@ import { isDemo, url } from './api';
 type Listener = (msg: WsServerMessage) => void;
 
 /**
- * Une seule connexion WebSocket partagée par toute l'application, avec reconnexion automatique
- * et réabonnement aux canaux après une coupure.
+ * A single WebSocket connection shared by the whole app, with automatic reconnection
+ * and channel re-subscription after a drop.
  */
 class RealtimeClient {
   private socket: WebSocket | null = null;
@@ -45,7 +45,7 @@ class RealtimeClient {
       for (const set of this.listeners.values()) for (const l of set) l(msg);
     };
     ws.onclose = () => {
-      // Une ancienne connexion fermée volontairement ne doit pas en relancer une seconde.
+      // An old connection closed on purpose must not start a second one.
       if (this.socket !== ws) return;
       this.socket = null;
       if (this.listeners.size === 0) return;
@@ -78,7 +78,7 @@ class RealtimeClient {
     };
   }
 
-  /** Force une reconnexion (ex. après connexion : les droits du socket changent). */
+  /** Forces a reconnection (e.g. after logging in: the socket permissions change). */
   reconnect() {
     const old = this.socket;
     this.socket = null;

@@ -8,6 +8,10 @@ import { RichEditor } from '../components/RichEditor';
 import { ImageField } from '../components/ImageField';
 import { Alert, Badge, Button, Card, Empty, Field, Input, PageHeader, Spinner, Textarea, Toggle } from '../components/ui';
 import { useLoad } from './AdminLayout';
+import { t } from '../lib/i18n';
+
+// "nouvelle": id used for new items before 1.1.0.
+const isNewId = (id: string | undefined) => id === 'new' || id === 'nouvelle';
 
 const toSlug = (s: string) =>
   s
@@ -44,7 +48,7 @@ function useSave() {
 export function PagesList() {
   const { data, error, reload } = useLoad<PageItem[]>('admin/site/pages');
   const remove = async (p: PageItem) => {
-    if (!window.confirm(`Supprimer la page « ${p.title} » ?`)) return;
+    if (!window.confirm(t('Delete the page "{title}"?', { title: p.title }))) return;
     await api.del(`admin/site/pages/${p.id}`);
     reload();
   };
@@ -53,17 +57,17 @@ export function PagesList() {
   return (
     <>
       <PageHeader
-        title="Pages"
-        description="Pages libres du site, accessibles à l'adresse /p/nom-de-la-page."
+        title={t('Pages')}
+        description={t('Free pages of the site, at the address /p/page-name.')}
         actions={
-          <Link to="/admin/site/pages/nouvelle" className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
-            <Plus className="h-4 w-4" /> Nouvelle page
+          <Link to="/admin/site/pages/new" className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
+            <Plus className="h-4 w-4" /> {t('New page')}
           </Link>
         }
       />
       <Card>
         {data.length === 0 ? (
-          <Empty>Aucune page.</Empty>
+          <Empty>{t('No page.')}</Empty>
         ) : (
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {data.map((p) => (
@@ -72,15 +76,15 @@ export function PagesList() {
                   <p className="font-medium">{p.title}</p>
                   <p className="font-mono text-xs text-slate-500">/p/{p.slug}</p>
                 </div>
-                {!p.published && <Badge tone="amber">Brouillon</Badge>}
-                <span className="text-xs text-slate-500">Modifiée le {formatDateTime(p.updatedAt)}</span>
-                <a href={url(`p/${p.slug}`)} target="_blank" rel="noreferrer" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" title="Voir">
+                {!p.published && <Badge tone="amber">{t('Draft')}</Badge>}
+                <span className="text-xs text-slate-500">{t('Edited on {date}', { date: formatDateTime(p.updatedAt) })}</span>
+                <a href={url(`p/${p.slug}`)} target="_blank" rel="noreferrer" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" title={t('View')}>
                   <ExternalLink className="h-4 w-4" />
                 </a>
-                <Link to={`/admin/site/pages/${p.id}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" title="Modifier">
+                <Link to={`/admin/site/pages/${p.id}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" title={t('Edit')}>
                   <Pencil className="h-4 w-4" />
                 </Link>
-                <button onClick={() => void remove(p)} className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10" title="Supprimer">
+                <button onClick={() => void remove(p)} className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10" title={t('Delete')}>
                   <Trash2 className="h-4 w-4" />
                 </button>
               </li>
@@ -88,7 +92,7 @@ export function PagesList() {
           </ul>
         )}
         <p className="mt-4 text-xs text-slate-500">
-          Astuce : les pages « regles » et « rejoindre » sont liées au menu et au bouton « Rejoindre » de l'accueil.
+          {t('Tip: the rules and join pages are linked from the menu and from the "Join the server" button of the home page (set in Appearance).')}
         </p>
       </Card>
     </>
@@ -97,7 +101,7 @@ export function PagesList() {
 
 export function PageEditor() {
   const { id } = useParams();
-  const isNew = id === 'nouvelle';
+  const isNew = isNewId(id);
   const navigate = useNavigate();
   const [form, setForm] = useState({ slug: '', title: '', contentHtml: '', published: true });
   const [slugTouched, setSlugTouched] = useState(!isNew);
@@ -126,21 +130,21 @@ export function PageEditor() {
   return (
     <>
       <Link to="/admin/site/pages" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-accent">
-        <ArrowLeft className="h-4 w-4" /> Pages
+        <ArrowLeft className="h-4 w-4" /> {t('Pages')}
       </Link>
       <PageHeader
-        title={isNew ? 'Nouvelle page' : form.title || 'Page'}
+        title={isNew ? t('New page') : form.title || t('Page')}
         actions={
           <Button onClick={save} loading={s.busy}>
-            <Save className="h-4 w-4" /> Enregistrer
+            <Save className="h-4 w-4" /> {t('Save')}
           </Button>
         }
       />
-      {s.saved && <Alert kind="success" className="mb-4">Page enregistrée.</Alert>}
+      {s.saved && <Alert kind="success" className="mb-4">{t('Page saved.')}</Alert>}
       {s.error && <Alert kind="error" className="mb-4">{s.error.message}</Alert>}
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         <div className="space-y-4">
-          <Field label="Titre" error={s.field('title')}>
+          <Field label={t('Title')} error={s.field('title')}>
             {(fid) => (
               <Input
                 id={fid}
@@ -152,7 +156,7 @@ export function PageEditor() {
           <RichEditor value={form.contentHtml} onChange={(html) => setForm((f) => ({ ...f, contentHtml: html }))} />
         </div>
         <Card className="h-fit space-y-4">
-          <Field label="Adresse" help={`/p/${form.slug || '…'}`} error={s.field('slug')}>
+          <Field label={t('Address')} help={`/p/${form.slug || '…'}`} error={s.field('slug')}>
             {(fid) => (
               <Input
                 id={fid}
@@ -165,19 +169,19 @@ export function PageEditor() {
               />
             )}
           </Field>
-          <Toggle checked={form.published} onChange={(v) => setForm({ ...form, published: v })} label="Publiée" description="Visible sur le site" />
+          <Toggle checked={form.published} onChange={(v) => setForm({ ...form, published: v })} label={t('Published')} description={t('Visible on the site')} />
         </Card>
       </div>
     </>
   );
 }
 
-// Actualités
+// News
 
 export function NewsAdminList() {
   const { data, error, reload } = useLoad<NewsItem[]>('admin/site/news');
   const remove = async (n: NewsItem) => {
-    if (!window.confirm(`Supprimer l'article « ${n.title} » ?`)) return;
+    if (!window.confirm(t('Delete the article "{title}"?', { title: n.title }))) return;
     await api.del(`admin/site/news/${n.id}`);
     reload();
   };
@@ -186,16 +190,16 @@ export function NewsAdminList() {
   return (
     <>
       <PageHeader
-        title="Actualités"
+        title={t('News')}
         actions={
-          <Link to="/admin/site/actualites/nouvelle" className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
-            <Plus className="h-4 w-4" /> Nouvel article
+          <Link to="/admin/site/news/new" className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
+            <Plus className="h-4 w-4" /> {t('New article')}
           </Link>
         }
       />
       <Card>
         {data.length === 0 ? (
-          <Empty>Aucun article.</Empty>
+          <Empty>{t('No article.')}</Empty>
         ) : (
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {data.map((n) => (
@@ -204,15 +208,15 @@ export function NewsAdminList() {
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{n.title}</p>
                   <p className="text-xs text-slate-500">
-                    {n.published ? `Publié le ${formatDate(n.publishedAt)}` : 'Brouillon'}
+                    {n.published ? t('Published on {date}', { date: formatDate(n.publishedAt) }) : t('Draft')}
                     {n.author && ` · ${n.author}`}
                   </p>
                 </div>
-                {n.published ? <Badge tone="green">Publié</Badge> : <Badge tone="amber">Brouillon</Badge>}
-                <Link to={`/admin/site/actualites/${n.id}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" title="Modifier">
+                {n.published ? <Badge tone="green">{t('Published')}</Badge> : <Badge tone="amber">{t('Draft')}</Badge>}
+                <Link to={`/admin/site/news/${n.id}`} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" title={t('Edit')}>
                   <Pencil className="h-4 w-4" />
                 </Link>
-                <button onClick={() => void remove(n)} className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10" title="Supprimer">
+                <button onClick={() => void remove(n)} className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10" title={t('Delete')}>
                   <Trash2 className="h-4 w-4" />
                 </button>
               </li>
@@ -226,7 +230,7 @@ export function NewsAdminList() {
 
 export function NewsEditor() {
   const { id } = useParams();
-  const isNew = id === 'nouvelle';
+  const isNew = isNewId(id);
   const navigate = useNavigate();
   const [form, setForm] = useState({ title: '', slug: '', excerpt: '', contentHtml: '', coverUrl: '', published: false });
   const [loaded, setLoaded] = useState(isNew);
@@ -249,7 +253,7 @@ export function NewsEditor() {
       const body = { ...form, slug: form.slug || undefined };
       if (isNew) {
         const n = await api.post<NewsItem>('admin/site/news', body);
-        navigate(`/admin/site/actualites/${n.id}`, { replace: true });
+        navigate(`/admin/site/news/${n.id}`, { replace: true });
       } else {
         const n = await api.put<NewsItem>(`admin/site/news/${id}`, body);
         setForm((f) => ({ ...f, slug: n.slug }));
@@ -259,33 +263,33 @@ export function NewsEditor() {
   if (!loaded) return <Spinner />;
   return (
     <>
-      <Link to="/admin/site/actualites" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-accent">
-        <ArrowLeft className="h-4 w-4" /> Actualités
+      <Link to="/admin/site/news" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-accent">
+        <ArrowLeft className="h-4 w-4" /> {t('News')}
       </Link>
       <PageHeader
-        title={isNew ? 'Nouvel article' : form.title || 'Article'}
+        title={isNew ? t('New article') : form.title || t('Article')}
         actions={
           <Button onClick={save} loading={s.busy}>
-            <Save className="h-4 w-4" /> Enregistrer
+            <Save className="h-4 w-4" /> {t('Save')}
           </Button>
         }
       />
-      {s.saved && <Alert kind="success" className="mb-4">Article enregistré.</Alert>}
+      {s.saved && <Alert kind="success" className="mb-4">{t('Article saved.')}</Alert>}
       {s.error && <Alert kind="error" className="mb-4">{s.error.message}</Alert>}
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-4">
-          <Field label="Titre" error={s.field('title')}>
+          <Field label={t('Title')} error={s.field('title')}>
             {(fid) => <Input id={fid} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />}
           </Field>
-          <Field label="Résumé" help="Affiché dans la liste des actualités et sur l'accueil" error={s.field('excerpt')}>
+          <Field label={t('Summary')} help={t('Shown in the news list and on the home page')} error={s.field('excerpt')}>
             {(fid) => <Textarea id={fid} value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} rows={2} />}
           </Field>
           <RichEditor value={form.contentHtml} onChange={(html) => setForm((f) => ({ ...f, contentHtml: html }))} />
         </div>
         <Card className="h-fit space-y-4">
-          <Toggle checked={form.published} onChange={(v) => setForm({ ...form, published: v })} label="Publié" description="Visible sur le site" />
-          <Field label="Image de couverture">{() => <ImageField value={form.coverUrl} onChange={(v) => setForm({ ...form, coverUrl: v })} previewClass="h-24" />}</Field>
-          <Field label="Adresse (facultatif)" help="Générée depuis le titre si vide" error={s.field('slug')}>
+          <Toggle checked={form.published} onChange={(v) => setForm({ ...form, published: v })} label={t('Published')} description={t('Visible on the site')} />
+          <Field label={t('Cover image')}>{() => <ImageField value={form.coverUrl} onChange={(v) => setForm({ ...form, coverUrl: v })} previewClass="h-24" />}</Field>
+          <Field label={t('Address (optional)')} help={t('Made from the title when empty')} error={s.field('slug')}>
             {(fid) => <Input id={fid} value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="font-mono" />}
           </Field>
         </Card>

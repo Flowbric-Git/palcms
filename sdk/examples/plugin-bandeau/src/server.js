@@ -1,5 +1,5 @@
-// Côté serveur : les réglages utiles au navigateur et un compteur de clics par jour.
-// Les routes sont servies sous /api/plugins/bandeau/…
+// Server side: the settings the browser needs and a click counter per day.
+// Routes are served under /api/plugins/bandeau/…
 
 export default function bandeau(pal) {
   pal.migrate([
@@ -12,7 +12,7 @@ export default function bandeau(pal) {
   const db = pal.host.db;
   const today = () => new Date().toISOString().slice(0, 10);
 
-  // Le bandeau à afficher, ou null s'il est vide ou expiré.
+  // The banner to show, or null when it is empty or expired.
   pal.route({
     method: 'GET',
     path: 'config',
@@ -22,7 +22,7 @@ export default function bandeau(pal) {
       const message = String(c.message ?? '').trim();
       if (!message) return null;
       if (c.until && today() > String(c.until)) return null;
-      return { message, link: c.link || null, linkLabel: c.linkLabel || 'En savoir plus', style: c.style, dismissible: c.dismissible !== false };
+      return { message, link: c.link || null, linkLabel: c.linkLabel || 'Learn more', style: c.style, dismissible: c.dismissible !== false };
     },
   });
 

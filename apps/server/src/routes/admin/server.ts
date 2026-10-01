@@ -16,7 +16,7 @@ import { testConnection } from '../../palworld/restClient';
 
 export async function adminServerRoutes(app: FastifyInstance) {
   app.get('/overview', async () => {
-    // Serveur externe ou absent : PalCMS ne pilote pas de service systemd.
+    // External or no server: PalCMS does not drive a systemd service.
     const mode = getServerMode();
     const service = mode === 'managed' ? await serviceState() : mode;
     const load = os.loadavg();
@@ -52,9 +52,9 @@ export async function adminServerRoutes(app: FastifyInstance) {
       }
     };
 
-  app.post('/start', control, action(startServer, 'start', 'Serveur démarré'));
-  app.post('/stop', control, action(stopServer, 'stop', 'Serveur arrêté'));
-  app.post('/restart', control, action(restartServer, 'restart', 'Serveur redémarré'));
+  app.post('/start', control, action(startServer, 'start', 'Server started'));
+  app.post('/stop', control, action(stopServer, 'stop', 'Server stopped'));
+  app.post('/restart', control, action(restartServer, 'restart', 'Server restarted'));
 
   // Configuration (PalWorldSettings.ini)
 
@@ -78,14 +78,14 @@ export async function adminServerRoutes(app: FastifyInstance) {
       return {
         ok: true,
         restarted,
-        message: restarted ? 'Configuration enregistrée, serveur redémarré' : 'Configuration enregistrée (prise en compte au prochain redémarrage)',
+        message: restarted ? 'Configuration saved, server restarted' : 'Configuration saved (applied on next restart)',
       };
     } catch (e) {
       return reply.code(e instanceof ConfigError ? 400 : 500).send({ error: errorMessage(e) });
     }
   });
 
-  // Joueurs
+  // Players
 
   app.get('/players', { preHandler: requirePermission('server.players') }, async () => {
     const online = poller.getOnlineRaw().map((p) => ({
@@ -117,7 +117,7 @@ export async function adminServerRoutes(app: FastifyInstance) {
     }
   });
 
-  // Connexion au serveur (serveur existant)
+  // Server connection (existing server)
 
   const connection = { preHandler: requirePermission('server.config') };
 
@@ -125,7 +125,7 @@ export async function adminServerRoutes(app: FastifyInstance) {
     const ext = getExternalServer();
     return {
       mode: getServerMode(),
-      // Le mot de passe n'est jamais renvoyé : on indique seulement s'il est défini.
+      // The password is never sent back: only whether it is set.
       external: ext ? { ...ext, adminPassword: '', hasPassword: !!ext.adminPassword } : null,
     };
   });
@@ -138,12 +138,12 @@ export async function adminServerRoutes(app: FastifyInstance) {
   });
 
   app.put('/connection', connection, async (req, reply) => {
-    if (isManaged()) return reply.code(409).send({ error: 'Le serveur est installé et géré par PalCMS sur ce VPS' });
+    if (isManaged()) return reply.code(409).send({ error: 'The server is installed and run by PalCMS on this VPS' });
     const body = parse(externalServerSchema.extend({ adminPassword: externalServerSchema.shape.adminPassword.or(z.literal('')) }), req.body, reply);
     if (!body) return;
-    // Mot de passe laissé vide : on garde celui déjà enregistré.
+    // Password left empty: keep the saved one.
     const adminPassword = body.adminPassword || getExternalServer()?.adminPassword;
-    if (!adminPassword) return reply.code(400).send({ error: 'Mot de passe admin obligatoire' });
+    if (!adminPassword) return reply.code(400).send({ error: 'Admin password is required' });
     saveExternalServer({ ...body, adminPassword });
     setServerMode('external');
     poller.reset();
@@ -152,7 +152,7 @@ export async function adminServerRoutes(app: FastifyInstance) {
   });
 
   app.delete('/connection', connection, async (req, reply) => {
-    if (isManaged()) return reply.code(409).send({ error: 'Le serveur est installé et géré par PalCMS sur ce VPS' });
+    if (isManaged()) return reply.code(409).send({ error: 'The server is installed and run by PalCMS on this VPS' });
     saveExternalServer(null);
     setServerMode('none');
     poller.reset();

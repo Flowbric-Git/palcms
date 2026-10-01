@@ -1,6 +1,6 @@
 /**
- * Libellés français des réglages de PalWorldSettings.ini affichés dans le panel admin.
- * Les clés absentes de cette liste restent éditables dans la section "Avancé".
+ * Labels of the PalWorldSettings.ini settings shown in the admin panel (translated on display).
+ * Keys missing from this list stay editable in the "Advanced" section.
  */
 export interface IniFieldMeta {
   label: string;
@@ -10,78 +10,88 @@ export interface IniFieldMeta {
   secret?: boolean;
 }
 
-export type IniGroup = 'Serveur' | 'Gameplay' | 'Taux' | 'Joueurs' | 'Pals' | 'Constructions' | 'Guildes';
+export type IniGroup = 'server' | 'gameplay' | 'rates' | 'players' | 'pals' | 'buildings' | 'guilds';
 
-export const INI_GROUPS: IniGroup[] = ['Serveur', 'Gameplay', 'Taux', 'Joueurs', 'Pals', 'Constructions', 'Guildes'];
+export const INI_GROUPS: IniGroup[] = ['server', 'gameplay', 'rates', 'players', 'pals', 'buildings', 'guilds'];
 
-/** Réglages que le CMS gère lui-même : affichés en lecture seule. */
+export const INI_GROUP_LABELS: Record<IniGroup, string> = {
+  server: 'Server',
+  gameplay: 'Gameplay',
+  rates: 'Rates',
+  players: 'Players',
+  pals: 'Pals',
+  buildings: 'Buildings',
+  guilds: 'Guilds',
+};
+
+/** Settings managed by the CMS itself: shown read-only. */
 export const INI_LOCKED_KEYS = ['RESTAPIEnabled', 'RESTAPIPort'];
 
 export const INI_FIELDS: Record<string, IniFieldMeta> = {
-  ServerName: { label: 'Nom du serveur', group: 'Serveur' },
-  ServerDescription: { label: 'Description', group: 'Serveur' },
-  ServerPassword: { label: 'Mot de passe du serveur', group: 'Serveur', help: 'Vide = serveur ouvert', secret: true },
-  AdminPassword: { label: 'Mot de passe admin (en jeu et API)', group: 'Serveur', secret: true },
-  ServerPlayerMaxNum: { label: 'Joueurs maximum', group: 'Serveur' },
-  PublicPort: { label: 'Port de jeu (UDP)', group: 'Serveur' },
-  PublicIP: { label: 'IP publique annoncée', group: 'Serveur', help: 'Laisser vide en général' },
-  Region: { label: 'Région', group: 'Serveur' },
-  bShowPlayerList: { label: 'Afficher la liste des joueurs en jeu', group: 'Serveur' },
-  CrossplayPlatforms: { label: 'Plateformes autorisées', group: 'Serveur', help: 'Ex. (Steam,Xbox,PS5,Mac)' },
-  RESTAPIEnabled: { label: 'API REST (gérée par le CMS)', group: 'Serveur' },
-  RESTAPIPort: { label: "Port de l'API REST (géré par le CMS)", group: 'Serveur' },
-  RCONEnabled: { label: 'RCON activé', group: 'Serveur' },
-  RCONPort: { label: 'Port RCON', group: 'Serveur' },
-  AutoSaveSpan: { label: 'Sauvegarde auto (secondes)', group: 'Serveur' },
+  ServerName: { label: 'Server name', group: 'server' },
+  ServerDescription: { label: 'Description', group: 'server' },
+  ServerPassword: { label: 'Server password', group: 'server', help: 'Empty = open server', secret: true },
+  AdminPassword: { label: 'Admin password (in game and API)', group: 'server', secret: true },
+  ServerPlayerMaxNum: { label: 'Max players', group: 'server' },
+  PublicPort: { label: 'Game port (UDP)', group: 'server' },
+  PublicIP: { label: 'Advertised public IP', group: 'server', help: 'Usually left empty' },
+  Region: { label: 'Region', group: 'server' },
+  bShowPlayerList: { label: 'Show the player list in game', group: 'server' },
+  CrossplayPlatforms: { label: 'Allowed platforms', group: 'server', help: 'E.g. (Steam,Xbox,PS5,Mac)' },
+  RESTAPIEnabled: { label: 'REST API (managed by the CMS)', group: 'server' },
+  RESTAPIPort: { label: 'REST API port (managed by the CMS)', group: 'server' },
+  RCONEnabled: { label: 'RCON enabled', group: 'server' },
+  RCONPort: { label: 'RCON port', group: 'server' },
+  AutoSaveSpan: { label: 'Auto-save (seconds)', group: 'server' },
 
-  Difficulty: { label: 'Difficulté', group: 'Gameplay', options: ['None', 'Casual', 'Normal', 'Hard'] },
+  Difficulty: { label: 'Difficulty', group: 'gameplay', options: ['None', 'Casual', 'Normal', 'Hard'] },
   DeathPenalty: {
-    label: 'Pénalité de mort',
-    group: 'Gameplay',
+    label: 'Death penalty',
+    group: 'gameplay',
     options: ['None', 'Item', 'ItemAndEquipment', 'All'],
-    help: 'None : rien, Item : objets, ItemAndEquipment : objets + équipement, All : tout (Pals compris)',
+    help: 'None: nothing, Item: items, ItemAndEquipment: items + equipment, All: everything (Pals included)',
   },
-  bIsPvP: { label: 'PvP', group: 'Gameplay' },
-  bEnablePlayerToPlayerDamage: { label: 'Dégâts entre joueurs', group: 'Gameplay' },
-  bEnableFriendlyFire: { label: 'Tir allié', group: 'Gameplay' },
-  bEnableInvaderEnemy: { label: 'Raids ennemis sur les bases', group: 'Gameplay' },
-  bEnableFastTravel: { label: 'Voyage rapide', group: 'Gameplay' },
-  bHardcore: { label: 'Mode hardcore', group: 'Gameplay' },
-  bPalLost: { label: 'Perte définitive des Pals à la mort', group: 'Gameplay' },
-  DayTimeSpeedRate: { label: 'Vitesse du jour', group: 'Gameplay' },
-  NightTimeSpeedRate: { label: 'Vitesse de la nuit', group: 'Gameplay' },
+  bIsPvP: { label: 'PvP', group: 'gameplay' },
+  bEnablePlayerToPlayerDamage: { label: 'Player to player damage', group: 'gameplay' },
+  bEnableFriendlyFire: { label: 'Friendly fire', group: 'gameplay' },
+  bEnableInvaderEnemy: { label: 'Enemy raids on bases', group: 'gameplay' },
+  bEnableFastTravel: { label: 'Fast travel', group: 'gameplay' },
+  bHardcore: { label: 'Hardcore mode', group: 'gameplay' },
+  bPalLost: { label: 'Pals lost for good on death', group: 'gameplay' },
+  DayTimeSpeedRate: { label: 'Day speed', group: 'gameplay' },
+  NightTimeSpeedRate: { label: 'Night speed', group: 'gameplay' },
 
-  ExpRate: { label: "Taux d'expérience", group: 'Taux' },
-  PalCaptureRate: { label: 'Taux de capture', group: 'Taux' },
-  PalSpawnNumRate: { label: "Taux d'apparition des Pals", group: 'Taux' },
-  CollectionDropRate: { label: 'Taux de récolte', group: 'Taux' },
-  EnemyDropItemRate: { label: 'Taux de butin des ennemis', group: 'Taux' },
-  WorkSpeedRate: { label: 'Vitesse de travail', group: 'Taux' },
-  CollectionObjectRespawnSpeedRate: { label: 'Réapparition des ressources', group: 'Taux' },
+  ExpRate: { label: 'Experience rate', group: 'rates' },
+  PalCaptureRate: { label: 'Capture rate', group: 'rates' },
+  PalSpawnNumRate: { label: 'Pal spawn rate', group: 'rates' },
+  CollectionDropRate: { label: 'Gathering rate', group: 'rates' },
+  EnemyDropItemRate: { label: 'Enemy loot rate', group: 'rates' },
+  WorkSpeedRate: { label: 'Work speed', group: 'rates' },
+  CollectionObjectRespawnSpeedRate: { label: 'Resource respawn', group: 'rates' },
 
-  PlayerDamageRateAttack: { label: 'Dégâts infligés (joueur)', group: 'Joueurs' },
-  PlayerDamageRateDefense: { label: 'Dégâts reçus (joueur)', group: 'Joueurs' },
-  PlayerStomachDecreaceRate: { label: 'Vitesse de la faim (joueur)', group: 'Joueurs' },
-  PlayerStaminaDecreaceRate: { label: "Consommation d'endurance (joueur)", group: 'Joueurs' },
-  PlayerAutoHPRegeneRate: { label: 'Régénération de vie (joueur)', group: 'Joueurs' },
-  ItemWeightRate: { label: 'Poids des objets', group: 'Joueurs' },
+  PlayerDamageRateAttack: { label: 'Damage dealt (player)', group: 'players' },
+  PlayerDamageRateDefense: { label: 'Damage taken (player)', group: 'players' },
+  PlayerStomachDecreaceRate: { label: 'Hunger speed (player)', group: 'players' },
+  PlayerStaminaDecreaceRate: { label: 'Stamina use (player)', group: 'players' },
+  PlayerAutoHPRegeneRate: { label: 'Health regeneration (player)', group: 'players' },
+  ItemWeightRate: { label: 'Item weight', group: 'players' },
 
-  PalDamageRateAttack: { label: 'Dégâts infligés (Pal)', group: 'Pals' },
-  PalDamageRateDefense: { label: 'Dégâts reçus (Pal)', group: 'Pals' },
-  PalStomachDecreaceRate: { label: 'Vitesse de la faim (Pal)', group: 'Pals' },
-  PalStaminaDecreaceRate: { label: "Consommation d'endurance (Pal)", group: 'Pals' },
-  PalAutoHPRegeneRate: { label: 'Régénération de vie (Pal)', group: 'Pals' },
-  PalEggDefaultHatchingTime: { label: "Temps d'éclosion des œufs (heures)", group: 'Pals' },
+  PalDamageRateAttack: { label: 'Damage dealt (Pal)', group: 'pals' },
+  PalDamageRateDefense: { label: 'Damage taken (Pal)', group: 'pals' },
+  PalStomachDecreaceRate: { label: 'Hunger speed (Pal)', group: 'pals' },
+  PalStaminaDecreaceRate: { label: 'Stamina use (Pal)', group: 'pals' },
+  PalAutoHPRegeneRate: { label: 'Health regeneration (Pal)', group: 'pals' },
+  PalEggDefaultHatchingTime: { label: 'Egg hatching time (hours)', group: 'pals' },
 
-  BuildObjectHpRate: { label: 'Résistance des constructions', group: 'Constructions' },
-  BuildObjectDamageRate: { label: 'Dégâts aux constructions', group: 'Constructions' },
-  BuildObjectDeteriorationDamageRate: { label: 'Détérioration des constructions', group: 'Constructions' },
-  BaseCampMaxNum: { label: 'Nombre max de bases (serveur)', group: 'Constructions' },
-  BaseCampWorkerMaxNum: { label: 'Pals travailleurs max par base', group: 'Constructions' },
-  DropItemMaxNum: { label: "Objets au sol max", group: 'Constructions' },
+  BuildObjectHpRate: { label: 'Building durability', group: 'buildings' },
+  BuildObjectDamageRate: { label: 'Damage to buildings', group: 'buildings' },
+  BuildObjectDeteriorationDamageRate: { label: 'Building deterioration', group: 'buildings' },
+  BaseCampMaxNum: { label: 'Max bases (server)', group: 'buildings' },
+  BaseCampWorkerMaxNum: { label: 'Max working Pals per base', group: 'buildings' },
+  DropItemMaxNum: { label: 'Max dropped items', group: 'buildings' },
 
-  GuildPlayerMaxNum: { label: 'Joueurs max par guilde', group: 'Guildes' },
-  BaseCampMaxNumInGuild: { label: 'Bases max par guilde', group: 'Guildes' },
-  bAutoResetGuildNoOnlinePlayers: { label: 'Réinitialiser les guildes inactives', group: 'Guildes' },
-  AutoResetGuildTimeNoOnlinePlayers: { label: "Délai d'inactivité des guildes (heures)", group: 'Guildes' },
+  GuildPlayerMaxNum: { label: 'Max players per guild', group: 'guilds' },
+  BaseCampMaxNumInGuild: { label: 'Max bases per guild', group: 'guilds' },
+  bAutoResetGuildNoOnlinePlayers: { label: 'Reset inactive guilds', group: 'guilds' },
+  AutoResetGuildTimeNoOnlinePlayers: { label: 'Guild inactivity delay (hours)', group: 'guilds' },
 };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatePalctlArgs } from '../src/palworld/palctlArgs';
 
-describe('liste blanche palctl', () => {
+describe('palctl whitelist', () => {
   it.each([
     [['install-deps']],
     [['install-palworld']],

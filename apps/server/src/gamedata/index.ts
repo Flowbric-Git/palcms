@@ -1,5 +1,5 @@
-// Noms des Pals, objets et talents, et points fixes de la carte.
-// Données issues de palworld-server-tool (Apache-2.0), en anglais uniquement.
+// Names of Pals, items and passive skills, and fixed map points.
+// Data from palworld-server-tool (Apache-2.0), English only.
 import pals from './pals.json';
 import items from './items.json';
 import passives from './passives.json';
@@ -8,7 +8,7 @@ import mapPoints from './map-points.json';
 const palsLower = new Map(Object.entries(pals as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v]));
 const valid = (v: string | undefined) => (v && v !== 'en_text' && v !== 'en Text' ? v : undefined);
 
-/** "SheepBall" -> "Lamball". Les variantes alpha (BOSS_) et les inconnues gardent un nom lisible. */
+/** "SheepBall" -> "Lamball". Alpha variants (BOSS_) and unknown ones keep a readable name. */
 export function palName(type: string): string {
   const key = type.toLowerCase();
   return (

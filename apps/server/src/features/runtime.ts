@@ -6,7 +6,7 @@ import { createFeatures } from './index';
 let instance: FeatureSet | null = null;
 let running = false;
 
-/** Instance unique des fonctionnalités (routes et permissions disponibles dès le démarrage). */
+/** Single features instance (routes and permissions available right from startup). */
 export function features(): FeatureSet {
   if (!instance) {
     instance = createFeatures(createFeatureHost());
@@ -15,7 +15,7 @@ export function features(): FeatureSet {
   return instance;
 }
 
-/** Démarre les tâches de fond (sauvegardes, programmation, Discord…), une fois l'installation terminée. */
+/** Starts background tasks (backups, schedules, Discord…) once setup is finished. */
 export function startFeatures(): void {
   if (running) return;
   features().start();

@@ -2,7 +2,7 @@ import type { HostEventName, HostEvents } from '@palcms/shared';
 
 type Listener<E extends HostEventName> = (data: HostEvents[E]) => void;
 
-/** Bus d'événements interne : le cœur du CMS émet, les fonctionnalités (journal, Discord…) écoutent. */
+/** Internal event bus: the CMS core emits, features (audit log, Discord…) listen. */
 class EventBus {
   private listeners = new Map<HostEventName, Set<Listener<never>>>();
 

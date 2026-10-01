@@ -1,7 +1,7 @@
 import { config, setupTokenPath } from './config';
 import { db, runMigrations } from './db';
 import { CORE_MIGRATIONS } from './core/migrations';
-import { isSetupDone } from './core/site';
+import { isSetupDone, migrateLegacyMenu } from './core/site';
 import { purgeExpiredSessions } from './auth/sessions';
 import { features, startFeatures, stopFeatures } from './features/runtime';
 import { poller } from './palworld/poller';
@@ -10,9 +10,10 @@ import { ensureSetupToken } from './setup/token';
 import { buildApp } from './app';
 
 runMigrations(CORE_MIGRATIONS);
+migrateLegacyMenu();
 setupRunner.recover();
 
-features(); // routes et rôles disponibles dès le démarrage
+features(); // routes and roles available right from startup
 if (isSetupDone()) {
   startFeatures();
   poller.start();
@@ -23,11 +24,11 @@ if (isSetupDone()) {
     [
       '',
       '  ┌────────────────────────────────────────────────────────┐',
-      '  │  PalCMS : installation en attente                      │',
+      '  │  PalCMS: waiting for setup                             │',
       '  └────────────────────────────────────────────────────────┘',
-      `  Assistant : ${url}`,
-      `  Jeton     : ${token}`,
-      `  (enregistré dans ${setupTokenPath})`,
+      `  Wizard : ${url}`,
+      `  Token  : ${token}`,
+      `  (saved in ${setupTokenPath})`,
       '',
     ].join('\n'),
   );
@@ -37,7 +38,7 @@ setInterval(purgeExpiredSessions, 3600_000).unref();
 
 const app = await buildApp();
 await app.listen({ host: config.host, port: config.port });
-console.log(`PalCMS ${config.version} à l'écoute sur http://${config.host}:${config.port}${config.basePath}`);
+console.log(`PalCMS ${config.version} listening on http://${config.host}:${config.port}${config.basePath}`);
 
 const shutdown = async () => {
   poller.stop();

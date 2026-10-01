@@ -21,9 +21,9 @@ function match(route: FeatureRoute, method: string, parts: string[]): Record<str
 
 const isFile = (v: unknown): v is FeatureFile => !!v && typeof v === 'object' && (v as FeatureFile).kind === 'file';
 
-/** Trouve la route demandée parmi "routes", vérifie les droits et l'exécute. */
+/** Finds the requested route among "routes", checks access and runs it. */
 async function dispatch(req: FastifyRequest, reply: FastifyReply, routes: FeatureRoute[], path: string) {
-  if (!isSetupDone()) return reply.code(409).send({ error: "L'installation n'est pas terminée" });
+  if (!isSetupDone()) return reply.code(409).send({ error: 'Setup is not finished' });
   const parts = path.split('/').filter(Boolean);
   let route: FeatureRoute | undefined;
   let params: Record<string, string> | null = null;
@@ -34,13 +34,13 @@ async function dispatch(req: FastifyRequest, reply: FastifyReply, routes: Featur
       break;
     }
   }
-  if (!route || !params) return reply.code(404).send({ error: 'Introuvable' });
+  if (!route || !params) return reply.code(404).send({ error: 'Not found' });
 
   const user = req.user;
-  if (route.access !== 'public' && !user) return reply.code(401).send({ error: 'Connexion requise' });
+  if (route.access !== 'public' && !user) return reply.code(401).send({ error: 'Login required' });
   if (route.access === 'staff') {
-    if (!isStaff(user)) return reply.code(403).send({ error: 'Accès réservé à l’équipe' });
-    if (route.permission && !hasPermission(user, route.permission)) return reply.code(403).send({ error: 'Permission insuffisante' });
+    if (!isStaff(user)) return reply.code(403).send({ error: 'Team only' });
+    if (route.permission && !hasPermission(user, route.permission)) return reply.code(403).send({ error: 'Insufficient permission' });
   }
 
   try {
@@ -52,7 +52,7 @@ async function dispatch(req: FastifyRequest, reply: FastifyReply, routes: Featur
       can: (p) => hasPermission(user, p),
       saveUpload: async (maxBytes) => {
         const file = await req.file({ limits: { fileSize: maxBytes, files: 1 } });
-        if (!file) throw Object.assign(new Error('Aucun fichier'), { status: 400 });
+        if (!file) throw Object.assign(new Error('No file'), { status: 400 });
         try {
           return await saveImageUpload(file, maxBytes);
         } catch (e) {
@@ -61,9 +61,9 @@ async function dispatch(req: FastifyRequest, reply: FastifyReply, routes: Featur
       },
       readUpload: async (maxBytes) => {
         const file = await req.file({ limits: { fileSize: maxBytes, files: 1 } });
-        if (!file) throw Object.assign(new Error('Aucun fichier'), { status: 400 });
+        if (!file) throw Object.assign(new Error('No file'), { status: 400 });
         const data = await file.toBuffer();
-        if (file.file.truncated) throw Object.assign(new Error('Fichier trop volumineux'), { status: 413 });
+        if (file.file.truncated) throw Object.assign(new Error('File too large'), { status: 413 });
         return { filename: file.filename, data: new Uint8Array(data) };
       },
     });
@@ -81,7 +81,7 @@ async function dispatch(req: FastifyRequest, reply: FastifyReply, routes: Featur
   }
 }
 
-/** Passerelle /api/features : routes déclarées par les fonctionnalités, avec contrôle d'accès. */
+/** /api/features gateway: routes declared by features, with access control. */
 export async function featureRoutes(app: FastifyInstance) {
   for (const method of ['GET', 'POST', 'PUT', 'DELETE'] as const) {
     app.route<{ Params: { '*': string } }>({
@@ -92,7 +92,7 @@ export async function featureRoutes(app: FastifyInstance) {
   }
 }
 
-/** Passerelle /api/plugins/<id>/… : routes déclarées par les plugins activés. */
+/** /api/plugins/<id>/… gateway: routes declared by enabled plugins. */
 export async function pluginRoutes(app: FastifyInstance) {
   for (const method of ['GET', 'POST', 'PUT', 'DELETE'] as const) {
     app.route<{ Params: { id: string; '*': string } }>({
@@ -100,7 +100,7 @@ export async function pluginRoutes(app: FastifyInstance) {
       url: '/:id/*',
       handler: (req, reply) => {
         const rt = pluginRuntime();
-        if (!rt?.isLoaded(req.params.id)) return reply.code(404).send({ error: 'Plugin introuvable ou désactivé' });
+        if (!rt?.isLoaded(req.params.id)) return reply.code(404).send({ error: 'Plugin not found or disabled' });
         return dispatch(req, reply, rt.routes(req.params.id), req.params['*']);
       },
     });

@@ -15,34 +15,36 @@ import {
   Palette,
   XCircle,
 } from 'lucide-react';
-import type { PalworldSetup, ServerMode, SetupState, SetupStep, TaskState } from '@palcms/shared';
+import { LANGS, type Lang, type PalworldSetup, type ServerMode, type SetupState, type SetupStep, type TaskState } from '@palcms/shared';
 import { api, ApiError, basePath, errorText } from '../lib/api';
 import { useApp } from '../lib/app';
 import { useRealtime, realtime } from '../lib/ws';
+import { lang, t, tm } from '../lib/i18n';
 import { Alert, Badge, Button, Field, Input, Select, Spinner, Toggle, cx } from '../components/ui';
 import { ImageField } from '../components/ImageField';
 import { ExternalServerForm } from '../components/ExternalServerForm';
+import { LanguageSwitch } from '../components/LanguageSwitch';
 
 type StepInfo = { id: SetupStep; label: string; Icon: typeof KeyRound };
 
-/** Étapes de l'assistant, qui dépendent du choix fait au début (installer, connecter ou site seul). */
+/** Wizard steps, which depend on the first choice (install, connect or website only). */
 function stepsFor(mode: ServerMode | null): StepInfo[] {
   const server: StepInfo[] =
     mode === 'external'
-      ? [{ id: 'external', label: 'Connexion au serveur', Icon: PlugZap }]
+      ? [{ id: 'external', label: 'Server connection', Icon: PlugZap }]
       : mode === 'none'
         ? []
         : [
-            { id: 'server', label: 'Serveur Palworld', Icon: Server },
+            { id: 'server', label: 'Palworld server', Icon: Server },
             { id: 'install', label: 'Installation', Icon: Loader2 },
           ];
   return [
-    { id: 'token', label: "Jeton d'installation", Icon: KeyRound },
-    { id: 'mode', label: 'Choix du serveur', Icon: ServerCog },
+    { id: 'token', label: 'Setup token', Icon: KeyRound },
+    { id: 'mode', label: 'Server choice', Icon: ServerCog },
     ...server,
-    { id: 'admin', label: 'Compte administrateur', Icon: UserCog },
-    { id: 'site', label: 'Votre site', Icon: Palette },
-    { id: 'finish', label: 'Terminé', Icon: PartyPopper },
+    { id: 'admin', label: 'Administrator account', Icon: UserCog },
+    { id: 'site', label: 'Your website', Icon: Palette },
+    { id: 'finish', label: 'Done', Icon: PartyPopper },
   ];
 }
 
@@ -53,8 +55,11 @@ function Shell({ step, mode, children }: { step: SetupStep; mode: ServerMode | n
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-950 dark:to-slate-900">
       <div className="mx-auto grid max-w-5xl gap-8 px-4 py-10 md:grid-cols-[240px_1fr]">
         <aside>
-          <div className="mb-8 flex items-center gap-2 text-lg font-bold">
-            <span className="text-2xl">🐾</span> PalCMS
+          <div className="mb-8 flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2 text-lg font-bold">
+              <span className="text-2xl">🐾</span> PalCMS
+            </span>
+            <LanguageSwitch />
           </div>
           <ol className="space-y-1">
             {STEPS.map((s, i) => (
@@ -67,7 +72,7 @@ function Shell({ step, mode, children }: { step: SetupStep; mode: ServerMode | n
                 )}
               >
                 {i < current ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <s.Icon className="h-4 w-4" />}
-                {s.label}
+                {t(s.label)}
               </li>
             ))}
           </ol>
@@ -105,7 +110,7 @@ function useSubmit() {
   return { busy, error, run, field };
 }
 
-// Étapes
+// Steps
 
 function TokenStep({ onDone }: { onDone: () => void }) {
   const [token, setToken] = useState('');
@@ -120,16 +125,16 @@ function TokenStep({ onDone }: { onDone: () => void }) {
   };
   return (
     <form onSubmit={submit} className="space-y-5">
-      <StepTitle title="Bienvenue !">
-        Pour sécuriser l'installation, colle le jeton affiché dans le terminal de ton VPS à la fin du script d'installation. Tu peux aussi le
-        retrouver avec la commande <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">sudo cat /var/lib/palcms/setup-token</code>.
+      <StepTitle title={t('Welcome!')}>
+        {t('To secure the setup, paste the token shown in your VPS terminal at the end of the install script. You can also find it with this command:')}{' '}
+        <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">sudo cat /var/lib/palcms/setup-token</code>
       </StepTitle>
-      <Field label="Jeton d'installation">
+      <Field label={t('Setup token')}>
         {(id) => <Input id={id} value={token} onChange={(e) => setToken(e.target.value)} placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autoFocus className="font-mono" />}
       </Field>
       {s.error && <Alert kind="error">{s.error.message}</Alert>}
       <Button type="submit" loading={s.busy} disabled={token.trim().length < 8}>
-        Continuer
+        {t('Continue')}
       </Button>
     </form>
   );
@@ -171,26 +176,23 @@ function ModeStep({ current, onDone }: { current: ServerMode | null; onDone: () 
   );
   return (
     <div className="space-y-4">
-      <StepTitle title="Ton serveur Palworld">Que veux-tu faire ? Tu pourras connecter un autre serveur plus tard depuis le panel admin.</StepTitle>
+      <StepTitle title={t('Your Palworld server')}>{t('What do you want to do? You can connect another server later from the admin panel.')}</StepTitle>
       {option(
         'managed',
         Server,
-        'Installer un nouveau serveur Palworld',
-        'PalCMS installe SteamCMD et le serveur dédié sur ce VPS, puis le gère entièrement : démarrage, configuration, sauvegardes, mises à jour…',
-        'Recommandé',
+        t('Install a new Palworld server'),
+        t('PalCMS installs SteamCMD and the dedicated server on this VPS, then runs it fully: start, configuration, backups, updates…'),
+        t('Recommended'),
       )}
       {option(
         'external',
         PlugZap,
-        'Connecter un serveur existant',
-        'Tu as déjà un serveur Palworld (sur ce VPS ou ailleurs) : le site s’y connecte par son API REST. Statut, joueurs, carte, classement, modération et annonces fonctionnent ; la gestion de la machine (démarrage, configuration, sauvegardes) reste de ton côté.',
+        t('Connect an existing server'),
+        t(
+          'You already have a Palworld server (on this VPS or elsewhere): the site connects to it through its REST API. Status, players, map, leaderboard, moderation and announcements work; running the machine (start, configuration, backups) stays on your side.',
+        ),
       )}
-      {option(
-        'none',
-        Globe,
-        'Uniquement le site, pour l’instant',
-        'Aucun serveur pour le moment. Tu en connecteras un plus tard dans Panel admin > Connexion au serveur.',
-      )}
+      {option('none', Globe, t('Only the website, for now'), t('No server for now. You will connect one later in Admin panel > Server connection.'))}
       {error && <Alert kind="error">{error}</Alert>}
     </div>
   );
@@ -199,13 +201,11 @@ function ModeStep({ current, onDone }: { current: ServerMode | null; onDone: () 
 function ExternalStep({ initial, onDone }: { initial: SetupState['externalForm']; onDone: () => void }) {
   return (
     <div className="space-y-5">
-      <StepTitle title="Connecter ton serveur existant">
-        PalCMS se connecte à l’API REST officielle du serveur dédié. Teste la connexion avant de continuer.
-      </StepTitle>
+      <StepTitle title={t('Connect your existing server')}>{t('PalCMS connects to the official REST API of the dedicated server. Test the connection before going on.')}</StepTitle>
       <ExternalServerForm
         initial={initial}
         testPath="setup/connection/test"
-        submitLabel="Enregistrer et continuer"
+        submitLabel={t('Save and continue')}
         onSave={async (value) => {
           await api.post('setup/external', value);
           onDone();
@@ -219,7 +219,7 @@ const randomPassword = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b % 55]).join('');
 
 const DEFAULT_SERVER: PalworldSetup = {
-  serverName: 'Mon serveur Palworld',
+  serverName: 'My Palworld server',
   description: '',
   serverPassword: '',
   adminPassword: '',
@@ -238,6 +238,7 @@ const DEFAULT_SERVER: PalworldSetup = {
 function ServerStep({ initial, onDone }: { initial: Record<string, unknown> | null; onDone: () => void }) {
   const [form, setForm] = useState<PalworldSetup>(() => ({
     ...DEFAULT_SERVER,
+    serverName: t('My Palworld server'),
     adminPassword: randomPassword(),
     ...(initial as Partial<PalworldSetup> | null),
   }));
@@ -255,90 +256,90 @@ function ServerStep({ initial, onDone }: { initial: Record<string, unknown> | nu
 
   return (
     <form onSubmit={submit} className="space-y-6">
-      <StepTitle title="Ton serveur Palworld">Ces réglages seront écrits dans PalWorldSettings.ini. Tout reste modifiable ensuite depuis le panel admin.</StepTitle>
+      <StepTitle title={t('Your Palworld server')}>{t('These settings are written to PalWorldSettings.ini. Everything can be changed later from the admin panel.')}</StepTitle>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Nom du serveur" error={s.field('serverName')} className="md:col-span-2">
+        <Field label={t('Server name')} error={s.field('serverName')} className="md:col-span-2">
           {(id) => <Input id={id} value={form.serverName} onChange={(e) => set('serverName', e.target.value)} required />}
         </Field>
-        <Field label="Description" error={s.field('description')} className="md:col-span-2">
+        <Field label={t('Description')} error={s.field('description')} className="md:col-span-2">
           {(id) => <Input id={id} value={form.description} onChange={(e) => set('description', e.target.value)} />}
         </Field>
-        <Field label="Mot de passe du serveur" help="Laisse vide pour un serveur ouvert à tous" error={s.field('serverPassword')}>
+        <Field label={t('Server password')} help={t('Leave empty for a server open to everyone')} error={s.field('serverPassword')}>
           {(id) => <Input id={id} value={form.serverPassword} onChange={(e) => set('serverPassword', e.target.value)} />}
         </Field>
-        <Field label="Mot de passe admin" help="Pour les commandes admin en jeu et pour le CMS" error={s.field('adminPassword')}>
+        <Field label={t('Admin password')} help={t('For admin commands in game and for the CMS')} error={s.field('adminPassword')}>
           {(id) => (
             <div className="flex gap-2">
               <Input id={id} value={form.adminPassword} onChange={(e) => set('adminPassword', e.target.value)} className="font-mono" required />
-              <Button type="button" variant="secondary" onClick={() => set('adminPassword', randomPassword())} title="Générer">
+              <Button type="button" variant="secondary" onClick={() => set('adminPassword', randomPassword())} title={t('Generate')}>
                 <RotateCcw className="h-4 w-4" />
               </Button>
             </div>
           )}
         </Field>
-        <Field label="Joueurs maximum" error={s.field('maxPlayers')}>
+        <Field label={t('Max players')} error={s.field('maxPlayers')}>
           {(id) => <Input id={id} type="number" min={1} max={32} value={form.maxPlayers} onChange={num('maxPlayers')} />}
         </Field>
-        <Field label="Difficulté" error={s.field('difficulty')}>
+        <Field label={t('Difficulty')} error={s.field('difficulty')}>
           {(id) => (
             <Select id={id} value={form.difficulty} onChange={(e) => set('difficulty', e.target.value as PalworldSetup['difficulty'])}>
-              <option value="None">Personnalisée (réglages ci-dessous)</option>
-              <option value="Casual">Facile</option>
-              <option value="Normal">Normale</option>
-              <option value="Hard">Difficile</option>
+              <option value="None">{t('Custom (settings below)')}</option>
+              <option value="Casual">{t('Easy')}</option>
+              <option value="Normal">{t('Normal')}</option>
+              <option value="Hard">{t('Hard')}</option>
             </Select>
           )}
         </Field>
       </div>
 
       <details className="rounded-lg bg-slate-50 p-4 dark:bg-slate-800/40">
-        <summary className="cursor-pointer text-sm font-semibold">Réglages de jeu</summary>
+        <summary className="cursor-pointer text-sm font-semibold">{t('Gameplay settings')}</summary>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <Field label="Taux d'expérience" error={s.field('expRate')}>
+          <Field label={t('Experience rate')} error={s.field('expRate')}>
             {(id) => <Input id={id} type="number" step="0.1" min={0.1} max={20} value={form.expRate} onChange={num('expRate')} />}
           </Field>
-          <Field label="Taux de capture" error={s.field('palCaptureRate')}>
+          <Field label={t('Capture rate')} error={s.field('palCaptureRate')}>
             {(id) => <Input id={id} type="number" step="0.1" min={0.5} max={2} value={form.palCaptureRate} onChange={num('palCaptureRate')} />}
           </Field>
-          <Field label="Taux de récolte" error={s.field('collectionDropRate')}>
+          <Field label={t('Gathering rate')} error={s.field('collectionDropRate')}>
             {(id) => <Input id={id} type="number" step="0.1" min={0.5} max={3} value={form.collectionDropRate} onChange={num('collectionDropRate')} />}
           </Field>
-          <Field label="Butin des ennemis" error={s.field('enemyDropItemRate')}>
+          <Field label={t('Enemy loot rate')} error={s.field('enemyDropItemRate')}>
             {(id) => <Input id={id} type="number" step="0.1" min={0.5} max={3} value={form.enemyDropItemRate} onChange={num('enemyDropItemRate')} />}
           </Field>
-          <Field label="Pénalité de mort">
+          <Field label={t('Death penalty')}>
             {(id) => (
               <Select id={id} value={form.deathPenalty} onChange={(e) => set('deathPenalty', e.target.value as PalworldSetup['deathPenalty'])}>
-                <option value="None">Aucune</option>
-                <option value="Item">Objets</option>
-                <option value="ItemAndEquipment">Objets et équipement</option>
-                <option value="All">Tout (Pals compris)</option>
+                <option value="None">{t('None')}</option>
+                <option value="Item">{t('Items')}</option>
+                <option value="ItemAndEquipment">{t('Items and equipment')}</option>
+                <option value="All">{t('Everything (Pals included)')}</option>
               </Select>
             )}
           </Field>
           <div className="flex items-end pb-2">
-            <Toggle checked={form.pvp} onChange={(v) => set('pvp', v)} label="PvP" description="Dégâts entre joueurs" />
+            <Toggle checked={form.pvp} onChange={(v) => set('pvp', v)} label="PvP" description={t('Player to player damage')} />
           </div>
         </div>
       </details>
 
       <details className="rounded-lg bg-slate-50 p-4 dark:bg-slate-800/40">
-        <summary className="cursor-pointer text-sm font-semibold">Réseau (avancé)</summary>
+        <summary className="cursor-pointer text-sm font-semibold">{t('Network (advanced)')}</summary>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <Field label="Port de jeu (UDP)" help="Ouvert automatiquement dans le pare-feu" error={s.field('port')}>
+          <Field label={t('Game port (UDP)')} help={t('Opened automatically in the firewall')} error={s.field('port')}>
             {(id) => <Input id={id} type="number" value={form.port} onChange={num('port')} />}
           </Field>
-          <Field label="Port de l'API REST" help="Local uniquement, jamais exposé sur Internet" error={s.field('restApiPort')}>
+          <Field label={t('REST API port')} help={t('Local only, never exposed to the Internet')} error={s.field('restApiPort')}>
             {(id) => <Input id={id} type="number" value={form.restApiPort} onChange={num('restApiPort')} />}
           </Field>
         </div>
       </details>
 
       {s.error && !(s.error instanceof ApiError && s.error.details) && <Alert kind="error">{s.error.message}</Alert>}
-      {s.error instanceof ApiError && s.error.details && <Alert kind="error">Vérifie les champs en rouge.</Alert>}
+      {s.error instanceof ApiError && s.error.details && <Alert kind="error">{t('Check the fields in red.')}</Alert>}
       <Button type="submit" loading={s.busy}>
-        Enregistrer et passer à l'installation
+        {t('Save and go to the installation')}
       </Button>
     </form>
   );
@@ -362,7 +363,7 @@ function InstallStep({ state, onChange, onEditServer }: { state: SetupState; onC
 
   useRealtime('setup', (msg) => {
     if (msg.type === 'task') {
-      setTasks((ts) => ts.map((t) => (t.id === msg.data.id ? msg.data : t)));
+      setTasks((ts) => ts.map((x) => (x.id === msg.data.id ? msg.data : x)));
       if (msg.data.status === 'running') {
         setSelected(msg.data.id);
         setLogs((l) => ({ ...l, [msg.data.id]: [] }));
@@ -373,12 +374,12 @@ function InstallStep({ state, onChange, onEditServer }: { state: SetupState; onC
     }
   });
 
-  const running = tasks.find((t) => t.status === 'running');
-  const failed = tasks.find((t) => t.status === 'failed');
-  const started = tasks.some((t) => t.status !== 'pending');
+  const running = tasks.find((x) => x.status === 'running');
+  const failed = tasks.find((x) => x.status === 'failed');
+  const started = tasks.some((x) => x.status !== 'pending');
   const shown = selected ?? running?.id ?? failed?.id ?? null;
 
-  // Recharge le journal d'une étape passée (après un rafraîchissement de la page).
+  // Reloads the log of a past step (after a page refresh).
   useEffect(() => {
     if (!shown || logs[shown]) return;
     api
@@ -391,11 +392,11 @@ function InstallStep({ state, onChange, onEditServer }: { state: SetupState; onC
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
   }, [logs, shown]);
 
-  // Filet de sécurité si le WebSocket est coupé : on relit l'état toutes les 3 secondes.
+  // Safety net when the WebSocket drops: read the state again every 3 seconds.
   useEffect(() => {
     if (!state.installing && !running) return;
-    const t = setInterval(() => void onChange(), 3000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => void onChange(), 3000);
+    return () => clearInterval(timer);
   }, [state.installing, running, onChange]);
 
   const start = async () => {
@@ -410,61 +411,57 @@ function InstallStep({ state, onChange, onEditServer }: { state: SetupState; onC
 
   return (
     <div className="space-y-5">
-      <StepTitle title="Installation du serveur">
-        SteamCMD puis le serveur dédié Palworld (plusieurs Go) sont téléchargés sur ton VPS. Selon la connexion, cela prend de 2 à 15 minutes.
-        Tu peux fermer cette page : l'installation continue.
+      <StepTitle title={t('Server installation')}>
+        {t('SteamCMD, then the Palworld dedicated server (several GB), are downloaded to your VPS. Depending on the connection, this takes 2 to 15 minutes. You can close this page: the installation keeps going.')}
       </StepTitle>
       <ol className="space-y-1">
-        {tasks.map((t) => (
-          <li key={t.id}>
+        {tasks.map((task) => (
+          <li key={task.id}>
             <button
               type="button"
-              onClick={() => setSelected(t.id)}
+              onClick={() => setSelected(task.id)}
               className={cx(
                 'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm',
-                shown === t.id ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50',
+                shown === task.id ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50',
               )}
             >
-              <TaskIcon status={t.status} />
-              <span className={cx('flex-1', t.status === 'pending' && 'text-slate-400')}>{t.label}</span>
-              {t.status === 'failed' && <Badge tone="red">Échec</Badge>}
+              <TaskIcon status={task.status} />
+              <span className={cx('flex-1', task.status === 'pending' && 'text-slate-400')}>{t(task.label)}</span>
+              {task.status === 'failed' && <Badge tone="red">{t('Failed')}</Badge>}
             </button>
           </li>
         ))}
       </ol>
 
       {shown && (
-        <pre
-          ref={logRef}
-          className="h-64 overflow-auto rounded-lg bg-slate-950 p-3 font-mono text-xs leading-relaxed text-slate-200"
-        >
-          {(logs[shown] ?? []).join('\n') || 'En attente…'}
+        <pre ref={logRef} className="h-64 overflow-auto rounded-lg bg-slate-950 p-3 font-mono text-xs leading-relaxed text-slate-200">
+          {(logs[shown] ?? []).map(tm).join('\n') || t('Waiting…')}
         </pre>
       )}
 
       {failed && (
         <Alert kind="error">
-          <p className="font-semibold">L'étape « {failed.label} » a échoué.</p>
-          <p className="mt-1">{failed.error}</p>
+          <p className="font-semibold">{t('The step "{step}" failed.', { step: t(failed.label) })}</p>
+          <p className="mt-1">{failed.error ? tm(failed.error) : ''}</p>
         </Alert>
       )}
       {error && <Alert kind="error">{error}</Alert>}
 
       <div className="flex flex-wrap gap-2">
-        {!started && <Button onClick={() => void start()}>Lancer l'installation</Button>}
+        {!started && <Button onClick={() => void start()}>{t('Start the installation')}</Button>}
         {failed && !running && (
           <>
             <Button onClick={() => void start()}>
-              <RotateCcw className="h-4 w-4" /> Réessayer
+              <RotateCcw className="h-4 w-4" /> {t('Retry')}
             </Button>
             <Button variant="secondary" onClick={onEditServer}>
-              Modifier les réglages du serveur
+              {t('Change the server settings')}
             </Button>
           </>
         )}
         {running && (
           <p className="flex items-center gap-2 text-sm text-slate-500">
-            <Loader2 className="h-4 w-4 animate-spin" /> Installation en cours…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t('Installing…')}
           </p>
         )}
       </div>
@@ -487,26 +484,24 @@ function AdminStep({ onDone }: { onDone: () => void }) {
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
   return (
     <form onSubmit={submit} className="space-y-5">
-      <StepTitle title="Compte administrateur">
-        C'est le compte principal du panel admin : il permet de gérer le serveur et le site. Garde ses identifiants précieusement.
-      </StepTitle>
+      <StepTitle title={t('Administrator account')}>{t('This is the main account of the admin panel: it runs the server and the site. Keep its login details safe.')}</StepTitle>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Nom d'utilisateur" error={s.field('username')}>
+        <Field label={t('Username')} error={s.field('username')}>
           {(id) => <Input id={id} value={form.username} onChange={set('username')} autoComplete="username" required />}
         </Field>
-        <Field label="Email" error={s.field('email')}>
+        <Field label={t('Email')} error={s.field('email')}>
           {(id) => <Input id={id} type="email" value={form.email} onChange={set('email')} autoComplete="email" required />}
         </Field>
-        <Field label="Mot de passe" help="8 caractères minimum" error={s.field('password')}>
+        <Field label={t('Password')} help={t('At least 8 characters')} error={s.field('password')}>
           {(id) => <Input id={id} type="password" value={form.password} onChange={set('password')} autoComplete="new-password" required />}
         </Field>
-        <Field label="Confirmation" error={mismatch ? 'Les mots de passe ne correspondent pas' : undefined}>
+        <Field label={t('Confirmation')} error={mismatch ? t('The passwords do not match') : undefined}>
           {(id) => <Input id={id} type="password" value={form.confirm} onChange={set('confirm')} autoComplete="new-password" required />}
         </Field>
       </div>
       {s.error && <Alert kind="error">{s.error.message}</Alert>}
       <Button type="submit" loading={s.busy} disabled={mismatch}>
-        Créer le compte
+        {t('Create the account')}
       </Button>
     </form>
   );
@@ -516,10 +511,11 @@ const PRESETS = ['#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#f97316', '#eab308
 
 function SiteStep({ onDone }: { onDone: () => void }) {
   const [form, setForm] = useState({
-    name: 'Mon serveur Palworld',
-    tagline: 'Un serveur communautaire Palworld',
+    name: t('My Palworld server'),
+    tagline: t('A community Palworld server'),
     accentColor: '#22c55e',
     defaultTheme: 'dark' as 'dark' | 'light' | 'system',
+    language: lang() as Lang,
     discordUrl: '',
     logoUrl: '',
   });
@@ -534,15 +530,35 @@ function SiteStep({ onDone }: { onDone: () => void }) {
   };
   return (
     <form onSubmit={submit} className="space-y-5">
-      <StepTitle title="Ton site">Les bases de l'apparence. Tout se personnalise ensuite dans « Gestion du site ».</StepTitle>
+      <StepTitle title={t('Your website')}>{t('The basics of the look. Everything can be customized later in "Website".')}</StepTitle>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Nom de la communauté" error={s.field('name')}>
+        <Field label={t('Community name')} error={s.field('name')}>
           {(id) => <Input id={id} value={form.name} onChange={(e) => set('name', e.target.value)} required />}
         </Field>
-        <Field label="Slogan" error={s.field('tagline')}>
+        <Field label={t('Tagline')} error={s.field('tagline')}>
           {(id) => <Input id={id} value={form.tagline} onChange={(e) => set('tagline', e.target.value)} />}
         </Field>
-        <Field label="Couleur principale" error={s.field('accentColor')}>
+        <Field label={t('Site language')} help={t('For visitors, starter pages, Discord and in-game messages')}>
+          {(id) => (
+            <Select id={id} value={form.language} onChange={(e) => set('language', e.target.value as Lang)}>
+              {LANGS.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+        <Field label={t('Default theme')}>
+          {(id) => (
+            <Select id={id} value={form.defaultTheme} onChange={(e) => set('defaultTheme', e.target.value as typeof form.defaultTheme)}>
+              <option value="dark">{t('Dark')}</option>
+              <option value="light">{t('Light')}</option>
+              <option value="system">{t("Follow the visitor's device")}</option>
+            </Select>
+          )}
+        </Field>
+        <Field label={t('Main color')} error={s.field('accentColor')} className="md:col-span-2">
           {() => (
             <div className="flex flex-wrap items-center gap-2">
               {PRESETS.map((c) => (
@@ -559,25 +575,16 @@ function SiteStep({ onDone }: { onDone: () => void }) {
             </div>
           )}
         </Field>
-        <Field label="Thème par défaut">
-          {(id) => (
-            <Select id={id} value={form.defaultTheme} onChange={(e) => set('defaultTheme', e.target.value as typeof form.defaultTheme)}>
-              <option value="dark">Sombre</option>
-              <option value="light">Clair</option>
-              <option value="system">Selon l'appareil du visiteur</option>
-            </Select>
-          )}
-        </Field>
-        <Field label="Lien d'invitation Discord" help="Facultatif" error={s.field('discordUrl')} className="md:col-span-2">
+        <Field label={t('Discord invite link')} help={t('Optional')} error={s.field('discordUrl')} className="md:col-span-2">
           {(id) => <Input id={id} value={form.discordUrl} onChange={(e) => set('discordUrl', e.target.value)} placeholder="https://discord.gg/…" />}
         </Field>
-        <Field label="Logo" help="Facultatif — PNG, JPG, GIF ou WebP" className="md:col-span-2">
+        <Field label={t('Logo')} help={t('Optional: PNG, JPG, GIF or WebP')} className="md:col-span-2">
           {() => <ImageField value={form.logoUrl} onChange={(v) => set('logoUrl', v)} uploadPath="setup/upload" />}
         </Field>
       </div>
       {s.error && <Alert kind="error">{s.error.message}</Alert>}
       <Button type="submit" loading={s.busy}>
-        Continuer
+        {t('Continue')}
       </Button>
     </form>
   );
@@ -595,22 +602,22 @@ function FinishStep({ mode }: { mode: ServerMode | null }) {
   return (
     <div className="space-y-5 text-center">
       <PartyPopper className="mx-auto h-14 w-14 text-accent" />
-      <StepTitle title="Tout est prêt !">
+      <StepTitle title={t('All set!')}>
         {mode === 'managed'
-          ? 'Le serveur Palworld tourne et ton compte administrateur est créé. Il reste à finaliser le site : contenus de départ, modules et tâches automatiques.'
+          ? t('The Palworld server is running and your administrator account is created. All that is left is finishing the site: starter content, modules and automatic tasks.')
           : mode === 'external'
-            ? 'Ton serveur est connecté et ton compte administrateur est créé. Il reste à finaliser le site : contenus de départ et modules.'
-            : 'Ton compte administrateur est créé. Le site sera prêt dans un instant ; tu pourras connecter un serveur plus tard dans Panel admin > Connexion au serveur.'}
+            ? t('Your server is connected and your administrator account is created. All that is left is finishing the site: starter content and modules.')
+            : t('Your administrator account is created. The site will be ready in a moment; you can connect a server later in Admin panel > Server connection.')}
       </StepTitle>
       {s.error && <Alert kind="error">{s.error.message}</Alert>}
       <Button onClick={finish} loading={s.busy} className="mx-auto">
-        Installer le CMS et ouvrir mon site
+        {t('Install the CMS and open my site')}
       </Button>
     </div>
   );
 }
 
-// Assistant
+// Wizard
 
 export function SetupWizard() {
   const [state, setState] = useState<SetupState | null>(null);
@@ -638,14 +645,14 @@ export function SetupWizard() {
     setChangeMode(false);
     void load();
   };
-  // On peut revenir sur le choix du serveur tant que l'installation n'a pas commencé.
-  const canGoBack = !changeMode && (step === 'server' || step === 'external' || (step === 'install' && !state.tasks.some((t) => t.status !== 'pending')));
+  // The server choice can be changed until the installation has started.
+  const canGoBack = !changeMode && (step === 'server' || step === 'external' || (step === 'install' && !state.tasks.some((x) => x.status !== 'pending')));
 
   return (
     <Shell step={step} mode={state.mode}>
       {canGoBack && (
         <button type="button" onClick={() => setChangeMode(true)} className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-accent">
-          <ArrowLeft className="h-4 w-4" /> Changer de choix
+          <ArrowLeft className="h-4 w-4" /> {t('Change my choice')}
         </button>
       )}
       {step === 'token' && <TokenStep onDone={next} />}

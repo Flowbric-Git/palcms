@@ -1,4 +1,4 @@
-// État partagé entre le faux palctl et le faux serveur Palworld (développement uniquement).
+// State shared by the fake palctl and the fake Palworld server (development only).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,13 +30,13 @@ export function appendLog(line) {
   fs.appendFileSync(LOG_FILE, `${new Date().toISOString()} palworld[4242]: ${line}\n`);
 }
 
-/** Lit AdminPassword et RESTAPIPort dans l'ini simulé. */
+/** Reads AdminPassword and RESTAPIPort from the simulated ini. */
 export function readIniBasics() {
   try {
     const ini = fs.readFileSync(INI_FILE, 'utf8');
     const pwd = /AdminPassword="([^"]*)"/.exec(ini)?.[1] ?? '';
     const port = Number(/RESTAPIPort=(\d+)/.exec(ini)?.[1] ?? 8212);
-    const name = /ServerName="([^"]*)"/.exec(ini)?.[1] ?? 'Serveur de dev';
+    const name = /ServerName="([^"]*)"/.exec(ini)?.[1] ?? 'Dev server';
     const max = Number(/ServerPlayerMaxNum=(\d+)/.exec(ini)?.[1] ?? 32);
     return { adminPassword: pwd, restPort: port, serverName: name, maxPlayers: max };
   } catch {

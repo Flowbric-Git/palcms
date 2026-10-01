@@ -14,11 +14,11 @@ describe('BASE_PATH', () => {
     expect(normalizeBasePath(input)).toBe(expected);
   });
 
-  it.each(['/cms;rm', '/c ms', '/cms?x=1', '/../etc', '/café', '/cms"'])('refuse %j', (input) => {
+  it.each(['/cms;rm', '/c ms', '/cms?x=1', '/../etc', '/café', '/cms"'])('refuses %j', (input) => {
     expect(() => normalizeBasePath(input)).toThrow();
   });
 
-  it('calcule le préfixe des routes et les liens', () => {
+  it('computes the route prefix and the links', () => {
     expect(routePrefix('/')).toBe('');
     expect(routePrefix('/cms/')).toBe('/cms');
     expect(joinBase('/cms/', '/api/public/status')).toBe('/cms/api/public/status');

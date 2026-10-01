@@ -1,31 +1,31 @@
 /**
- * Permissions du panel admin, réparties entre les membres de l'équipe par les rôles
- * (Administrateur, Modérateur, Rédacteur, rôles personnalisés).
+ * Admin panel permissions, shared between team members through roles
+ * (Administrator, Moderator, Editor, custom roles). Labels are translated on display.
  */
 export const PERMISSIONS = {
-  'server.control': 'Démarrer, arrêter et redémarrer le serveur',
-  'server.config': 'Modifier la configuration du serveur',
-  'server.players': 'Voir les joueurs',
-  'server.logs': 'Voir les logs',
-  'server.moderation': 'Expulser, bannir, liste blanche',
-  'server.announce': 'Envoyer des annonces en jeu',
-  'server.rcon': 'Console RCON',
-  'server.backups': 'Sauvegardes et restauration',
-  'server.schedules': 'Redémarrages programmés et mises à jour',
-  'server.world': 'Données du monde (inventaires, Pals, guildes)',
-  'server.events': 'Événements et préréglages',
+  'server.control': 'Start, stop and restart the server',
+  'server.config': 'Edit the server configuration',
+  'server.players': 'See players',
+  'server.logs': 'See logs',
+  'server.moderation': 'Kick, ban, whitelist',
+  'server.announce': 'Send in-game announcements',
+  'server.rcon': 'RCON console',
+  'server.backups': 'Backups and restore',
+  'server.schedules': 'Scheduled restarts and updates',
+  'server.world': 'World data (inventories, Pals, guilds)',
+  'server.events': 'Events and presets',
   'site.pages': 'Pages',
-  'site.news': 'Actualités',
-  'site.appearance': 'Apparence, menu et thèmes',
+  'site.news': 'News',
+  'site.appearance': 'Appearance, menu and themes',
   'site.modules': 'Modules',
-  'site.members': 'Membres',
-  'site.map': 'Carte (image et points d’intérêt)',
+  'site.members': 'Members',
+  'site.map': 'Map (image and points of interest)',
   'site.discord': 'Discord',
-  'site.tickets': 'Signalements et suggestions',
-  'admin.team': 'Équipe et rôles',
-  'admin.audit': 'Journal des actions',
-  'admin.updates': 'Mises à jour de PalCMS',
-  'admin.extensions': 'Plugins, thèmes et market',
+  'site.tickets': 'Reports and suggestions',
+  'admin.team': 'Team and roles',
+  'admin.audit': 'Audit log',
+  'admin.updates': 'PalCMS updates',
+  'admin.extensions': 'Plugins, themes and market',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -33,7 +33,7 @@ export type Permission = keyof typeof PERMISSIONS;
 export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
 
 export const PERMISSION_GROUPS: { title: string; keys: Permission[] }[] = [
-  { title: 'Serveur', keys: ALL_PERMISSIONS.filter((p) => p.startsWith('server.')) },
-  { title: 'Site', keys: ALL_PERMISSIONS.filter((p) => p.startsWith('site.')) },
+  { title: 'Server', keys: ALL_PERMISSIONS.filter((p) => p.startsWith('server.')) },
+  { title: 'Website', keys: ALL_PERMISSIONS.filter((p) => p.startsWith('site.')) },
   { title: 'Administration', keys: ALL_PERMISSIONS.filter((p) => p.startsWith('admin.')) },
 ];

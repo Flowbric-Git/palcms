@@ -9,7 +9,7 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   splitting: false,
-  // Le paquet partagé est en TypeScript : on l'intègre au bundle. Les autres dépendances
-  // restent externes et sont installées par npm sur le VPS.
+  // The shared package is TypeScript: it is bundled in. The other dependencies
+  // stay external and are installed by npm on the VPS.
   noExternal: [/^@palcms\/shared/],
 });

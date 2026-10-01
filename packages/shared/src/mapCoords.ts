@@ -1,11 +1,11 @@
 /**
- * Conversions de coordonnées pour la carte.
+ * Coordinate conversions for the map.
  *
- * - Monde : coordonnées renvoyées par l'API REST (location_x / location_y), en unités Unreal.
- * - Image : position normalisée (0 → 1) sur l'image de la carte, selon sa calibration
- *   [maxX, maxY, minX, minY] (même convention que palworld-live-map, licence MIT).
- * - Jeu : coordonnées affichées sur la carte en jeu (formule de palworld-coord, licence MIT).
- * - Leaflet : repère CRS.Simple de 0 à MAP_SIZE, "lat" vers le haut.
+ * - World: coordinates returned by the REST API (location_x / location_y), in Unreal units.
+ * - Image: normalized position (0 to 1) on the map image, from its calibration
+ *   [maxX, maxY, minX, minY] (same convention as palworld-live-map, MIT license).
+ * - Game: coordinates shown on the in-game map (formula from palworld-coord, MIT license).
+ * - Leaflet: CRS.Simple frame from 0 to MAP_SIZE, "lat" pointing up.
  */
 export type Bounds = [number, number, number, number];
 
@@ -28,7 +28,7 @@ export function latLngToWorld(lat: number, lng: number, bounds: Bounds): { x: nu
   return imageToWorld(lng / MAP_SIZE, 1 - lat / MAP_SIZE, bounds);
 }
 
-/** Coordonnées telles qu'affichées dans le jeu. */
+/** Coordinates as shown in the game. */
 export function worldToGame(x: number, y: number): { x: number; y: number } {
   return { x: Math.round((y - 158000) / 459), y: Math.round((x + 123888) / 459) };
 }

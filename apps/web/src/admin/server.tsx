@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Cpu, MemoryStick, Pause, Play, PlugZap, Power, RotateCw, Save, Search, Square, Unplug } from 'lucide-react';
-import { INI_FIELDS, INI_GROUPS, type ExternalServer, type ServerMode, type ServerStatus } from '@palcms/shared';
+import { INI_FIELDS, INI_GROUPS, INI_GROUP_LABELS, type ExternalServer, type ServerMode, type ServerStatus } from '@palcms/shared';
 import { api, errorText } from '../lib/api';
 import { useLiveServer } from '../lib/live';
 import { useRealtime } from '../lib/ws';
@@ -11,6 +11,7 @@ import { Alert, Badge, Button, Card, Empty, Field, Input, PageHeader, Select, Sp
 import { useLoad } from './AdminLayout';
 import { useApp } from '../lib/app';
 import { ExternalServerForm } from '../components/ExternalServerForm';
+import { t, tm } from '../lib/i18n';
 
 type ServiceState = 'active' | 'inactive' | 'activating' | 'deactivating' | 'failed' | 'unknown' | 'external' | 'none';
 
@@ -23,18 +24,18 @@ interface Overview {
 }
 
 const SERVICE_LABEL: Record<ServiceState, { text: string; tone: 'green' | 'red' | 'amber' | 'slate' }> = {
-  active: { text: 'Service actif', tone: 'green' },
-  inactive: { text: 'Service arrêté', tone: 'slate' },
-  activating: { text: 'Démarrage…', tone: 'amber' },
-  deactivating: { text: 'Arrêt…', tone: 'amber' },
-  failed: { text: 'Service en échec', tone: 'red' },
-  unknown: { text: 'État inconnu', tone: 'slate' },
-  external: { text: 'Serveur externe', tone: 'slate' },
-  none: { text: 'Aucun serveur connecté', tone: 'amber' },
+  active: { text: 'Service running', tone: 'green' },
+  inactive: { text: 'Service stopped', tone: 'slate' },
+  activating: { text: 'Starting…', tone: 'amber' },
+  deactivating: { text: 'Stopping…', tone: 'amber' },
+  failed: { text: 'Service failed', tone: 'red' },
+  unknown: { text: 'Unknown state', tone: 'slate' },
+  external: { text: 'External server', tone: 'slate' },
+  none: { text: 'No server connected', tone: 'amber' },
 };
 
 function PlayersChart({ points }: { points: Overview['metrics'] }) {
-  if (points.length < 2) return <Empty>Les statistiques apparaîtront après quelques minutes de fonctionnement.</Empty>;
+  if (points.length < 2) return <Empty>{t('Statistics show up after a few minutes of running.')}</Empty>;
   const max = Math.max(1, ...points.map((p) => p.players));
   const w = 600;
   const h = 120;
@@ -43,14 +44,14 @@ function PlayersChart({ points }: { points: Overview['metrics'] }) {
   const line = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.players).toFixed(1)}`).join(' ');
   return (
     <div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="h-32 w-full" preserveAspectRatio="none" role="img" aria-label="Joueurs connectés sur 24 heures">
+      <svg viewBox={`0 0 ${w} ${h}`} className="h-32 w-full" preserveAspectRatio="none" role="img" aria-label={t('Players online over 24 hours')}>
         <path d={`${line} L${w},${h} L0,${h} Z`} className="fill-accent/15" />
         <path d={line} className="stroke-accent" fill="none" strokeWidth={2} vectorEffect="non-scaling-stroke" />
       </svg>
       <div className="mt-1 flex justify-between text-xs text-slate-500">
         <span>{formatDateTime(points[0].ts)}</span>
-        <span>max {max} joueurs</span>
-        <span>maintenant</span>
+        <span>{t('max {count} players', { count: max })}</span>
+        <span>{t('now')}</span>
       </div>
     </div>
   );
@@ -63,23 +64,23 @@ export function DashboardPage() {
   const [msg, setMsg] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    const t = setInterval(reload, 10_000);
-    return () => clearInterval(t);
+    const timer = setInterval(reload, 10_000);
+    return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const act = async (action: 'start' | 'stop' | 'restart') => {
     const confirmText = {
       start: null,
-      stop: 'Arrêter le serveur ? Les joueurs connectés seront déconnectés (le monde est sauvegardé avant).',
-      restart: 'Redémarrer le serveur ? Les joueurs connectés seront déconnectés (le monde est sauvegardé avant).',
+      stop: t('Stop the server? Online players will be disconnected (the world is saved first).'),
+      restart: t('Restart the server? Online players will be disconnected (the world is saved first).'),
     }[action];
     if (confirmText && !window.confirm(confirmText)) return;
     setBusy(action);
     setMsg(null);
     try {
       const r = await api.post<{ message: string }>(`admin/server/${action}`);
-      setMsg({ kind: 'success', text: r.message });
+      setMsg({ kind: 'success', text: tm(r.message) });
       reload();
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
@@ -97,26 +98,26 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader
-        title="Tableau de bord"
+        title={t('Dashboard')}
         description={status.name}
         actions={
           data.mode !== 'managed' ? (
             <Link
-              to="/admin/serveur/connexion"
+              to="/admin/server/connection"
               className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold ring-1 ring-slate-300 dark:bg-slate-800 dark:ring-slate-700"
             >
-              <PlugZap className="h-4 w-4" /> Connexion au serveur
+              <PlugZap className="h-4 w-4" /> {t('Server connection')}
             </Link>
           ) : (
           <>
             <Button variant="secondary" onClick={() => void act('start')} loading={busy === 'start'} disabled={data.service === 'active'}>
-              <Play className="h-4 w-4" /> Démarrer
+              <Play className="h-4 w-4" /> {t('Start')}
             </Button>
             <Button variant="secondary" onClick={() => void act('restart')} loading={busy === 'restart'}>
-              <RotateCw className="h-4 w-4" /> Redémarrer
+              <RotateCw className="h-4 w-4" /> {t('Restart')}
             </Button>
             <Button variant="danger" onClick={() => void act('stop')} loading={busy === 'stop'} disabled={data.service === 'inactive'}>
-              <Square className="h-4 w-4" /> Arrêter
+              <Square className="h-4 w-4" /> {t('Stop')}
             </Button>
           </>
           )
@@ -125,52 +126,51 @@ export function DashboardPage() {
       {msg && <Alert kind={msg.kind} className="mb-6">{msg.text}</Alert>}
       {data.mode === 'none' && (
         <Alert kind="warning" className="mb-6">
-          Aucun serveur Palworld n’est connecté au site.{' '}
-          <Link to="/admin/serveur/connexion" className="font-semibold underline">
-            Connecter un serveur
+          {t('No Palworld server is connected to the site.')}{' '}
+          <Link to="/admin/server/connection" className="font-semibold underline">
+            {t('Connect a server')}
           </Link>
         </Alert>
       )}
       {data.mode === 'external' && (
         <Alert className="mb-6">
-          Serveur externe : son démarrage, sa configuration et ses sauvegardes se gèrent sur sa propre machine. Le processeur et la mémoire
-          ci-dessous sont ceux du VPS du site.
+          {t('External server: starting it, its configuration and its backups are handled on its own machine. The CPU and memory below are those of the site VPS.')}
         </Alert>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <p className="text-xs text-slate-500">Serveur Palworld</p>
+          <p className="text-xs text-slate-500">{t('Palworld server')}</p>
           <div className="mt-2 flex items-center gap-2">
             <StatusDot online={status.online} />
-            <span className="text-lg font-semibold">{status.online ? 'En ligne' : 'Hors ligne'}</span>
+            <span className="text-lg font-semibold">{status.online ? t('Online') : t('Offline')}</span>
           </div>
           <div className="mt-2">
             <Badge tone={svc.tone}>
-              <Power className="h-3 w-3" /> {svc.text}
+              <Power className="h-3 w-3" /> {t(svc.text)}
             </Badge>
           </div>
         </Card>
         <Card>
-          <p className="text-xs text-slate-500">Joueurs connectés</p>
+          <p className="text-xs text-slate-500">{t('Players online')}</p>
           <p className="mt-2 text-3xl font-bold">
             {status.players}
             <span className="text-base text-slate-400"> / {status.maxPlayers}</span>
           </p>
-          <Link to="/admin/serveur/joueurs" className="text-xs text-accent">
-            Voir les joueurs
+          <Link to="/admin/server/players" className="text-xs text-accent">
+            {t('See the players')}
           </Link>
         </Card>
         <Card>
           <p className="flex items-center gap-1 text-xs text-slate-500">
-            <Cpu className="h-3 w-3" /> Processeur ({data.host.cpus} cœurs)
+            <Cpu className="h-3 w-3" /> {t('CPU ({count} cores)', { count: data.host.cpus })}
           </p>
           <p className="mt-2 text-3xl font-bold">{Math.round((data.host.load / data.host.cpus) * 100)}%</p>
-          <p className="text-xs text-slate-500">FPS serveur : {status.fps ?? '—'}</p>
+          <p className="text-xs text-slate-500">{t('Server FPS: {fps}', { fps: status.fps ?? '—' })}</p>
         </Card>
         <Card>
           <p className="flex items-center gap-1 text-xs text-slate-500">
-            <MemoryStick className="h-3 w-3" /> Mémoire
+            <MemoryStick className="h-3 w-3" /> {t('Memory')}
           </p>
           <p className="mt-2 text-3xl font-bold">{Math.round((memUsed / data.host.memTotal) * 100)}%</p>
           <p className="text-xs text-slate-500">
@@ -180,17 +180,17 @@ export function DashboardPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <Card title="Joueurs sur 24 heures">
+        <Card title={t('Players over 24 hours')}>
           <PlayersChart points={data.metrics} />
         </Card>
-        <Card title="Informations">
+        <Card title={t('Information')}>
           <dl className="space-y-2 text-sm">
             {[
-              ['Version', status.version ?? '—'],
-              ['Adresse', status.address || '—'],
-              ['Jour en jeu', status.days ?? '—'],
-              ['Serveur lancé depuis', status.uptime != null ? formatDuration(status.uptime) : '—'],
-              ['VPS allumé depuis', formatDuration(data.host.uptime)],
+              [t('Version'), status.version ?? '—'],
+              [t('Address'), status.address || '—'],
+              [t('In-game day'), status.days ?? '—'],
+              [t('Server up for'), status.uptime != null ? formatDuration(status.uptime) : '—'],
+              [t('VPS up for'), formatDuration(data.host.uptime)],
             ].map(([k, v]) => (
               <div key={String(k)} className="flex justify-between gap-4">
                 <dt className="text-slate-500">{k}</dt>
@@ -229,13 +229,14 @@ export function ConfigPage() {
   const groups = useMemo(() => {
     if (!data) return [];
     const q = filter.toLowerCase();
-    const match = (e: ConfigEntry) => !q || e.key.toLowerCase().includes(q) || INI_FIELDS[e.key]?.label.toLowerCase().includes(q);
+    const match = (e: ConfigEntry) =>
+      !q || e.key.toLowerCase().includes(q) || (INI_FIELDS[e.key] && t(INI_FIELDS[e.key].label).toLowerCase().includes(q));
     const known = INI_GROUPS.map((g) => ({
-      title: g as string,
+      title: t(INI_GROUP_LABELS[g]),
       entries: data.entries.filter((e) => INI_FIELDS[e.key]?.group === g && match(e)),
     }));
     const other = data.entries.filter((e) => !INI_FIELDS[e.key] && match(e));
-    return [...known, { title: 'Avancé', entries: other }].filter((g) => g.entries.length);
+    return [...known, { title: t('Advanced'), entries: other }].filter((g) => g.entries.length);
   }, [data, filter]);
 
   const changed = data ? data.entries.filter((e) => values[e.key] !== e.value) : [];
@@ -246,7 +247,7 @@ export function ConfigPage() {
     try {
       const body = Object.fromEntries(changed.map((e) => [e.key, values[e.key]]));
       const r = await api.put<{ message: string }>('admin/server/config', { values: body, restart });
-      setMsg({ kind: 'success', text: r.message });
+      setMsg({ kind: 'success', text: tm(r.message) });
       reload();
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
@@ -261,15 +262,15 @@ export function ConfigPage() {
   const input = (e: ConfigEntry) => {
     const meta = INI_FIELDS[e.key];
     const v = values[e.key];
-    if (e.type === 'bool') return <Toggle checked={!!v} onChange={(nv) => setValues({ ...values, [e.key]: nv })} label={meta?.label ?? e.key} disabled={e.locked} />;
+    if (e.type === 'bool') return <Toggle checked={!!v} onChange={(nv) => setValues({ ...values, [e.key]: nv })} label={meta ? t(meta.label) : e.key} disabled={e.locked} />;
     const label = (
       <span className="flex items-center gap-2">
-        {meta?.label ?? e.key}
+        {meta ? t(meta.label) : e.key}
         {meta && <span className="font-mono text-[10px] font-normal text-slate-400">{e.key}</span>}
       </span>
     );
     return (
-      <Field label={label} help={meta?.help}>
+      <Field label={label} help={meta?.help && t(meta.help)}>
         {(id) =>
           meta?.options ? (
             <Select id={id} value={String(v)} disabled={e.locked} onChange={(ev) => setValues({ ...values, [e.key]: ev.target.value })}>
@@ -294,15 +295,15 @@ export function ConfigPage() {
 
   return (
     <>
-      <PageHeader title="Configuration du serveur" description="PalWorldSettings.ini — les réglages s'appliquent au redémarrage du serveur." />
+      <PageHeader title={t('Server configuration')} description={t('PalWorldSettings.ini — settings apply when the server restarts.')} />
       <div className="sticky top-14 z-20 -mx-4 mb-6 flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50/90 px-4 py-3 backdrop-blur md:-mx-8 md:px-8 dark:border-slate-800 dark:bg-slate-950/90">
         <div className="relative min-w-48 flex-1">
           <Search className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
-          <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Rechercher un réglage…" className="pl-9" />
+          <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={t('Search a setting…')} className="pl-9" />
         </div>
-        <Toggle checked={restart} onChange={setRestart} label="Redémarrer après l'enregistrement" />
+        <Toggle checked={restart} onChange={setRestart} label={t('Restart after saving')} />
         <Button onClick={() => void save()} loading={busy} disabled={changed.length === 0}>
-          <Save className="h-4 w-4" /> Enregistrer {changed.length > 0 && `(${changed.length})`}
+          <Save className="h-4 w-4" /> {t('Save')} {changed.length > 0 && `(${changed.length})`}
         </Button>
       </div>
       {msg && <Alert kind={msg.kind} className="mb-6">{msg.text}</Alert>}
@@ -323,7 +324,7 @@ export function ConfigPage() {
   );
 }
 
-// Joueurs
+// Players
 
 interface PlayersData {
   online: { uid: string; name: string; level: number; ping: number; ip: string }[];
@@ -351,19 +352,19 @@ export function PlayersPage() {
   const hist = data.history.filter((h) => !q || h.name.toLowerCase().includes(q.toLowerCase()) || h.uid.includes(q));
   return (
     <>
-      <PageHeader title="Joueurs" description="Joueurs connectés en direct et historique de tous les joueurs vus sur le serveur." />
-      <Card title={`En ligne (${data.online.length})`}>
+      <PageHeader title={t('Players')} description={t('Players online right now and history of every player seen on the server.')} />
+      <Card title={t('Online ({count})', { count: data.online.length })}>
         {data.online.length === 0 ? (
-          <Empty>Aucun joueur connecté.</Empty>
+          <Empty>{t('No player online.')}</Empty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-left text-xs text-slate-500 uppercase">
                 <tr>
-                  <th className="py-2">Nom</th>
-                  <th className="py-2">Niveau</th>
+                  <th className="py-2">{t('Name')}</th>
+                  <th className="py-2">{t('Level')}</th>
                   <th className="py-2">Ping</th>
-                  <th className="py-2">Identifiant</th>
+                  <th className="py-2">{t('ID')}</th>
                   <th className="py-2">IP</th>
                 </tr>
               </thead>
@@ -381,32 +382,36 @@ export function PlayersPage() {
             </table>
           </div>
         )}
-        <p className="mt-4 text-xs text-slate-500">Expulsion, bannissement et liste blanche : rubrique Modération.</p>
+        <p className="mt-4 text-xs text-slate-500">{t('Kick, ban and whitelist: Moderation section.')}</p>
       </Card>
-      <Card title={`Historique (${data.history.length})`} className="mt-6" actions={<Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrer…" className="w-48" />}>
+      <Card
+        title={t('History ({count})', { count: data.history.length })}
+        className="mt-6"
+        actions={<Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Filter…')} className="w-48" />}
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-slate-500 uppercase">
               <tr>
-                <th className="py-2">Nom</th>
-                <th className="py-2">Niveau</th>
-                <th className="py-2">Temps de jeu</th>
-                <th className="py-2">Dernière connexion</th>
-                <th className="py-2">Membre du site</th>
+                <th className="py-2">{t('Name')}</th>
+                <th className="py-2">{t('Level')}</th>
+                <th className="py-2">{t('Playtime')}</th>
+                <th className="py-2">{t('Last seen')}</th>
+                <th className="py-2">{t('Site member')}</th>
               </tr>
             </thead>
             <tbody>
               {hist.map((p) => (
                 <tr key={p.uid} className="border-t border-slate-100 dark:border-slate-800">
                   <td className="py-2 font-medium">
-                    <Link to={`/joueurs/${p.publicId}`} className="flex items-center gap-2 hover:text-accent">
+                    <Link to={`/players/${p.publicId}`} className="flex items-center gap-2 hover:text-accent">
                       {p.online === 1 && <span className="h-2 w-2 rounded-full bg-green-500" />}
                       {p.name}
                     </Link>
                   </td>
                   <td className="py-2">{p.level}</td>
                   <td className="py-2">{formatDuration(p.playtimeSeconds)}</td>
-                  <td className="py-2 text-slate-500">{p.online === 1 ? 'En ligne' : timeAgo(p.lastSeen)}</td>
+                  <td className="py-2 text-slate-500">{p.online === 1 ? t('Online') : timeAgo(p.lastSeen)}</td>
                   <td className="py-2">{p.member ?? <span className="text-slate-400">—</span>}</td>
                 </tr>
               ))}
@@ -450,27 +455,27 @@ export function LogsPage() {
   return (
     <>
       <PageHeader
-        title="Logs du serveur"
-        description="Journal du service palworld, en direct."
+        title={t('Server logs')}
+        description={t('Log of the palworld service, live.')}
         actions={
           <>
-            <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filtrer…" className="w-48" />
+            <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={t('Filter…')} className="w-48" />
             <Button variant="secondary" onClick={() => setPaused(!paused)}>
               {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-              {paused ? 'Reprendre' : 'Pause'}
+              {paused ? t('Resume') : t('Pause')}
             </Button>
           </>
         }
       />
       {error && <Alert kind="error" className="mb-4">{error}</Alert>}
       <pre ref={ref} className="h-[65vh] overflow-auto rounded-xl bg-slate-950 p-4 font-mono text-xs leading-relaxed text-slate-200">
-        {shown.join('\n') || 'Aucune ligne.'}
+        {shown.join('\n') || t('No line.')}
       </pre>
     </>
   );
 }
 
-// Connexion au serveur
+// Server connection
 
 export function ConnectionPage() {
   const { refresh } = useApp();
@@ -486,14 +491,13 @@ export function ConnectionPage() {
   if (data.mode === 'managed') {
     return (
       <>
-        <PageHeader title="Connexion au serveur" />
+        <PageHeader title={t('Server connection')} />
         <Card>
           <p className="flex items-center gap-2 font-semibold">
-            <PlugZap className="h-5 w-5 text-accent" /> Serveur installé et géré par PalCMS
+            <PlugZap className="h-5 w-5 text-accent" /> {t('Server installed and run by PalCMS')}
           </p>
           <p className="mt-2 text-sm text-slate-500">
-            Le serveur Palworld tourne sur ce VPS et PalCMS le pilote directement : démarrage, configuration, sauvegardes, mises à jour. Rien à
-            configurer ici.
+            {t('The Palworld server runs on this VPS and PalCMS drives it directly: start, configuration, backups, updates. Nothing to set up here.')}
           </p>
         </Card>
       </>
@@ -501,12 +505,12 @@ export function ConnectionPage() {
   }
 
   const disconnect = async () => {
-    if (!window.confirm('Déconnecter ce serveur ? Le site restera en ligne, sans statut ni joueurs en direct, jusqu’à la connexion d’un autre serveur.')) return;
+    if (!window.confirm(t('Disconnect this server? The site stays online, without live status or players, until another server is connected.'))) return;
     try {
       await api.del('admin/server/connection');
       await refresh();
       reload();
-      setMsg({ kind: 'success', text: 'Serveur déconnecté.' });
+      setMsg({ kind: 'success', text: t('Server disconnected.') });
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
     }
@@ -516,37 +520,37 @@ export function ConnectionPage() {
   return (
     <>
       <PageHeader
-        title="Connexion au serveur"
-        description="Connecte un serveur Palworld existant (sur ce VPS ou ailleurs) grâce à son API REST."
+        title={t('Server connection')}
+        description={t('Connect an existing Palworld server (on this VPS or elsewhere) through its REST API.')}
       />
       {msg && <Alert kind={msg.kind} className="mb-4">{msg.text}</Alert>}
       {connected && !editing ? (
         <Card>
           <p className="flex items-center gap-2 font-semibold">
-            <PlugZap className="h-5 w-5 text-green-500" /> Serveur connecté
+            <PlugZap className="h-5 w-5 text-green-500" /> {t('Server connected')}
           </p>
           <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-slate-500">API REST</dt>
+              <dt className="text-slate-500">{t('REST API')}</dt>
               <dd className="font-mono">
                 {data.external!.apiHost}:{data.external!.apiPort}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Adresse pour les joueurs</dt>
+              <dt className="text-slate-500">{t('Address for players')}</dt>
               <dd className="font-mono">{data.external!.publicAddress || '—'}</dd>
             </div>
             <div>
               <dt className="text-slate-500">RCON</dt>
-              <dd>{data.external!.rconPort ? `port ${data.external!.rconPort}` : 'non configuré'}</dd>
+              <dd>{data.external!.rconPort ? t('port {port}', { port: data.external!.rconPort }) : t('not set')}</dd>
             </div>
           </dl>
           <div className="mt-5 flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => setEditing(true)}>
-              Modifier
+              {t('Edit')}
             </Button>
             <Button variant="danger" onClick={() => void disconnect()}>
-              <Unplug className="h-4 w-4" /> Déconnecter
+              <Unplug className="h-4 w-4" /> {t('Disconnect')}
             </Button>
           </div>
         </Card>
@@ -554,25 +558,25 @@ export function ConnectionPage() {
         <Card>
           {!connected && (
             <Alert kind="warning" className="mb-5">
-              Aucun serveur n’est connecté pour le moment.
+              {t('No server is connected yet.')}
             </Alert>
           )}
           <ExternalServerForm
             initial={data.external}
             passwordOptional={!!data.external?.hasPassword}
             testPath="admin/server/connection/test"
-            submitLabel={connected ? 'Enregistrer' : 'Connecter ce serveur'}
+            submitLabel={connected ? t('Save') : t('Connect this server')}
             onSave={async (value) => {
               await api.put('admin/server/connection', value);
               await refresh();
               setEditing(false);
               reload();
-              setMsg({ kind: 'success', text: 'Serveur connecté : le statut et les joueurs apparaissent en quelques secondes.' });
+              setMsg({ kind: 'success', text: t('Server connected: status and players show up within a few seconds.') });
             }}
           />
           {connected && (
             <Button variant="ghost" className="mt-3" onClick={() => setEditing(false)}>
-              Annuler
+              {t('Cancel')}
             </Button>
           )}
         </Card>

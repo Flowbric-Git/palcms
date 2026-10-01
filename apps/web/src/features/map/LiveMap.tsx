@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './map.css';
 import { MAP_SIZE as SIZE, latLngToWorld, worldToGame, worldToLatLng, type Bounds } from '@palcms/shared';
+import { t } from '../../lib/i18n';
 
 export interface MapPlayer {
   id: string;
@@ -30,7 +31,7 @@ export interface MapData {
   players: MapPlayer[];
 }
 
-/** Calques facultatifs : bases des guildes (sauvegarde du monde) et points fixes du jeu. */
+/** Optional layers: guild bases (world save) and fixed game points. */
 export interface MapLayers {
   bases?: { x: number; y: number; guild: string; guildId: string; level: number }[];
   fastTravel?: [number, number][];
@@ -51,8 +52,8 @@ export const POI_ICONS: Record<string, string> = {
 const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 /**
- * Carte Leaflet (CRS.Simple) : image de la carte, points d'intérêt et joueurs en direct.
- * Si l'image est absente ou ne charge pas, une carte neutre quadrillée est affichée.
+ * Leaflet map (CRS.Simple): map image, points of interest and live players.
+ * When the image is missing or fails to load, a neutral grid map is shown.
  */
 export function LiveMap({
   data,
@@ -89,7 +90,7 @@ export function LiveMap({
   const imageUrl =
     data.settings.image === 'neutral' ? null : data.settings.image === 'custom' && data.settings.customUrl ? data.settings.customUrl : data.officialUrl;
 
-  // Création de la carte et de l'image de fond.
+  // Creates the map and its background image.
   useEffect(() => {
     if (!el.current) return;
     const m = L.map(el.current, {
@@ -110,7 +111,7 @@ export function LiveMap({
     m.fitBounds(extent);
     setNeutral(!imageUrl);
     if (imageUrl) {
-      const overlay = L.imageOverlay(imageUrl, extent, { attribution: 'Carte © Pocketpair, Inc.' }).addTo(m);
+      const overlay = L.imageOverlay(imageUrl, extent, { attribution: t('Map © Pocketpair, Inc.') }).addTo(m);
       overlay.on('error', () => {
         m.removeLayer(overlay);
         setNeutral(true);
@@ -130,7 +131,7 @@ export function LiveMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageUrl, bounds.join(',')]);
 
-  // Points d'intérêt.
+  // Points of interest.
   useEffect(() => {
     const layer = poiLayer.current;
     if (!layer) return;
@@ -152,35 +153,35 @@ export function LiveMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.pois, imageUrl, bounds.join(',')]);
 
-  // Calques facultatifs (bases, voyage rapide, tours).
+  // Optional layers (bases, fast travel, towers).
   useEffect(() => {
     const layer = extraLayer.current;
     if (!layer) return;
     layer.clearLayers();
     for (const [x, y] of layers?.fastTravel ?? []) {
       L.circleMarker(worldToLatLng(x, y, bounds), { radius: 4, color: '#38bdf8', weight: 2, fillColor: '#0ea5e9', fillOpacity: 0.8 })
-        .bindTooltip('Voyage rapide', { className: 'palcms-label', direction: 'top' })
+        .bindTooltip(t('Fast travel'), { className: 'palcms-label', direction: 'top' })
         .addTo(layer);
     }
     for (const [x, y] of layers?.bossTowers ?? []) {
       L.marker(worldToLatLng(x, y, bounds), {
         icon: L.divIcon({ className: '', html: '<div class="palcms-marker" style="width:28px;height:28px;background:#7c3aed;font-size:14px">🗼</div>', iconSize: [28, 28], iconAnchor: [14, 14] }),
       })
-        .bindTooltip('Tour de boss', { className: 'palcms-label', direction: 'top', offset: [0, -12] })
+        .bindTooltip(t('Boss tower'), { className: 'palcms-label', direction: 'top', offset: [0, -12] })
         .addTo(layer);
     }
     for (const b of layers?.bases ?? []) {
       const marker = L.marker(worldToLatLng(b.x, b.y, bounds), {
         icon: L.divIcon({ className: '', html: '<div class="palcms-marker" style="width:30px;height:30px;background:#b45309;font-size:15px">🏰</div>', iconSize: [30, 30], iconAnchor: [15, 15] }),
       })
-        .bindTooltip(`${escape(b.guild)} · niv. ${b.level}`, { className: 'palcms-label', direction: 'top', offset: [0, -14] })
+        .bindTooltip(`${escape(b.guild)} · ${t('lvl {level}', { level: b.level })}`, { className: 'palcms-label', direction: 'top', offset: [0, -14] })
         .addTo(layer);
       marker.on('click', () => baseClickRef.current?.(b.guildId));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layers, imageUrl, bounds.join(',')]);
 
-  // Joueurs : les marqueurs existants sont déplacés, pas recréés (animation fluide).
+  // Players: existing markers are moved, not recreated (smooth animation).
   useEffect(() => {
     const layer = playerLayer.current;
     if (!layer) return;
@@ -189,7 +190,7 @@ export function LiveMap({
       seen.add(p.id);
       const pos = worldToLatLng(p.x, p.y, bounds);
       const g = worldToGame(p.x, p.y);
-      const tip = `${escape(p.name)} · niv. ${p.level} <span style="opacity:.7">(${g.x}, ${g.y})</span>`;
+      const tip = `${escape(p.name)} · ${t('lvl {level}', { level: p.level })} <span style="opacity:.7">(${g.x}, ${g.y})</span>`;
       const existing = markers.current.get(p.id);
       if (existing) {
         existing.setLatLng(pos);

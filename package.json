@@ -1,9 +1,9 @@
 {
   "name": "palcms",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "CMS open source pour serveur dédié Palworld : installeur, site public et panel admin",
+  "description": "Open-source CMS for Palworld dedicated servers: installer, public website and admin panel",
   "packageManager": "pnpm@9.15.9",
   "engines": {
     "node": ">=20.12"

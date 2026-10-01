@@ -66,7 +66,7 @@ export async function publicRoutes(app: FastifyInstance) {
         { uid: string; public_id: string; name: string; level: number; online: number; playtime_seconds: number; first_seen: number; last_seen: number }
       >('SELECT uid, public_id, name, level, online, playtime_seconds, first_seen, last_seen FROM players WHERE public_id = ?')
       .get(req.params.id);
-    if (!row) return reply.code(404).send({ error: 'Joueur introuvable' });
+    if (!row) return reply.code(404).send({ error: 'Player not found' });
     const member = db
       .prepare<[string], { username: string; display_name: string }>(
         "SELECT username, display_name FROM users WHERE player_uid = ? AND status = 'active'",
@@ -100,7 +100,7 @@ export async function publicRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { slug: string } }>('/news/:slug', { preHandler: requireModule('news') }, async (req, reply) => {
     const row = db.prepare<[string], NewsRow>(`${NEWS_SELECT} WHERE n.slug = ? AND n.published = 1`).get(req.params.slug);
-    if (!row) return reply.code(404).send({ error: 'Article introuvable' });
+    if (!row) return reply.code(404).send({ error: 'Article not found' });
     return toNewsItem(row);
   });
 
@@ -110,7 +110,7 @@ export async function publicRoutes(app: FastifyInstance) {
         'SELECT * FROM pages WHERE slug = ? AND published = 1',
       )
       .get(req.params.slug);
-    if (!row) return reply.code(404).send({ error: 'Page introuvable' });
+    if (!row) return reply.code(404).send({ error: 'Page not found' });
     return {
       id: row.id,
       slug: row.slug,

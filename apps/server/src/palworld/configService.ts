@@ -15,15 +15,15 @@ export async function readConfigValues(): Promise<Record<string, string | number
 }
 
 /**
- * Modifie PalWorldSettings.ini. Les clés gérées par le CMS (API REST) sont ignorées.
- * Un changement de port, de joueurs max ou de mot de passe admin impose un redémarrage.
+ * Edits PalWorldSettings.ini. Keys managed by the CMS (REST API) are ignored.
+ * Changing the port, max players or admin password requires a restart.
  */
 export async function updateConfig(
   values: Record<string, string | number | boolean>,
   restart: boolean,
 ): Promise<{ restarted: boolean }> {
   const pal = getPalworldConfig();
-  if (!pal) throw new ConfigError('Serveur non configuré');
+  if (!pal) throw new ConfigError('Server not configured');
   const entries = await readConfigEntries();
   const before = {
     port: JSON.stringify(getValue(entries, 'PublicPort')),
@@ -46,8 +46,8 @@ export async function updateConfig(
   };
   const port = num('PublicPort', pal.port);
   const maxPlayers = num('ServerPlayerMaxNum', pal.maxPlayers);
-  if (port < 1024 || port > 65535 || port === pal.restApiPort) throw new ConfigError('Port de jeu invalide');
-  if (maxPlayers < 1 || maxPlayers > 32) throw new ConfigError('Joueurs maximum : entre 1 et 32');
+  if (port < 1024 || port > 65535 || port === pal.restApiPort) throw new ConfigError('Invalid game port');
+  if (maxPlayers < 1 || maxPlayers > 32) throw new ConfigError('Max players: between 1 and 32');
 
   await runPalctl(['write-config'], { input: serializeOptionSettings(entries) });
 
@@ -59,7 +59,7 @@ export async function updateConfig(
     if (portChanged) await runPalctl(['firewall-open', String(port)]);
   }
 
-  // Le CMS utilise le mot de passe admin pour parler à l'API : un changement impose un redémarrage.
+  // The CMS uses the admin password to talk to the API: changing it requires a restart.
   const mustRestart = restart || passwordChanged || portChanged || playersChanged;
   savePalworldConfig({
     ...pal,

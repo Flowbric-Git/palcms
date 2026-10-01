@@ -1,6 +1,6 @@
 /*
- * Aurora : les couleurs viennent des réglages du thème (var(--theme-from), var(--theme-to)).
- * Seul le site public est concerné : le CSS d'un thème est désactivé dans le panel admin.
+ * Aurora: the colors come from the theme settings (var(--theme-from), var(--theme-to)).
+ * Only the public site is affected: theme CSS is turned off in the admin panel.
  */
 
 :root {
@@ -67,7 +67,7 @@ body {
   border-top: 1px solid rgb(255 255 255 / 0.08);
 }
 
-/* Cartes du site en verre dépoli */
+/* Site cards in frosted glass */
 main section.rounded-xl,
 main .rounded-xl.border {
   background-color: rgb(15 23 42 / 0.55) !important;

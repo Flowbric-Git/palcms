@@ -1,43 +1,43 @@
-# Mentions tierces
+# Third-party notices
 
-## Carte de Palpagos — `apps/web/public/map-palpagos.jpg`
+## Palpagos map — `apps/web/public/map-palpagos.jpg`
 
-- **Contenu** : carte officielle de Palpagos (texture `T_WorldMap`), réduite de 8192 à 4096 px (JPEG, qualité 80).
-- **Droits** : **© Pocketpair, Inc.** Ce fichier n'est **pas** couvert par la licence MIT de PalCMS.
-- **Source** : [LukeHollandDev/palworld-live-map](https://github.com/LukeHollandDev/palworld-live-map), fichier `assets/palworld/maps/palpagos.jpg`. SHA-256 de l'original : `9961632d5c38a0a67fd18713fa63af0ac6f192e71fadeb5ba53ae696b8914dd1`.
-- **Calibration** (coordonnées monde `[maxX, maxY, minX, minY]`) : `[349400, 724400, -1099400, -724400]`.
+- **Content**: official Palpagos map (`T_WorldMap` texture), scaled down from 8192 to 4096 px (JPEG, quality 80).
+- **Rights**: **© Pocketpair, Inc.** This file is **not** covered by the PalCMS MIT license.
+- **Source**: [LukeHollandDev/palworld-live-map](https://github.com/LukeHollandDev/palworld-live-map), file `assets/palworld/maps/palpagos.jpg`. SHA-256 of the original: `9961632d5c38a0a67fd18713fa63af0ac6f192e71fadeb5ba53ae696b8914dd1`.
+- **Calibration** (world coordinates `[maxX, maxY, minX, minY]`): `[349400, 724400, -1099400, -724400]`.
 
-Si Pocketpair demande le retrait de ce fichier, il suffit de le supprimer. Le CMS affiche alors une carte neutre, et chaque admin peut importer sa propre image depuis le panel (*Gestion du site > Carte*).
+If Pocketpair asks for this file to be removed, simply delete it. The CMS then shows a neutral map, and each admin can upload their own image from the panel (*Website > Map*).
 
-## Conversions de coordonnées — `packages/shared/src/mapCoords.ts`
+## Coordinate conversions — `packages/shared/src/mapCoords.ts`
 
-- La conversion des coordonnées vers l'image reprend la convention de calibration de [palworld-live-map](https://github.com/LukeHollandDev/palworld-live-map) (licence MIT, © 2026 Luke Holland).
-- La conversion vers les coordonnées affichées en jeu reprend la formule de [palworld-coord](https://github.com/palworldlol/palworld-coord) (licence MIT).
+- The conversion of coordinates to the image follows the calibration convention of [palworld-live-map](https://github.com/LukeHollandDev/palworld-live-map) (MIT license, © 2026 Luke Holland).
+- The conversion to the coordinates shown in game follows the formula of [palworld-coord](https://github.com/palworldlol/palworld-coord) (MIT license).
 
-## Lecture des sauvegardes — `sav_cli`
+## Reading saves — `sav_cli`
 
-- Les données du monde (inventaires, Pals, guildes, bases) sont lues avec `sav_cli`, tiré de [palworld-server-tool](https://github.com/zaigie/palworld-server-tool) (licence Apache-2.0). Ses dépendances d'exécution (palsav-flex, palooz) sont sous licence GPL-3.0 ou ultérieure.
-- `sav_cli` **n'est pas inclus** dans PalCMS : il est téléchargé sur le VPS depuis la version officielle `v0.12.2` de palworld-server-tool, et son empreinte SHA-256 est vérifiée avant l'installation (`scripts/palctl`, commande `savtools-install`).
+- World data (inventories, Pals, guilds, bases) is read with `sav_cli`, taken from [palworld-server-tool](https://github.com/zaigie/palworld-server-tool) (Apache-2.0 license). Its runtime dependencies (palsav-flex, palooz) are under the GPL-3.0-or-later license.
+- `sav_cli` **is not included** in PalCMS: it is downloaded on the VPS from the official `v0.12.2` release of palworld-server-tool, and its SHA-256 checksum is checked before install (`scripts/palctl`, `savtools-install` command).
 
-## Noms des Pals, objets et talents — `apps/server/src/gamedata`
+## Pal, item and passive names — `apps/server/src/gamedata`
 
-- Tables de noms (en anglais) et coordonnées des points de voyage rapide et des tours de boss, extraites de [palworld-server-tool](https://github.com/zaigie/palworld-server-tool) (`web/src/assets`, licence Apache-2.0).
-- Les noms eux-mêmes appartiennent à Pocketpair, Inc.
+- Name tables (in English) and coordinates of fast travel points and boss towers, taken from [palworld-server-tool](https://github.com/zaigie/palworld-server-tool) (`web/src/assets`, Apache-2.0 license).
+- The names themselves belong to Pocketpair, Inc.
 
-## Liste du Paldex — `packages/shared/src/paldex.json`
+## Paldex list — `packages/shared/src/paldex.json`
 
-- Numéros, noms et éléments des 288 Pals de Palworld 1.0, extraits des fichiers du jeu par [AlbertoJALJ/Palworld](https://github.com/AlbertoJALJ/Palworld) (`data/pals.json`). Seuls ces faits sont repris.
-- Les noms appartiennent à Pocketpair, Inc.
+- Numbers, names and elements of the 288 Pals of Palworld 1.0, extracted from the game files by [AlbertoJALJ/Palworld](https://github.com/AlbertoJALJ/Palworld) (`data/pals.json`). Only these facts are used.
+- The names belong to Pocketpair, Inc.
 
-## Images des Pals — `apps/web/public/pals`
+## Pal images — `apps/web/public/pals`
 
-- Icônes des Pals affichées dans le Paldex, reprises de [palworld-server-tool](https://github.com/zaigie/palworld-server-tool) (`web/src/assets/pals`).
-- **Droits** : **© Pocketpair, Inc.** Ces images ne sont **pas** couvertes par la licence MIT de PalCMS. Si leur retrait est demandé, il suffit de supprimer le dossier : le Paldex affiche alors un emplacement neutre à la place.
+- Pal icons shown in the Paldex, taken from [palworld-server-tool](https://github.com/zaigie/palworld-server-tool) (`web/src/assets/pals`).
+- **Rights**: **© Pocketpair, Inc.** These images are **not** covered by the PalCMS MIT license. If their removal is requested, simply delete the folder: the Paldex then shows a neutral placeholder instead.
 
-## Marques
+## Trademarks
 
-Palworld est une marque de Pocketpair, Inc. PalCMS est un projet indépendant, sans lien avec Pocketpair : il n'est ni affilié, ni approuvé, ni sponsorisé par cette société.
+Palworld is a trademark of Pocketpair, Inc. PalCMS is an independent project, not affiliated with Pocketpair: it is neither affiliated with, endorsed nor sponsored by that company.
 
-## Dépendances
+## Dependencies
 
-Les bibliothèques utilisées (Fastify, React, Leaflet, TipTap, Tailwind CSS, better-sqlite3…) sont distribuées sous leurs propres licences open source. Ces licences sont incluses dans leurs paquets respectifs, dans `node_modules`.
+The libraries used (Fastify, React, Leaflet, TipTap, Tailwind CSS, better-sqlite3…) are distributed under their own open-source licenses. These licenses are included in their respective packages, in `node_modules`.

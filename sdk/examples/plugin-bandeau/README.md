@@ -1,9 +1,10 @@
-# Bandeau d'annonce (plugin d'exemple)
+# Announcement banner (example plugin)
 
-Affiche un bandeau en haut de toutes les pages du site : événement, maintenance, wipe, lien Discord… Le message, le lien, la couleur, la date de fin et la possibilité de le fermer se règlent dans *Panel admin > Extensions > Plugins > Bandeau d'annonce* (icône Réglages). Les clics sur le bouton sont comptés jour par jour dans *Extensions > Bandeau d'annonce*.
+Shows a banner at the top of every page of the site: event, maintenance, wipe, Discord link… The message, the link, the color, the end date and whether visitors can close it are set in *Admin panel > Extensions > Plugins > Announcement banner* (Settings icon). Clicks on the button are counted day by day in *Extensions > Announcement banner*.
 
-Ce plugin montre :
-- des réglages modifiables dans le panel (`palcms.json` > `settings`, lus côté serveur avec `pal.config()`) ;
-- une table en base (`pal.migrate`) et des routes API publiques et réservées à l'équipe (`pal.route`) ;
-- un bloc sur toutes les pages (`pal.widget('layout.top', …)`) et une page dans le panel (`pal.adminPage`) ;
-- des classes Tailwind propres au plugin (`src/style.css`).
+This plugin shows:
+- settings editable in the panel (`palcms.json` > `settings`, read on the server with `pal.config()`);
+- a database table (`pal.migrate`) and API routes, public and team-only (`pal.route`);
+- a block on every page (`pal.widget('layout.top', …)`) and a page in the panel (`pal.adminPage`);
+- the plugin's own texts in English and French, following the visitor's language (`lang()` from `@palcms/sdk`, PalCMS 1.1.0+);
+- Tailwind classes specific to the plugin (`src/style.css`).

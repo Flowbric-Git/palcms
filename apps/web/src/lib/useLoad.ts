@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from './api';
 
-/** Charge une ressource de l'API avec rechargement manuel. */
+/** Loads an API resource, with manual reload. */
 export function useLoad<T>(path: string | null) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);

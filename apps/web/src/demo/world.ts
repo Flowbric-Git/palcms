@@ -1,6 +1,6 @@
-// Démo : données du monde, surveillance, événements, sanctions, signalements et mises à jour.
+// Demo: world data, monitoring, events, sanctions, reports and updates.
 
-import { PALDEX, paldexId } from '@palcms/shared';
+import { INI_FIELDS, PALDEX, paldexId } from '@palcms/shared';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -38,18 +38,18 @@ const PALS: [string, string][] = [
   ['SakuraSaurus', 'Broncherry'], ['Alpaca', 'Melpaca'], ['GrassMammoth', 'Mammorest'], ['NightFox', 'Nox'], ['FlowerDinosaur', 'Dinossom'],
   ['IceHorse', 'Frostallion'], ['Horus', 'Faleris'], ['BlackGriffon', 'Shadowbeak'], ['ElecPanda', 'Grizzbolt'],
 ];
-const PASSIVES = ['Chanceux', 'Légende', 'Artisan', 'Féroce', 'Peau dure', 'Empereur des flammes', 'Insomniaque', 'Chef mineur'];
+const PASSIVES = ['Lucky', 'Legend', 'Artisan', 'Ferocious', 'Hard Skin', 'Flame Emperor', 'Insomniac', 'Mine Foreman'];
 const ITEMS: [string, string, number][] = [
   ['money', 'Gold Coin', 80000], ['stone', 'Stone', 900], ['wood', 'Wood', 700], ['palsphere', 'Pal Sphere', 40], ['palsphere_mega', 'Mega Sphere', 15],
   ['copperingot', 'Ingot', 120], ['berries', 'Red Berries', 60], ['honey', 'Honey', 12], ['palfluid', 'Aquatic Pal Fluids', 30], ['cloth', 'Cloth', 80],
 ];
 const GUILDS = [
-  { id: 'g1a2b3c4d5e6', name: 'Les Pionniers', level: 22, members: [0, 1, 2], bases: [[-250000, 150000], [-180000, 60000]] },
-  { id: 'g7f8a9b0c1d2', name: 'Ordre du Phénix', level: 17, members: [3, 4, 5], bases: [[-420000, -60000]] },
+  { id: 'g1a2b3c4d5e6', name: 'The Pioneers', level: 22, members: [0, 1, 2], bases: [[-250000, 150000], [-180000, 60000]] },
+  { id: 'g7f8a9b0c1d2', name: 'Order of the Phoenix', level: 17, members: [3, 4, 5], bases: [[-420000, -60000]] },
   { id: 'ge3f4a5b6c7d', name: 'Tanuki Corp', level: 9, members: [6, 7], bases: [[-60000, 220000]] },
-  { id: 'g8e9f0a1b2c3', name: 'Les Nomades', level: 4, members: [8, 9], bases: [] },
+  { id: 'g8e9f0a1b2c3', name: 'The Nomads', level: 4, members: [8, 9], bases: [] },
 ];
-// Points fixes (échantillon) pour les calques de la carte
+// Fixed points (sample) for the map layers
 const FAST_TRAVEL: [number, number][] = [
   [-266563, 174506], [-361695, -112009], [81363, 90183], [29975, 413325], [-321596, 209085], [-778215, -36026], [-108093, 77936], [-29427, -115900],
   [-470000, 120000], [-150000, -250000], [60000, -180000], [-560000, -300000],
@@ -78,7 +78,7 @@ interface PalRow {
 }
 
 export function createWorldDemo(ctx: DemoContext) {
-  // Données du monde générées une fois, identiques pour tous les visiteurs
+  // World data generated once, the same for every visitor
   const r = rng(7);
   const world = ctx.players.map((p, i) => {
     const pals: PalRow[] = Array.from({ length: 6 + Math.floor(r() * 26) }, () => {
@@ -98,10 +98,10 @@ export function createWorldDemo(ctx: DemoContext) {
       };
     }).sort((a, b) => b.level - a.level);
     const inventory = [
-      { key: 'CommonContainerId', label: 'Inventaire', items: ITEMS.filter(() => r() < 0.75).map(([id, name, max], slot) => ({ id, name, count: 1 + Math.floor(r() * max), slot })) },
-      { key: 'WeaponLoadOutContainerId', label: 'Armes', items: [{ id: 'assaultrifle_default1', name: 'Assault Rifle', count: 1, slot: 0 }] },
-      { key: 'PlayerEquipArmorContainerId', label: 'Équipement', items: [{ id: 'clotharmor', name: 'Cloth Outfit', count: 1, slot: 0 }] },
-      { key: 'EssentialContainerId', label: 'Objets essentiels', items: [{ id: 'glider_good', name: 'Mega Glider', count: 1, slot: 0 }] },
+      { key: 'CommonContainerId', label: 'Inventory', items: ITEMS.filter(() => r() < 0.75).map(([id, name, max], slot) => ({ id, name, count: 1 + Math.floor(r() * max), slot })) },
+      { key: 'WeaponLoadOutContainerId', label: 'Weapons', items: [{ id: 'assaultrifle_default1', name: 'Assault Rifle', count: 1, slot: 0 }] },
+      { key: 'PlayerEquipArmorContainerId', label: 'Equipment', items: [{ id: 'clotharmor', name: 'Cloth Outfit', count: 1, slot: 0 }] },
+      { key: 'EssentialContainerId', label: 'Key items', items: [{ id: 'glider_good', name: 'Mega Glider', count: 1, slot: 0 }] },
     ];
     if (i === 5) inventory[0].items.push({ id: 'palsphere_legend', name: 'Legendary Sphere', count: 45000, slot: 20 });
     const statusPoints = { 最大HP: Math.floor(r() * 20), 最大SP: Math.floor(r() * 10), 攻撃力: Math.floor(r() * 15), 所持重量: Math.floor(r() * 20) };
@@ -130,29 +130,29 @@ export function createWorldDemo(ctx: DemoContext) {
 
   const s = () => {
     const st = ctx.state();
-    // Valeurs par défaut des nouveautés pour une démo commencée avant elles
+    // Defaults of newer features for a demo started before them
     st.extra ??= {
       tickets: [
-        { id: 1, userId: 0, username: 'lyra', kind: 'report', subject: 'Sphères infinies', message: 'Oskar a des milliers de sphères légendaires, c’est bizarre.', target: 'Oskar', status: 'open', reply: null, repliedBy: null, createdAt: ctx.start - 3 * 3600_000 },
-        { id: 2, userId: 0, username: 'kaito', kind: 'suggestion', subject: 'Chasse aux œufs', message: 'Un événement chasse aux œufs le week-end prochain ?', target: null, status: 'answered', reply: 'Bonne idée, c’est prévu !', repliedBy: 'admin', createdAt: ctx.start - 2 * DAY },
+        { id: 1, userId: 0, username: 'lyra', kind: 'report', subject: 'Endless spheres', message: 'Oskar has thousands of Legendary Spheres, that is odd.', target: 'Oskar', status: 'open', reply: null, repliedBy: null, createdAt: ctx.start - 3 * 3600_000 },
+        { id: 2, userId: 0, username: 'kaito', kind: 'suggestion', subject: 'Egg hunt', message: 'How about an egg hunt event next weekend?', target: null, status: 'answered', reply: 'Great idea, it is planned!', repliedBy: 'admin', createdAt: ctx.start - 2 * DAY },
       ],
       myTickets: [] as Any[],
       events: [
-        { id: 1, name: 'Week-end XP x3', description: 'Expérience triplée tout le week-end !', startsAt: ctx.start + 2 * DAY, endsAt: ctx.start + 4 * DAY, values: { ExpRate: 3, PalCaptureRate: 2 }, restart: true, isPublic: true, status: 'scheduled', error: null },
-        { id: 2, name: 'Nuit de la capture', description: 'Taux de capture doublé.', startsAt: ctx.start - 3600_000, endsAt: ctx.start + 5 * 3600_000, values: { PalCaptureRate: 2 }, restart: true, isPublic: true, status: 'active', error: null },
-        { id: 3, name: 'Lancement du serveur', description: 'Première semaine en taux x2.', startsAt: ctx.start - 14 * DAY, endsAt: ctx.start - 7 * DAY, values: { ExpRate: 2 }, restart: true, isPublic: true, status: 'done', error: null },
+        { id: 1, name: 'XP x3 weekend', description: 'Triple experience all weekend long!', startsAt: ctx.start + 2 * DAY, endsAt: ctx.start + 4 * DAY, values: { ExpRate: 3, PalCaptureRate: 2 }, restart: true, isPublic: true, status: 'scheduled', error: null },
+        { id: 2, name: 'Capture night', description: 'Double capture rate.', startsAt: ctx.start - 3600_000, endsAt: ctx.start + 5 * 3600_000, values: { PalCaptureRate: 2 }, restart: true, isPublic: true, status: 'active', error: null },
+        { id: 3, name: 'Server launch', description: 'First week with x2 rates.', startsAt: ctx.start - 14 * DAY, endsAt: ctx.start - 7 * DAY, values: { ExpRate: 2 }, restart: true, isPublic: true, status: 'done', error: null },
       ],
       presets: [] as Any[],
       flags: [
-        { id: 1, uid: ctx.players[5].uid, name: ctx.players[5].name, publicId: ctx.players[5].publicId, kind: 'items:palsphere_legend', severity: 3, details: '45 000 × Legendary Sphere (seuil 20 000)', createdAt: ctx.start - 40 * 60_000, resolvedAt: null, resolvedBy: null, resolution: null },
+        { id: 1, uid: ctx.players[5].uid, name: ctx.players[5].name, publicId: ctx.players[5].publicId, kind: 'items:palsphere_legend', severity: 3, details: '45000 × Legendary Sphere (threshold 20000)', createdAt: ctx.start - 40 * 60_000, resolvedAt: null, resolvedBy: null, resolution: null },
       ],
       sanctions: [
-        { id: 1, uid: ctx.players[5].uid, type: 'warning', reason: 'Langage inapproprié dans le chat', expiresAt: null, createdAt: ctx.start - 5 * DAY, createdBy: 'admin' },
-        { id: 2, uid: ctx.players[5].uid, type: 'note', reason: 'À surveiller : stock de sphères anormal', expiresAt: null, createdAt: ctx.start - 3600_000, createdBy: 'admin' },
+        { id: 1, uid: ctx.players[5].uid, type: 'warning', reason: 'Inappropriate language in the chat', expiresAt: null, createdAt: ctx.start - 5 * DAY, createdBy: 'admin' },
+        { id: 2, uid: ctx.players[5].uid, type: 'note', reason: 'Keep an eye on: abnormal sphere stock', expiresAt: null, createdAt: ctx.start - 3600_000, createdBy: 'admin' },
       ],
       alerts: [
-        { id: 1, ts: ctx.start - 26 * 3600_000, level: 'critical', kind: 'crash', message: 'Le serveur s’est arrêté alors qu’aucun arrêt n’était prévu (crash probable)', resolvedAt: ctx.start - 26 * 3600_000 + 60_000 },
-        { id: 2, ts: ctx.start - 3 * 3600_000, level: 'warning', kind: 'fps', message: 'FPS du serveur bas : 17 (seuil 20)', resolvedAt: ctx.start - 3 * 3600_000 + 5 * 60_000 },
+        { id: 1, ts: ctx.start - 26 * 3600_000, level: 'critical', kind: 'crash', message: 'The server stopped although no stop was planned (probable crash)', resolvedAt: ctx.start - 26 * 3600_000 + 60_000 },
+        { id: 2, ts: ctx.start - 3 * 3600_000, level: 'warning', kind: 'fps', message: 'Low server FPS: 17 (threshold 20)', resolvedAt: ctx.start - 3 * 3600_000 + 5 * 60_000 },
       ],
       thresholds: { enabled: true, fpsLow: 20, memoryHigh: 90, diskLow: 10 },
       anticheat: { enabled: true, levelJump: 6, levelsPerHour: 20, itemStack: 20000, money: 10000000 },
@@ -164,15 +164,16 @@ export function createWorldDemo(ctx: DemoContext) {
   };
 
   const publicEvent = (e: Any) => ({ id: e.id, name: e.name, description: e.description, startsAt: e.startsAt, endsAt: e.endsAt, status: e.status, changes: describe(e.values) });
-  const LABELS: Record<string, string> = { ExpRate: "Taux d'expérience", PalCaptureRate: 'Taux de capture', CollectionDropRate: 'Taux de récolte', EnemyDropItemRate: 'Taux de butin des ennemis', Difficulty: 'Difficulté', DeathPenalty: 'Pénalité de mort' };
-  const describe = (v: Record<string, Any>) => Object.entries(v).map(([k, x]) => `${LABELS[k] ?? k} : ${typeof x === 'number' && /Rate/.test(k) ? `x${x}` : x}`);
+  // Same wording as describeValues() on the server, translated on display.
+  const describe = (v: Record<string, Any>) =>
+    Object.entries(v).map(([k, x]) => `${INI_FIELDS[k]?.label ?? k}: ${typeof x === 'number' && /Rate/.test(k) ? `x${x}` : x}`);
 
   const PRESETS = [
-    { id: 'casual', name: 'Détente', description: 'Pour jouer tranquille : plus d’XP, captures faciles, aucune perte à la mort.', values: { Difficulty: 'Casual', ExpRate: 1.5, PalCaptureRate: 1.5, DeathPenalty: 'None' } },
-    { id: 'normal', name: 'Normal', description: 'Les réglages par défaut du jeu.', values: { Difficulty: 'None', ExpRate: 1, PalCaptureRate: 1, DeathPenalty: 'All' } },
-    { id: 'hard', name: 'Difficile', description: 'Ennemis plus forts, ressources plus rares, on perd tout à la mort.', values: { Difficulty: 'Hard', ExpRate: 0.8, CollectionDropRate: 0.8, DeathPenalty: 'All' } },
-    { id: 'x2', name: 'Taux x2', description: 'Expérience, captures, récolte et butin doublés.', values: { ExpRate: 2, PalCaptureRate: 2, CollectionDropRate: 2, EnemyDropItemRate: 2 } },
-    { id: 'x3', name: 'Taux x3', description: 'Expérience, captures, récolte et butin triplés.', values: { ExpRate: 3, PalCaptureRate: 2, CollectionDropRate: 3, EnemyDropItemRate: 3 } },
+    { id: 'casual', name: 'Casual', description: 'Relaxed play: more XP, easy captures, nothing lost on death.', values: { Difficulty: 'Casual', ExpRate: 1.5, PalCaptureRate: 1.5, DeathPenalty: 'None' } },
+    { id: 'normal', name: 'Normal', description: 'The default game settings.', values: { Difficulty: 'None', ExpRate: 1, PalCaptureRate: 1, DeathPenalty: 'All' } },
+    { id: 'hard', name: 'Hard', description: 'Stronger enemies, scarcer resources, everything lost on death.', values: { Difficulty: 'Hard', ExpRate: 0.8, CollectionDropRate: 0.8, DeathPenalty: 'All' } },
+    { id: 'x2', name: 'Rates x2', description: 'Double experience, captures, gathering and loot.', values: { ExpRate: 2, PalCaptureRate: 2, CollectionDropRate: 2, EnemyDropItemRate: 2 } },
+    { id: 'x3', name: 'Rates x3', description: 'Triple experience, captures, gathering and loot.', values: { ExpRate: 3, PalCaptureRate: 2, CollectionDropRate: 3, EnemyDropItemRate: 3 } },
   ];
   const applyValues = (values: Record<string, Any>) => {
     for (const [k, v] of Object.entries(values)) {
@@ -181,7 +182,7 @@ export function createWorldDemo(ctx: DemoContext) {
     }
   };
 
-  /** Routes publiques (ou joueur connecté). Renvoie undefined si la route n'est pas gérée ici. */
+  /** Public routes (or logged-in player). Returns undefined when the route is not handled here. */
   function publicRoute(method: string, path: string, seg: string[], q: URLSearchParams, body: Any): Any {
     const route = `${method} ${path}`;
     if (route === 'GET features/guilds') {
@@ -189,7 +190,7 @@ export function createWorldDemo(ctx: DemoContext) {
     }
     if (method === 'GET' && seg[0] === 'features' && seg[1] === 'guilds' && seg[2]) {
       const g = GUILDS.find((x) => x.id === seg[2]);
-      if (!g) ctx.fail(404, 'Guilde introuvable');
+      if (!g) ctx.fail(404, 'Guild not found');
       return guildDetail(g!);
     }
     if (route === 'GET features/paldex') {
@@ -199,13 +200,13 @@ export function createWorldDemo(ctx: DemoContext) {
       let scope: Any = { type: 'server', id: null, name: 'Serveur', guild: null };
       if (joueur) {
         const i = ctx.players.findIndex((p) => p.publicId === joueur);
-        if (i < 0) ctx.fail(404, 'Joueur introuvable dans la sauvegarde');
+        if (i < 0) ctx.fail(404, 'Player not found in the save file');
         const g = guildOf(i);
         scope = { type: 'player', id: joueur, name: ctx.players[i].name, guild: g ? { id: g.id, name: g.name } : null };
         owners = [i];
       } else if (guilde) {
         const g = GUILDS.find((x) => x.id === guilde);
-        if (!g) ctx.fail(404, 'Guilde introuvable');
+        if (!g) ctx.fail(404, 'Guild not found');
         scope = { type: 'guild', id: guilde, name: g!.name, guild: null };
         owners = g!.members;
       }
@@ -265,9 +266,9 @@ export function createWorldDemo(ctx: DemoContext) {
       if (next.getTime() < Date.now()) next.setDate(next.getDate() + 1);
       return { status: ctx.status(), uptimePercent: 99.9, days, hourly, nextRestart: next.getTime() };
     }
-    // Joueur connecté
+    // Logged-in player
     if (route === 'GET features/me/character') {
-      if (!ctx.state().user) ctx.fail(401, 'Connexion requise');
+      if (!ctx.state().user) ctx.fail(401, 'Login required');
       const p = ctx.players[0];
       const w = world[0];
       const g = guildOf(0)!;
@@ -280,13 +281,13 @@ export function createWorldDemo(ctx: DemoContext) {
       };
     }
     if (route === 'GET features/me/tickets') {
-      if (!ctx.state().user) ctx.fail(401, 'Connexion requise');
+      if (!ctx.state().user) ctx.fail(401, 'Login required');
       return s().myTickets;
     }
     if (route === 'POST features/tickets') {
-      if (!ctx.state().user) ctx.fail(401, 'Connexion requise');
-      if (!body?.subject || String(body.subject).length < 3) ctx.fail(400, 'Sujet trop court');
-      if (!body?.message || String(body.message).length < 10) ctx.fail(400, 'Message trop court (10 caractères minimum)');
+      if (!ctx.state().user) ctx.fail(401, 'Login required');
+      if (!body?.subject || String(body.subject).length < 3) ctx.fail(400, 'Subject too short');
+      if (!body?.message || String(body.message).length < 10) ctx.fail(400, 'Message too short (10 characters minimum)');
       const t = { id: s().nextId++, userId: 0, username: ctx.state().user.username, kind: body.kind, subject: body.subject, message: body.message, target: body.target ?? null, status: 'open', reply: null, repliedBy: null, createdAt: Date.now() };
       s().tickets.unshift(t);
       s().myTickets.unshift(t);
@@ -295,12 +296,12 @@ export function createWorldDemo(ctx: DemoContext) {
     return undefined;
   }
 
-  /** Routes de l'équipe (la connexion est déjà vérifiée). */
+  /** Team routes (login already checked). */
   function adminRoute(method: string, path: string, seg: string[], q: URLSearchParams, body: Any): Any {
     const route = `${method} ${path}`;
     const v = s();
 
-    // Données du monde
+    // World data
     if (route === 'GET features/world/status') {
       return {
         available: true,
@@ -324,7 +325,7 @@ export function createWorldDemo(ctx: DemoContext) {
     }
     if (method === 'GET' && path.startsWith('features/world/players/')) {
       const i = ctx.players.findIndex((p) => p.publicId === seg[3]);
-      if (i < 0) ctx.fail(404, 'Joueur introuvable');
+      if (i < 0) ctx.fail(404, 'Player not found');
       const p = ctx.players[i];
       const w = wOf(p.publicId)!;
       const g = guildOf(i);
@@ -400,7 +401,7 @@ export function createWorldDemo(ctx: DemoContext) {
       return { heatmap, daily, averageSessionSeconds: 5820, activeLast7Days: 9, returningRate: 78, totalPlayers: ctx.players.length + 14 };
     }
 
-    // Préréglages, import / export, événements
+    // Presets, import / export, events
     if (route === 'GET features/presets') return [...PRESETS.map((p) => ({ ...p, builtin: true, changes: describe(p.values) })), ...v.presets.map((p: Any) => ({ ...p, changes: describe(p.values) }))];
     if (route === 'POST features/presets') {
       const p = { id: String(v.nextId++), name: body.name, description: body.description ?? '', values: body.values, builtin: false };
@@ -413,7 +414,7 @@ export function createWorldDemo(ctx: DemoContext) {
     }
     if (method === 'POST' && seg[1] === 'presets' && seg[3] === 'apply') {
       const p = [...PRESETS, ...v.presets].find((x: Any) => x.id === seg[2]);
-      if (!p) ctx.fail(404, 'Préréglage introuvable');
+      if (!p) ctx.fail(404, 'Preset not found');
       applyValues(p!.values);
       ctx.record('preset.apply', p!.name);
       return { ok: true, restarted: !!body?.restart };
@@ -430,8 +431,8 @@ export function createWorldDemo(ctx: DemoContext) {
     }
     if (route === 'GET features/events') return v.events.map((e: Any) => ({ ...e, changes: describe(e.values) })).sort((a: Any, b: Any) => b.startsAt - a.startsAt);
     if (route === 'POST features/events') {
-      if (!body.name || !Object.keys(body.values ?? {}).length) ctx.fail(400, 'Choisis au moins un réglage de jeu à modifier');
-      if (body.endsAt <= body.startsAt) ctx.fail(400, 'La fin doit être après le début');
+      if (!body.name || !Object.keys(body.values ?? {}).length) ctx.fail(400, 'Choose at least one gameplay setting to change');
+      if (body.endsAt <= body.startsAt) ctx.fail(400, 'The end must be after the start');
       const e = { id: v.nextId++, name: body.name, description: body.description ?? '', startsAt: body.startsAt, endsAt: body.endsAt, values: body.values, restart: !!body.restart, isPublic: !!body.isPublic, status: 'scheduled', error: null };
       v.events.push(e);
       ctx.record('event.create', e.name);
@@ -461,8 +462,8 @@ export function createWorldDemo(ctx: DemoContext) {
     if (route === 'POST features/anticheat/scan') return { found: 0 };
     if (method === 'POST' && seg[1] === 'anticheat' && seg[4] === 'resolve') {
       const f = v.flags.find((x: Any) => x.id === Number(seg[3]));
-      if (!f) ctx.fail(404, 'Alerte introuvable');
-      Object.assign(f, { resolvedAt: Date.now(), resolvedBy: ctx.state().user.username, resolution: { ignore: 'Ignorée', kick: 'Joueur expulsé', ban: 'Joueur banni' }[body.action as 'ignore'] });
+      if (!f) ctx.fail(404, 'Alert not found or already handled');
+      Object.assign(f, { resolvedAt: Date.now(), resolvedBy: ctx.state().user.username, resolution: { ignore: 'Ignored', kick: 'Player kicked', ban: 'Player banned' }[body.action as 'ignore'] });
       if (body.action !== 'ignore') {
         const p = ctx.players.find((x) => x.uid === f.uid);
         if (p) p.online = false;
@@ -517,7 +518,7 @@ export function createWorldDemo(ctx: DemoContext) {
     }
     if (method === 'POST' && seg[1] === 'tickets' && seg[3] === 'reply') {
       const t = v.tickets.find((x: Any) => x.id === Number(seg[2]));
-      if (!t) ctx.fail(404, 'Demande introuvable');
+      if (!t) ctx.fail(404, 'Request not found');
       if (body.reply) Object.assign(t, { reply: body.reply, repliedBy: ctx.state().user.username });
       t.status = body.close ? 'closed' : 'answered';
       return { ok: true };
@@ -527,9 +528,9 @@ export function createWorldDemo(ctx: DemoContext) {
       return { ok: true };
     }
 
-    // Mises à jour
+    // Updates
     if (route === 'GET features/updates/server') {
-      return { settings: v.serverUpdate, installed: '20304050', latest: '20304050', outdated: false, checkedAt: Date.now() - 12 * 60_000, error: null, pending: null, running: false, lastResult: `Mis à jour le ${new Date(ctx.start - 3 * DAY).toLocaleString('fr-FR')}` };
+      return { settings: v.serverUpdate, installed: '20304050', latest: '20304050', outdated: false, checkedAt: Date.now() - 12 * 60_000, error: null, pending: null, running: false, lastResult: `Updated on ${new Date(ctx.start - 3 * DAY).toISOString().slice(0, 16).replace('T', ' ')}` };
     }
     if (route === 'PUT features/updates/server/settings') {
       v.serverUpdate = body;

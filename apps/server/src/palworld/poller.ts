@@ -9,7 +9,7 @@ import { modules } from '../core/modules';
 import { rankPlayers, type RankablePlayer } from '../modules/leaderboard/rank';
 import { palworld, type PalInfo, type PalMetrics, type PalPlayer } from './restClient';
 
-/** Identifiant public stable d'un joueur, dérivé de son identifiant Palworld (jamais exposé). */
+/** Stable public id of a player, derived from their Palworld id (never exposed). */
 export function publicPlayerId(uid: string): string {
   return crypto.createHmac('sha256', secretSalt()).update(uid).digest('hex').slice(0, 12);
 }
@@ -36,7 +36,7 @@ class Poller {
     this.timer = null;
   }
 
-  /** Oublie l'état du serveur précédent (ex. après avoir connecté un autre serveur). */
+  /** Forgets the previous server state (e.g. after connecting another server). */
   reset(): void {
     this.info = null;
     this.infoAt = 0;
@@ -54,7 +54,7 @@ class Poller {
     return this.status?.online ? this.metrics : null;
   }
 
-  /** Joueurs connectés, avec leurs données privées (réservé à l'admin). */
+  /** Online players, with their private data (admin only). */
   getOnlineRaw(): PalPlayer[] {
     return this.online;
   }
@@ -90,7 +90,7 @@ class Poller {
   async tick(): Promise<void> {
     if (this.running || !isSetupDone()) return;
     if (!palworldConnection()) {
-      // Site seul : aucun serveur connecté, on diffuse simplement un statut hors ligne.
+      // Website only: no server connected, just broadcast an offline status.
       this.status = this.offlineStatus();
       this.online = [];
       return;
@@ -156,7 +156,7 @@ class Poller {
     }
   }
 
-  /** Met à jour la table players : présence, niveau, sessions et temps de jeu cumulé. */
+  /** Updates the players table: presence, level, sessions and total playtime. */
   private recordPlayers(players: PalPlayer[], now: number, elapsedSec: number): void {
     const seen = new Set<string>();
     const joined: { uid: string; name: string }[] = [];

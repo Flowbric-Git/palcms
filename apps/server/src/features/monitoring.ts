@@ -22,20 +22,20 @@ export function diskUsage(path = '/'): { total: number; free: number } | null {
 }
 
 export function memoryUsage() {
-  // Sous Linux, os.freemem() ignore le cache disque : on lit MemAvailable quand c'est possible.
+  // On Linux, os.freemem() ignores the disk cache: read MemAvailable when possible.
   let available = os.freemem();
   try {
     const m = /MemAvailable:\s+(\d+) kB/.exec(fs.readFileSync('/proc/meminfo', 'utf8'));
     if (m) available = Number(m[1]) * 1024;
   } catch {
-    // pas de /proc (Windows, macOS en développement)
+    // no /proc (Windows, macOS in development)
   }
   return { total: os.totalmem(), available };
 }
 
 /**
- * Heures de présence : pour chaque session, ajoute 1 dans la case [jour de la semaine][heure]
- * de chaque heure touchée. Divisé par le nombre de semaines, ça donne le nombre moyen de joueurs.
+ * Attendance hours: for each session, adds 1 to the [weekday][hour] cell
+ * of every hour it covers. Divided by the number of weeks, this gives the average number of players.
  */
 export function attendanceHeatmap(sessions: { started_at: number; ended_at: number | null }[], from: number, to: number): number[][] {
   const grid = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
@@ -62,7 +62,7 @@ export function createMonitoring(host: FeatureHost, bus: FeatureBus): Feature {
   const openAlert = (kind: string) =>
     db.prepare('SELECT id FROM pro_alerts WHERE kind = ? AND resolved_at IS NULL').get(kind) as { id: number } | undefined;
 
-  /** Crée une alerte (une seule ouverte par type) ; renvoie true si elle est nouvelle. */
+  /** Creates an alert (one open alert per kind); returns true when it is new. Messages are stored in English. */
   const raise = (level: 'info' | 'warning' | 'critical', kind: string, message: string) => {
     if (kind !== 'crash' && openAlert(kind)) return false;
     db.prepare('INSERT INTO pro_alerts (ts, level, kind, message) VALUES (?, ?, ?, ?)').run(Date.now(), level, kind, message);
@@ -74,7 +74,7 @@ export function createMonitoring(host: FeatureHost, bus: FeatureBus): Feature {
     strikes.delete(kind);
     db.prepare('UPDATE pro_alerts SET resolved_at = ? WHERE kind = ? AND resolved_at IS NULL').run(Date.now(), kind);
   };
-  /** Alerte après N mesures consécutives au-delà du seuil, pour ignorer les pics isolés. */
+  /** Alerts after N measurements in a row past the threshold, to ignore isolated spikes. */
   const check = (kind: string, bad: boolean, times: number, level: 'warning' | 'critical', message: () => string) => {
     if (!bad) return resolve(kind);
     const n = (strikes.get(kind) ?? 0) + 1;
@@ -87,7 +87,7 @@ export function createMonitoring(host: FeatureHost, bus: FeatureBus): Feature {
     const managed = host.server.mode() === 'managed';
     const connected = host.server.mode() !== 'none';
 
-    // Disponibilité : une minute de plus au compteur du jour
+    // Uptime: one more minute on today's counter
     if (connected) {
       db.prepare(
         `INSERT INTO pro_uptime (day, online_minutes, total_minutes) VALUES (?, ?, 1)
@@ -99,23 +99,23 @@ export function createMonitoring(host: FeatureHost, bus: FeatureBus): Feature {
     if (!t.enabled) return;
     const m = host.server.metrics();
     if (status.online && m) {
-      check('fps', m.serverfps < t.fpsLow, 3, 'warning', () => `FPS du serveur bas : ${m.serverfps} (seuil ${t.fpsLow})`);
+      check('fps', m.serverfps < t.fpsLow, 3, 'warning', () => `Low server FPS: ${m.serverfps} (threshold ${t.fpsLow})`);
     } else resolve('fps');
 
     const mem = memoryUsage();
     const memPct = Math.round((1 - mem.available / mem.total) * 100);
-    check('memory', memPct >= t.memoryHigh, 3, 'warning', () => `Mémoire du VPS utilisée à ${memPct} % (seuil ${t.memoryHigh} %)`);
+    check('memory', memPct >= t.memoryHigh, 3, 'warning', () => `VPS memory ${memPct}% used (threshold ${t.memoryHigh}%)`);
 
     const disk = diskUsage();
     if (disk) {
       const freePct = Math.round((disk.free / disk.total) * 100);
-      check('disk', freePct <= t.diskLow, 1, 'critical', () => `Disque presque plein : ${freePct} % libre (${(disk.free / 1e9).toFixed(1)} Go)`);
+      check('disk', freePct <= t.diskLow, 1, 'critical', () => `Disk almost full: ${freePct}% free (${(disk.free / 1e9).toFixed(1)} GB)`);
     }
 
     if (managed) {
       const active = (await host.server.state()) === 'active';
-      // Service lancé mais l'API ne répond pas depuis 3 minutes : serveur bloqué ou mal configuré.
-      check('api', active && !status.online && Date.now() - lastIntentional > 5 * 60_000, 3, 'warning', () => 'Le service Palworld tourne mais son API REST ne répond pas');
+      // Service running but the API has not answered for 3 minutes: server stuck or misconfigured.
+      check('api', active && !status.online && Date.now() - lastIntentional > 5 * 60_000, 3, 'warning', () => 'The Palworld service is running but its REST API does not answer');
     }
   };
 
@@ -136,7 +136,7 @@ export function createMonitoring(host: FeatureHost, bus: FeatureBus): Feature {
         bus.on('intentional', () => (lastIntentional = Date.now())),
         host.events.on('server:action', () => (lastIntentional = Date.now())),
         host.events.on('server:offline', () => {
-          if (Date.now() - lastIntentional > 10 * 60_000) raise('critical', 'crash', 'Le serveur s’est arrêté alors qu’aucun arrêt n’était prévu (crash probable)');
+          if (Date.now() - lastIntentional > 10 * 60_000) raise('critical', 'crash', 'The server stopped although no stop was planned (probable crash)');
         }),
         host.events.on('server:online', () => resolve('api')),
         every(60_000, minute),
@@ -233,7 +233,7 @@ export function createMonitoring(host: FeatureHost, bus: FeatureBus): Feature {
         access: 'staff',
         permission: 'server.control',
         handler: async ({ user }) => {
-          if (!host.server.status().online) throw httpError(409, 'Le serveur est hors ligne');
+          if (!host.server.status().online) throw httpError(409, 'The server is offline');
           await host.palworld.save();
           host.events.emit('audit', { userId: user!.id, username: user!.username, action: 'server.save' });
           return { ok: true };
@@ -249,7 +249,7 @@ export function createMonitoring(host: FeatureHost, bus: FeatureBus): Feature {
             z.object({ seconds: z.number().int().min(10).max(3600), message: z.string().trim().min(1).max(200) }),
             body,
           );
-          if (!host.server.status().online) throw httpError(409, 'Le serveur est hors ligne');
+          if (!host.server.status().online) throw httpError(409, 'The server is offline');
           bus.emit('intentional', {});
           host.events.emit('server:action', { action: 'stop', by: user!.username });
           await host.palworld.shutdown(seconds, message);
@@ -271,7 +271,7 @@ export function createMonitoring(host: FeatureHost, bus: FeatureBus): Feature {
             ended_at: number | null;
           }[];
           const heatmap = attendanceHeatmap(sessions, from, now);
-          // Joueurs uniques, nouveaux et habitués par jour
+          // Unique, new and returning players per day
           const firstSeen = new Map((db.prepare('SELECT uid, first_seen FROM players').all() as { uid: string; first_seen: number }[]).map((r) => [r.uid, r.first_seen]));
           const days = new Map<string, Set<string>>();
           for (const s of sessions) {
@@ -310,7 +310,7 @@ export function createMonitoring(host: FeatureHost, bus: FeatureBus): Feature {
         path: 'uptime',
         access: 'public',
         handler: (ctx) => {
-          if (!host.modules.isEnabled('uptime') && !ctx.can('server.players')) throw httpError(404, 'Page désactivée');
+          if (!host.modules.isEnabled('uptime') && !ctx.can('server.players')) throw httpError(404, 'Page disabled');
           const since = localDay(new Date(Date.now() - 29 * 86_400_000));
           const days = db.prepare('SELECT day, online_minutes AS online, total_minutes AS total FROM pro_uptime WHERE day >= ? ORDER BY day').all(since) as {
             day: string;
@@ -319,7 +319,7 @@ export function createMonitoring(host: FeatureHost, bus: FeatureBus): Feature {
           }[];
           const online = days.reduce((n, d) => n + d.online, 0);
           const total = days.reduce((n, d) => n + d.total, 0);
-          // Fréquentation moyenne par heure sur 30 jours
+          // Average attendance per hour over 30 days
           const now = Date.now();
           const sessions = db.prepare('SELECT started_at, ended_at FROM player_sessions WHERE COALESCE(ended_at, ?) > ?').all(now, now - 30 * 86_400_000) as {
             started_at: number;

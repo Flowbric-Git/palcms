@@ -12,9 +12,9 @@ export interface PublicUser {
   status: MemberStatus;
   avatarUrl: string | null;
   steam: boolean;
-  /** Identifiant public du personnage lié (jamais le Steam ID). */
+  /** Public id of the linked character (never the Steam ID). */
   playerPublicId: string | null;
-  /** Permissions du panel admin (vide pour un joueur). */
+  /** Admin panel permissions (empty for a player). */
   permissions: Permission[];
 }
 
@@ -30,12 +30,12 @@ export interface ModuleInfo {
 export interface Bootstrap {
   setupDone: boolean;
   version: string;
-  /** managed : installé et géré par PalCMS ; external : serveur existant connecté ; none : site seul. */
+  /** managed: installed and run by PalCMS; external: existing server connected; none: website only. */
   serverMode: ServerMode;
   site: SiteSettings;
   modules: Record<string, boolean>;
   user: PublicUser | null;
-  /** Thème et plugins à charger dans le navigateur (absent dans la démo). */
+  /** Theme and plugins to load in the browser. */
   extensions?: import('./extensions').BootExtensions;
 }
 

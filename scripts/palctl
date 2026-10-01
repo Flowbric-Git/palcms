@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# palctl - seul point d'entrée root du CMS PalCMS.
-# Le CMS tourne sous l'utilisateur "palcms" et ne peut lancer que ce script via sudo.
-# Chaque commande et chaque argument sont vérifiés ici : rien d'autre n'est possible.
+# palctl - the only root entry point of PalCMS.
+# The CMS runs as the "palcms" user and can only run this script through sudo.
+# Every command and every argument is checked here: nothing else is possible.
 set -euo pipefail
 export LC_ALL=C.UTF-8
 export DEBIAN_FRONTEND=noninteractive
@@ -17,7 +17,7 @@ STEAMCMD=/usr/games/steamcmd
 APP_ID=2394010
 
 die() { echo "palctl: $*" >&2; exit 2; }
-# Attend qu'une mise à jour automatique d'Ubuntu libère apt au lieu d'échouer
+# Waits for an automatic Ubuntu update to release apt instead of failing
 apt-get() { command apt-get -o DPkg::Lock::Timeout=600 "$@"; }
 is_port() { [[ "$1" =~ ^[0-9]{4,5}$ ]] && (( 10#$1 >= 1024 && 10#$1 <= 65535 )); }
 is_players() { [[ "$1" =~ ^[0-9]{1,2}$ ]] && (( 10#$1 >= 1 && 10#$1 <= 32 )); }
@@ -25,63 +25,63 @@ is_lines() { [[ "$1" =~ ^[0-9]{1,4}$ ]] && (( 10#$1 >= 1 && 10#$1 <= 2000 )); }
 is_backup() { [[ "$1" =~ ^palworld-[0-9]{8}-[0-9]{6}-(manual|auto|prerestart|preupdate|prerestore)\.tar\.gz$ ]]; }
 BACKUP_DIR=/var/lib/palworld-backups
 SAVE_DIR="$PAL_DIR/Pal/Saved/SaveGames"
-# Lecture des sauvegardes du monde : sav_cli de palworld-server-tool (Apache-2.0), version et empreinte figées.
+# Reading world saves: sav_cli from palworld-server-tool (Apache-2.0), pinned version and checksum.
 PST_VERSION=v0.12.2
 PST_SHA256=831c87f3df171a1d63ddeb4e231b5427ead262cbc6466e0ff196ff08a6b35304
 SAV_CLI=/usr/local/lib/palcms/sav_cli
-nargs() { (( $1 == $2 )) || die "nombre d'arguments invalide"; }
+nargs() { (( $1 == $2 )) || die "invalid number of arguments"; }
 
-[[ $EUID -eq 0 ]] || die "doit être lancé en root (via sudo)"
+[[ $EUID -eq 0 ]] || die "must run as root (through sudo)"
 
 cmd="${1:-}"
 shift || true
 
 steamcmd_update() {
   local tries=0
-  # steamcmd se met à jour lui-même au premier lancement et échoue parfois : on réessaie.
+  # steamcmd updates itself on first run and sometimes fails: retry.
   until sudo -u "$STEAM_USER" -H "$STEAMCMD" +force_install_dir "$PAL_DIR" +login anonymous +app_update "$APP_ID" validate +quit; do
     tries=$((tries + 1))
-    (( tries >= 3 )) && die "échec du téléchargement du serveur Palworld après 3 tentatives"
-    echo "==> Nouvelle tentative ($((tries + 1))/3)…"
+    (( tries >= 3 )) && die "failed to download the Palworld server after 3 attempts"
+    echo "==> Retrying ($((tries + 1))/3)…"
     sleep 5
   done
-  # Le serveur a besoin de steamclient.so dans ~/.steam/sdk64.
+  # The server needs steamclient.so in ~/.steam/sdk64.
   local so
   so=$(find "$STEAM_HOME/.steam" "$STEAM_HOME/.local/share/Steam" -path '*linux64/steamclient.so' 2>/dev/null | head -n1 || true)
   if [[ -n "$so" ]]; then
     install -d -o "$STEAM_USER" -g "$STEAM_USER" "$STEAM_HOME/.steam/sdk64"
     install -o "$STEAM_USER" -g "$STEAM_USER" -m 0644 "$so" "$STEAM_HOME/.steam/sdk64/steamclient.so"
-    echo "==> steamclient.so copié dans ~/.steam/sdk64"
+    echo "==> steamclient.so copied to ~/.steam/sdk64"
   else
-    echo "⚠ steamclient.so introuvable : le serveur peut afficher un avertissement au démarrage"
+    echo "⚠ steamclient.so not found: the server may show a warning when it starts"
   fi
-  [[ -x "$PAL_DIR/PalServer.sh" ]] || die "PalServer.sh introuvable après l'installation"
+  [[ -x "$PAL_DIR/PalServer.sh" ]] || die "PalServer.sh not found after the install"
 }
 
 case "$cmd" in
   install-deps)
     nargs $# 0
-    echo "==> Activation du dépôt multiverse et de l'architecture i386"
+    echo "==> Enabling the multiverse repository and the i386 architecture"
     apt-get install -y software-properties-common >/dev/null
     add-apt-repository -y multiverse
     dpkg --add-architecture i386
     echo "steam steam/question select I AGREE" | debconf-set-selections
     echo "steam steam/license note ''" | debconf-set-selections
     apt-get update
-    echo "==> Installation de steamcmd et lib32gcc-s1"
+    echo "==> Installing steamcmd and lib32gcc-s1"
     apt-get install -y steamcmd lib32gcc-s1 ca-certificates
     if ! id "$STEAM_USER" >/dev/null 2>&1; then
-      echo "==> Création de l'utilisateur $STEAM_USER"
+      echo "==> Creating the $STEAM_USER user"
       useradd -m -s /bin/bash "$STEAM_USER"
     fi
-    echo "✔ Dépendances installées"
+    echo "✔ Dependencies installed"
     ;;
 
   install-palworld)
     nargs $# 0
-    id "$STEAM_USER" >/dev/null 2>&1 || die "utilisateur $STEAM_USER absent : lancer install-deps"
+    id "$STEAM_USER" >/dev/null 2>&1 || die "user $STEAM_USER missing: run install-deps"
     steamcmd_update
-    echo "✔ Serveur Palworld installé dans $PAL_DIR"
+    echo "✔ Palworld server installed in $PAL_DIR"
     ;;
 
   update-palworld)
@@ -91,15 +91,15 @@ case "$cmd" in
     (( was_active )) && systemctl stop "$SERVICE"
     steamcmd_update
     (( was_active )) && systemctl start "$SERVICE"
-    echo "✔ Serveur Palworld à jour"
+    echo "✔ Palworld server up to date"
     ;;
 
   write-service)
     nargs $# 2
-    is_port "$1" || die "port invalide"
-    is_players "$2" || die "nombre de joueurs invalide"
+    is_port "$1" || die "invalid port"
+    is_players "$2" || die "invalid number of players"
     cat >"$UNIT_FILE" <<EOF
-# Généré par PalCMS (palctl write-service)
+# Written by PalCMS (palctl write-service)
 [Unit]
 Description=Palworld Dedicated Server (PalCMS)
 After=network-online.target
@@ -121,7 +121,7 @@ LimitNOFILE=100000
 WantedBy=multi-user.target
 EOF
     systemctl daemon-reload
-    echo "==> $UNIT_FILE écrit (port $1, $2 joueurs)"
+    echo "==> $UNIT_FILE written (port $1, $2 players)"
     ;;
 
   service)
@@ -130,20 +130,20 @@ EOF
       start | stop | restart | enable) systemctl "$1" "$SERVICE" ;;
       status) systemctl status --no-pager "$SERVICE" ;;
       is-active) systemctl is-active "$SERVICE" ;;
-      *) die "action de service non autorisée" ;;
+      *) die "service action not allowed" ;;
     esac
     ;;
 
   firewall-open)
     nargs $# 1
-    is_port "$1" || die "port invalide"
+    is_port "$1" || die "invalid port"
     if command -v ufw >/dev/null 2>&1; then
       ufw allow "$1/udp" comment 'Palworld (PalCMS)'
-      # Port de requête Steam : nécessaire pour apparaître dans la liste des serveurs communautaires,
-      # seul moyen de rejoindre depuis Xbox, Game Pass PC et PS5.
-      ufw allow 27015/udp comment 'Palworld liste des serveurs (PalCMS)'
+      # Steam query port: needed to show up in the community server list,
+      # the only way to join from Xbox, Game Pass PC and PS5.
+      ufw allow 27015/udp comment 'Palworld server list (PalCMS)'
     else
-      echo "ufw absent : pense à ouvrir les ports $1/udp et 27015/udp chez ton hébergeur"
+      echo "ufw missing: remember to open ports $1/udp and 27015/udp at your host"
     fi
     ;;
 
@@ -153,26 +153,26 @@ EOF
     trap 'rm -f "$tmp"' EXIT
     head -c 65537 >"$tmp"
     size=$(stat -c %s "$tmp")
-    (( size <= 65536 )) || die "configuration trop grande"
-    head -n1 "$tmp" | grep -qx '\[/Script/Pal.PalGameWorldSettings\]' || die "en-tête de configuration invalide"
-    grep -q '^OptionSettings=(' "$tmp" || die "OptionSettings absent"
-    (( $(wc -l <"$tmp") <= 3 )) || die "configuration inattendue (trop de lignes)"
-    # Chaque niveau doit appartenir à steam : sinon le serveur ne peut pas créer Saved/SaveGames
-    # ni Saved/Logs, et plante (signal 11) à la première sauvegarde du monde.
+    (( size <= 65536 )) || die "configuration too large"
+    head -n1 "$tmp" | grep -qx '\[/Script/Pal.PalGameWorldSettings\]' || die "invalid configuration header"
+    grep -q '^OptionSettings=(' "$tmp" || die "OptionSettings missing"
+    (( $(wc -l <"$tmp") <= 3 )) || die "unexpected configuration (too many lines)"
+    # Every level must belong to steam: otherwise the server cannot create Saved/SaveGames
+    # or Saved/Logs, and crashes (signal 11) on the first world save.
     install -d -o "$STEAM_USER" -g "$STEAM_USER" -m 0755 "$PAL_DIR/Pal/Saved" "$PAL_DIR/Pal/Saved/Config" "$CONFIG_DIR"
     install -o "$STEAM_USER" -g "$STEAM_USER" -m 0640 "$tmp" "$CONFIG_FILE"
-    echo "==> PalWorldSettings.ini mis à jour"
+    echo "==> PalWorldSettings.ini updated"
     ;;
 
   read-config)
     nargs $# 0
-    [[ -f "$CONFIG_FILE" ]] || die "PalWorldSettings.ini introuvable"
+    [[ -f "$CONFIG_FILE" ]] || die "PalWorldSettings.ini not found"
     cat "$CONFIG_FILE"
     ;;
 
   logs)
     nargs $# 1
-    is_lines "$1" || die "nombre de lignes invalide"
+    is_lines "$1" || die "invalid number of lines"
     journalctl -u "$SERVICE" -n "$1" --no-pager -o short-iso
     ;;
 
@@ -183,8 +183,8 @@ EOF
 
   backup-create)
     nargs $# 1
-    case "$1" in manual | auto | prerestart | preupdate | prerestore) ;; *) die "type de sauvegarde invalide" ;; esac
-    [[ -d "$SAVE_DIR" ]] || die "aucune sauvegarde de monde à archiver (le serveur n'a jamais démarré ?)"
+    case "$1" in manual | auto | prerestart | preupdate | prerestore) ;; *) die "invalid backup type" ;; esac
+    [[ -d "$SAVE_DIR" ]] || die "no world save to archive (has the server ever started?)"
     install -d -m 0750 -o root -g root "$BACKUP_DIR"
     name="palworld-$(date +%Y%m%d-%H%M%S)-$1.tar.gz"
     tar -czf "$BACKUP_DIR/$name.part" -C "$PAL_DIR/Pal/Saved" SaveGames $([[ -f "$CONFIG_FILE" ]] && echo "Config/LinuxServer/PalWorldSettings.ini")
@@ -195,40 +195,40 @@ EOF
   backup-list)
     nargs $# 0
     [[ -d "$BACKUP_DIR" ]] || exit 0
-    # nom<TAB>taille<TAB>date (epoch)
+    # name<TAB>size<TAB>date (epoch)
     find "$BACKUP_DIR" -maxdepth 1 -type f -name 'palworld-*.tar.gz' -printf '%f\t%s\t%T@\n' | sort -r
     ;;
 
   backup-restore)
     nargs $# 1
-    is_backup "$1" || die "nom de sauvegarde invalide"
-    [[ -f "$BACKUP_DIR/$1" ]] || die "sauvegarde introuvable"
+    is_backup "$1" || die "invalid backup name"
+    [[ -f "$BACKUP_DIR/$1" ]] || die "backup not found"
     was_active=0
     systemctl is-active --quiet "$SERVICE" && was_active=1
     if (( was_active )); then systemctl stop "$SERVICE"; fi
     restore_tmp=$(mktemp -d)
     tar -xzf "$BACKUP_DIR/$1" -C "$restore_tmp"
-    [[ -d "$restore_tmp/SaveGames" ]] || { rm -rf "$restore_tmp"; die "archive invalide"; }
+    [[ -d "$restore_tmp/SaveGames" ]] || { rm -rf "$restore_tmp"; die "invalid archive"; }
     rm -rf "$SAVE_DIR.before-restore"
     [[ -d "$SAVE_DIR" ]] && mv "$SAVE_DIR" "$SAVE_DIR.before-restore"
     mv "$restore_tmp/SaveGames" "$SAVE_DIR"
     chown -R "$STEAM_USER:$STEAM_USER" "$SAVE_DIR"
     rm -rf "$restore_tmp"
-    echo "==> Monde restauré depuis $1 (l'ancien est gardé dans SaveGames.before-restore)"
+    echo "==> World restored from $1 (the old one is kept in SaveGames.before-restore)"
     if (( was_active )); then systemctl start "$SERVICE"; fi
     ;;
 
   backup-delete)
     nargs $# 1
-    is_backup "$1" || die "nom de sauvegarde invalide"
+    is_backup "$1" || die "invalid backup name"
     rm -f "$BACKUP_DIR/$1"
-    echo "==> $1 supprimée"
+    echo "==> $1 deleted"
     ;;
 
   backup-download)
     nargs $# 1
-    is_backup "$1" || die "nom de sauvegarde invalide"
-    [[ -f "$BACKUP_DIR/$1" ]] || die "sauvegarde introuvable"
+    is_backup "$1" || die "invalid backup name"
+    [[ -f "$BACKUP_DIR/$1" ]] || die "backup not found"
     exec cat "$BACKUP_DIR/$1"
     ;;
 
@@ -236,14 +236,14 @@ EOF
     nargs $# 0
     dl=$(mktemp -d)
     trap 'rm -rf "$dl"' EXIT
-    echo "==> Téléchargement de sav_cli (palworld-server-tool $PST_VERSION)"
+    echo "==> Downloading sav_cli (palworld-server-tool $PST_VERSION)"
     curl -fsSL --retry 3 -o "$dl/pst.tar.gz" \
       "https://github.com/zaigie/palworld-server-tool/releases/download/$PST_VERSION/pst_${PST_VERSION}_linux_x86_64.tar.gz"
-    echo "$PST_SHA256  $dl/pst.tar.gz" | sha256sum -c --quiet - || die "empreinte de l'archive invalide"
+    echo "$PST_SHA256  $dl/pst.tar.gz" | sha256sum -c --quiet - || die "invalid archive checksum"
     tar -xzf "$dl/pst.tar.gz" -C "$dl" sav_cli
     install -d -m 0755 -o root -g root "$(dirname "$SAV_CLI")"
     install -m 0755 -o root -g root "$dl/sav_cli" "$SAV_CLI"
-    echo "✔ sav_cli installé"
+    echo "✔ sav_cli installed"
     ;;
 
   savtools-status)
@@ -253,18 +253,18 @@ EOF
 
   world-export)
     nargs $# 0
-    [[ -x "$SAV_CLI" ]] || die "sav_cli absent (lancer savtools-install)"
+    [[ -x "$SAV_CLI" ]] || die "sav_cli missing (run savtools-install)"
     level=$(find "$SAVE_DIR" -mindepth 3 -maxdepth 3 -name Level.sav -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)
-    [[ -n "$level" ]] || die "aucun monde sauvegardé (Level.sav introuvable)"
+    [[ -n "$level" ]] || die "no saved world (Level.sav not found)"
     work=$(mktemp -d)
     trap 'rm -rf "$work"' EXIT
-    # On travaille sur une copie : le serveur peut réécrire ses fichiers pendant la lecture.
+    # Work on a copy: the server may rewrite its files while they are read.
     world_dir=$(dirname "$level")
     cp "$level" "$work/Level.sav"
     [[ -d "$world_dir/Players" ]] && cp -r "$world_dir/Players" "$work/Players"
     chown -R "$STEAM_USER:$STEAM_USER" "$work"
     (cd "$work" && timeout 900 nice -n 10 sudo -u "$STEAM_USER" -H "$SAV_CLI" -f "$work/Level.sav" -o "$work/structure.json" >"$work/sav_cli.log" 2>&1) \
-      || { tail -n 20 "$work/sav_cli.log" >&2; die "lecture de la sauvegarde impossible"; }
+      || { tail -n 20 "$work/sav_cli.log" >&2; die "could not read the save"; }
     cat "$work/structure.json"
     ;;
 
@@ -280,20 +280,20 @@ EOF
 
   self-update)
     nargs $# 1
-    [[ "$1" =~ ^v[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]] || die "version invalide"
+    [[ "$1" =~ ^v[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]] || die "invalid version"
     repo=$(sed -n 's/^PALCMS_REPO="\${PALCMS_REPO:-\([A-Za-z0-9_.-]*\/[A-Za-z0-9_.-]*\)}"$/\1/p' /opt/palcms/install.sh | head -n1)
-    [[ -n "$repo" ]] || die "dépôt GitHub introuvable dans /opt/palcms/install.sh"
-    # Dossier réservé à root : le CMS ne doit pas pouvoir remplacer le script avant son exécution.
+    [[ -n "$repo" ]] || die "GitHub repository not found in /opt/palcms/install.sh"
+    # Root-only folder: the CMS must not be able to replace the script before it runs.
     script=$(mktemp /root/palcms-update.XXXXXX)
-    curl -fsSL --retry 3 -o "$script" "https://github.com/$repo/releases/download/$1/install.sh" || die "téléchargement de la version $1 impossible"
-    head -n1 "$script" | grep -q '^#!/usr/bin/env bash' || die "script d'installation invalide"
-    # L'installation redémarre PalCMS : elle tourne dans son propre service pour ne pas être coupée.
+    curl -fsSL --retry 3 -o "$script" "https://github.com/$repo/releases/download/$1/install.sh" || die "could not download version $1"
+    head -n1 "$script" | grep -q '^#!/usr/bin/env bash' || die "invalid install script"
+    # The install restarts PalCMS: it runs in its own service so it is not cut off.
     systemd-run --unit="palcms-update-$(date +%s)" --collect --setenv=PALCMS_VERSION="$1" --setenv=PALCMS_REPO="$repo" \
       /bin/bash "$script" -y
-    echo "==> Mise à jour vers $1 lancée"
+    echo "==> Update to $1 started"
     ;;
 
   *)
-    die "commande inconnue : ${cmd:-(vide)}"
+    die "unknown command: ${cmd:-(empty)}"
     ;;
 esac

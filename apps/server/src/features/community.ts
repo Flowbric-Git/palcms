@@ -7,7 +7,7 @@ import { errorText, httpError, parseBody, type Feature, type FeatureBus } from '
 const audit = (host: FeatureHost, user: HostUser | null, action: string, target?: string, details?: unknown) =>
   host.events.emit('audit', { userId: user?.id ?? null, username: user?.username ?? null, action, target, details });
 
-// Modération
+// Moderation
 
 interface WhitelistSettings {
   enabled: boolean;
@@ -16,7 +16,7 @@ interface WhitelistSettings {
 
 export function createModeration(host: FeatureHost): Feature {
   const { db } = host;
-  const wl = () => ({ enabled: false, message: 'Ce serveur est sur liste blanche.', ...host.settings.get<Partial<WhitelistSettings>>('feature.whitelist', {}) });
+  const wl = () => ({ enabled: false, message: host.t('This server is whitelisted.'), ...host.settings.get<Partial<WhitelistSettings>>('feature.whitelist', {}) });
   let off: (() => void) | null = null;
   const kicked = new Map<string, number>();
 
@@ -27,7 +27,7 @@ export function createModeration(host: FeatureHost): Feature {
 
   return {
     start() {
-      // Liste blanche : tout joueur absent de la liste est expulsé dès sa connexion.
+      // Whitelist: any player missing from the list is kicked as soon as they connect.
       off = host.events.on('tick', ({ players }) => {
         const s = wl();
         if (!s.enabled) return;
@@ -50,7 +50,7 @@ export function createModeration(host: FeatureHost): Feature {
         access: 'staff',
         permission: 'server.moderation',
         handler: async ({ params, body, user }) => {
-          const { message } = parseBody(z.object({ message: z.string().trim().max(200).default('Expulsé par un administrateur') }), body);
+          const { message } = parseBody(z.object({ message: z.string().trim().max(200).default(host.t('Kicked by an administrator')) }), body);
           await host.palworld.kick(params.uid, message);
           recordSanction(host, params.uid, nameOf(params.uid), 'kick', message, user!.username);
           audit(host, user, 'player.kick', nameOf(params.uid), { message });
@@ -64,7 +64,7 @@ export function createModeration(host: FeatureHost): Feature {
         permission: 'server.moderation',
         handler: async ({ params, body, user }) => {
           const { reason } = parseBody(z.object({ reason: z.string().trim().max(200).default('') }), body);
-          await host.palworld.ban(params.uid, reason || 'Banni par un administrateur');
+          await host.palworld.ban(params.uid, reason || host.t('Banned by an administrator'));
           db.prepare(
             `INSERT INTO pro_bans (uid, name, reason, banned_at, banned_by) VALUES (?, ?, ?, ?, ?)
              ON CONFLICT(uid) DO UPDATE SET reason = excluded.reason, banned_at = excluded.banned_at, banned_by = excluded.banned_by, expires_at = NULL`,
@@ -113,7 +113,7 @@ export function createModeration(host: FeatureHost): Feature {
         handler: ({ body, user }) => {
           const s = parseBody(z.object({ enabled: z.boolean(), message: z.string().trim().min(1).max(200) }), body);
           if (s.enabled && !(db.prepare('SELECT 1 FROM pro_whitelist LIMIT 1').get())) {
-            throw httpError(400, 'Ajoute au moins un joueur à la liste avant de l’activer (sinon tout le monde serait expulsé)');
+            throw httpError(400, 'Add at least one player to the list before turning it on (otherwise everyone would be kicked)');
           }
           host.settings.set('feature.whitelist', s);
           audit(host, user, s.enabled ? 'whitelist.enable' : 'whitelist.disable');
@@ -152,13 +152,13 @@ export function createModeration(host: FeatureHost): Feature {
   };
 }
 
-// Console RCON
+// RCON console
 
 export function createRcon(host: FeatureHost): Feature {
   const read = async (): Promise<{ enabled: boolean; port: number; password: string; host: string; managed: boolean }> => {
     const mode = host.server.mode();
     if (mode === 'external') {
-      // Serveur existant : RCON disponible si l'admin a indiqué son port dans "Connexion au serveur".
+      // Existing server: RCON is available if the admin entered its port in "Server connection".
       const ext = host.server.external();
       return { enabled: !!ext?.rconPort, port: ext?.rconPort ?? 25575, password: ext?.adminPassword ?? '', host: ext?.apiHost ?? '', managed: false };
     }
@@ -190,8 +190,8 @@ export function createRcon(host: FeatureHost): Feature {
         access: 'staff',
         permission: 'server.rcon',
         handler: async ({ user }) => {
-          if (host.server.mode() !== 'managed') throw httpError(409, 'Pour un serveur externe, indique son port RCON dans « Connexion au serveur »');
-          // Le port RCON n'est jamais ouvert dans le pare-feu : seul le CMS (en local) peut s'y connecter.
+          if (host.server.mode() !== 'managed') throw httpError(409, 'For an external server, enter its RCON port in "Server connection"');
+          // The RCON port is never opened in the firewall: only the CMS (locally) can connect to it.
           const { restarted } = await host.server.updateConfig({ RCONEnabled: true }, true);
           audit(host, user, 'rcon.enable');
           return { ok: true, restarted };
@@ -205,7 +205,7 @@ export function createRcon(host: FeatureHost): Feature {
         handler: async ({ body, user }) => {
           const { command } = parseBody(z.object({ command: z.string().trim().min(1).max(300) }), body);
           const { enabled, port, password, host: rconHost } = await read();
-          if (!enabled) throw httpError(409, 'RCON est désactivé : active-le d’abord');
+          if (!enabled) throw httpError(409, 'RCON is disabled: turn it on first');
           audit(host, user, 'rcon.exec', command.split(' ')[0], { command });
           try {
             return { output: await rconCommand(rconHost, port, password, command) };
@@ -253,7 +253,7 @@ export function createDiscord(host: FeatureHost, bus: FeatureBus): Feature {
           signal: AbortSignal.timeout(8000),
         });
       } catch (e) {
-        host.log(`Discord : envoi impossible (${errorText(e)})`);
+        host.log(`Discord: could not send (${errorText(e)})`);
       }
     });
   };
@@ -270,74 +270,74 @@ export function createDiscord(host: FeatureHost, bus: FeatureBus): Feature {
         host.events.on('server:action', (d) => {
           lastIntentional = Date.now();
           if (ev().server) {
-            const label = { start: 'démarré', stop: 'arrêté', restart: 'redémarré' }[d.action];
-            send(`Serveur ${label}`, d.by ? `Action de **${d.by}** depuis le panel.` : 'Action depuis le panel.', COLORS.blue);
+            const title = { start: 'Server started', stop: 'Server stopped', restart: 'Server restarted' }[d.action];
+            send(host.t(title), d.by ? host.t('Action by **{name}** from the panel.', { name: d.by }) : host.t('Action from the panel.'), COLORS.blue);
           }
         }),
         bus.on('intentional', () => (lastIntentional = Date.now())),
         host.events.on(
           'server:online',
-          on(() => ev().server, () => send('🟢 Serveur en ligne', `Rejoignez-nous : \`${host.server.status().address}\``, COLORS.green)),
+          on(() => ev().server, () => send(`🟢 ${host.t('Server online')}`, host.t('Join us: {address}', { address: `\`${host.server.status().address}\`` }), COLORS.green)),
         ),
         host.events.on(
           'server:offline',
           on(
             () => ev().server,
             () => {
-              // Hors ligne sans action récente de l'équipe : on considère que le serveur a planté.
-              if (Date.now() - lastIntentional < 10 * 60_000) send('🔴 Serveur hors ligne', 'Arrêt prévu par l’équipe.', COLORS.amber);
-              else send('💥 Crash détecté', 'Le serveur ne répond plus alors qu’aucun arrêt n’était prévu. Il redémarre automatiquement si possible.', COLORS.red);
+              // Offline without a recent team action: the server is considered to have crashed.
+              if (Date.now() - lastIntentional < 10 * 60_000) send(`🔴 ${host.t('Server offline')}`, host.t('Stop planned by the team.'), COLORS.amber);
+              else send(`💥 ${host.t('Crash detected')}`, host.t('The server stopped answering although no stop was planned. It restarts automatically if possible.'), COLORS.red);
             },
           ),
         ),
         bus.on(
           'restart:warning',
-          on(() => ev().schedule, (d) => send('⏳ Redémarrage prévu', `Le serveur redémarre dans **${d.minutes} minute(s)**.`, COLORS.amber)),
+          on(() => ev().schedule, (d) => send(`⏳ ${host.t('Restart planned')}`, host.t('The server restarts in **{n} minute(s)**.', { n: d.minutes }), COLORS.amber)),
         ),
         bus.on(
           'restart:done',
-          on(() => ev().schedule, (d) => send('🔄 Redémarrage terminé', d.updated ? 'Le serveur a été mis à jour et redémarré.' : 'Le serveur a redémarré.', COLORS.green)),
+          on(() => ev().schedule, (d) => send(`🔄 ${host.t('Restart finished')}`, host.t(d.updated ? 'The server was updated and restarted.' : 'The server restarted.'), COLORS.green)),
         ),
-        bus.on('restart:failed', on(() => ev().schedule, (d) => send('⚠️ Échec du redémarrage', d.error, COLORS.red))),
+        bus.on('restart:failed', on(() => ev().schedule, (d) => send(`⚠️ ${host.t('Restart failed')}`, host.tMessage(d.error), COLORS.red))),
         bus.on(
           'backup:done',
-          on(() => ev().schedule, (d) => d.tag !== 'auto' && send('💾 Sauvegarde effectuée', `\`${d.name}\``, COLORS.blue)),
+          on(() => ev().schedule, (d) => d.tag !== 'auto' && send(`💾 ${host.t('Backup done')}`, `\`${d.name}\``, COLORS.blue)),
         ),
-        bus.on('backup:failed', on(() => ev().schedule, (d) => send('⚠️ Échec de la sauvegarde', d.error, COLORS.red))),
+        bus.on('backup:failed', on(() => ev().schedule, (d) => send(`⚠️ ${host.t('Backup failed')}`, host.tMessage(d.error), COLORS.red))),
         host.events.on(
           'news:published',
-          on(() => ev().content, (d) => send(`📰 ${d.title}`, 'Nouvel article sur le site !', COLORS.purple, siteUrl(`actualites/${d.slug}`))),
+          on(() => ev().content, (d) => send(`📰 ${d.title}`, host.t('New article on the site!'), COLORS.purple, siteUrl(`news/${d.slug}`))),
         ),
-        // Le crash a déjà son propre message (server:offline) : on ne le double pas.
+        // A crash already has its own message (server:offline): do not send it twice.
         bus.on(
           'alert',
           on(
             () => ev().alerts,
-            (d) => d.kind !== 'crash' && send(d.level === 'critical' ? '🚨 Alerte critique' : '⚠️ Alerte', d.message, d.level === 'critical' ? COLORS.red : COLORS.amber, siteUrl('admin/serveur/surveillance')),
+            (d) => d.kind !== 'crash' && send(d.level === 'critical' ? `🚨 ${host.t('Critical alert')}` : `⚠️ ${host.t('Alert')}`, host.tMessage(d.message), d.level === 'critical' ? COLORS.red : COLORS.amber, siteUrl('admin/server/monitoring')),
           ),
         ),
         bus.on(
           'flag:new',
-          on(() => ev().alerts, (d) => send('🕵️ Soupçon de triche', `**${d.name}** : ${d.details}`, COLORS.red, siteUrl('admin/serveur/anti-triche'))),
+          on(() => ev().alerts, (d) => send(`🕵️ ${host.t('Suspected cheating')}`, `**${d.name}**: ${host.tMessage(d.details)}`, COLORS.red, siteUrl('admin/server/anti-cheat'))),
         ),
         bus.on(
           'update:available',
-          on(() => ev().alerts, (d) => send('⬆️ Mise à jour disponible', `PalCMS ${d.latest} est disponible (version actuelle : ${d.current}).`, COLORS.blue, siteUrl('admin/mises-a-jour'))),
+          on(() => ev().alerts, (d) => send(`⬆️ ${host.t('Update available')}`, host.t('PalCMS {latest} is available (current version: {current}).', { latest: d.latest, current: d.current }), COLORS.blue, siteUrl('admin/updates'))),
         ),
-        bus.on('event:started', on(() => ev().schedule, (d) => send('🎉 Événement commencé', `**${d.name}** a commencé !`, COLORS.purple, siteUrl('evenements')))),
-        bus.on('event:ended', on(() => ev().schedule, (d) => send('🏁 Événement terminé', `**${d.name}** est terminé.`, COLORS.blue))),
+        bus.on('event:started', on(() => ev().schedule, (d) => send(`🎉 ${host.t('Event started')}`, host.t('**{name}** has started!', { name: d.name }), COLORS.purple, siteUrl('events')))),
+        bus.on('event:ended', on(() => ev().schedule, (d) => send(`🏁 ${host.t('Event ended')}`, host.t('**{name}** is over.', { name: d.name }), COLORS.blue))),
         bus.on(
           'ticket:new',
           on(
             () => ev().content,
-            (d) => send(d.kind === 'report' ? '🚩 Nouveau signalement' : '💡 Nouvelle suggestion', `**${d.subject}** (par ${d.username})`, COLORS.amber, siteUrl('admin/site/signalements')),
+            (d) => send(d.kind === 'report' ? `🚩 ${host.t('New report')}` : `💡 ${host.t('New suggestion')}`, host.t('**{subject}** (by {name})', { subject: d.subject, name: d.username }), COLORS.amber, siteUrl('admin/site/reports')),
           ),
         ),
         host.events.on(
           'member:pending',
           on(
             () => ev().content,
-            (d) => send('👤 Nouvelle inscription à valider', `**${d.username}** (pseudo en jeu : ${d.inGameName ?? '—'})`, COLORS.amber, siteUrl('admin/site/membres')),
+            (d) => send(`👤 ${host.t('New sign-up to approve')}`, host.t('**{name}** (in-game name: {ingame})', { name: d.username, ingame: d.inGameName ?? '—' }), COLORS.amber, siteUrl('admin/site/members')),
           ),
         ),
       );
@@ -372,7 +372,7 @@ export function createDiscord(host: FeatureHost, bus: FeatureBus): Feature {
           const current = settings();
           let webhookUrl = current.webhookUrl;
           if (b.webhookUrl !== undefined && !b.webhookUrl.endsWith('…')) {
-            if (b.webhookUrl && !WEBHOOK_RE.test(b.webhookUrl)) throw httpError(400, 'Lien de webhook Discord invalide');
+            if (b.webhookUrl && !WEBHOOK_RE.test(b.webhookUrl)) throw httpError(400, 'Invalid Discord webhook link');
             webhookUrl = b.webhookUrl;
           }
           host.settings.set('feature.discord', { webhookUrl, events: b.events });
@@ -386,8 +386,8 @@ export function createDiscord(host: FeatureHost, bus: FeatureBus): Feature {
         access: 'staff',
         permission: 'site.discord',
         handler: async () => {
-          if (!settings().webhookUrl) throw httpError(400, 'Aucun webhook configuré');
-          send('✅ Test PalCMS', 'Les notifications Discord fonctionnent !', COLORS.green, siteUrl(''));
+          if (!settings().webhookUrl) throw httpError(400, 'No webhook configured');
+          send(`✅ ${host.t('PalCMS test')}`, host.t('Discord notifications work!'), COLORS.green, siteUrl(''));
           await queue;
           return { ok: true };
         },
@@ -396,7 +396,7 @@ export function createDiscord(host: FeatureHost, bus: FeatureBus): Feature {
   };
 }
 
-// Thèmes avancés
+// Advanced themes
 
 export interface ThemeSettings {
   font: 'system' | 'Inter' | 'Poppins' | 'Nunito' | 'Rajdhani' | 'Orbitron';
@@ -426,13 +426,13 @@ export function createThemes(host: FeatureHost): Feature {
                 .string()
                 .trim()
                 .max(500)
-                .refine((v) => v === '' || v.startsWith('/') || /^https:\/\//.test(v), 'Lien invalide'),
+                .refine((v) => v === '' || v.startsWith('/') || /^https:\/\//.test(v), 'Invalid link'),
               glass: z.boolean(),
-              // CSS libre réservé à l'équipe ; on bloque tout ce qui pourrait sortir de la balise <style>.
+              // Free CSS reserved for the team; block anything that could escape the <style> tag.
               customCss: z
                 .string()
                 .max(20_000)
-                .refine((v) => !/<\/?\s*(style|script)/i.test(v), 'Balises interdites dans le CSS'),
+                .refine((v) => !/<\/?\s*(style|script)/i.test(v), 'Forbidden tags in the CSS'),
             }),
             body,
           );

@@ -80,7 +80,7 @@ export const MIGRATIONS: HostMigration[] = [
   {
     id: 'core:003-world',
     sql: `
-      -- Données du monde lues dans les sauvegardes (sav_cli). Remplacées à chaque lecture.
+      -- World data read from the save files (sav_cli). Replaced on every read.
       CREATE TABLE world_players (
         player_uid TEXT PRIMARY KEY,
         nickname TEXT NOT NULL,
@@ -148,7 +148,7 @@ export const MIGRATIONS: HostMigration[] = [
         total_minutes INTEGER NOT NULL DEFAULT 0
       );
 
-      -- Événements et préréglages
+      -- Events and presets
       CREATE TABLE pro_presets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -214,9 +214,18 @@ export const MIGRATIONS: HostMigration[] = [
         updated_at INTEGER NOT NULL
       );
 
-      -- Les modérateurs traitent aussi les signalements et consultent les données du monde
+      -- Moderators also handle reports and look at world data
       UPDATE pro_roles SET permissions = '${JSON.stringify([...MODERATOR, 'server.world', 'site.tickets'])}'
         WHERE builtin = 1 AND name = 'Modérateur';
+    `,
+  },
+  {
+    // Built-in roles get English names (translated on display).
+    id: 'core:005-role-names',
+    sql: `
+      UPDATE pro_roles SET name = 'Administrator' WHERE builtin = 1 AND name = 'Administrateur';
+      UPDATE pro_roles SET name = 'Moderator' WHERE builtin = 1 AND name = 'Modérateur';
+      UPDATE pro_roles SET name = 'Editor' WHERE builtin = 1 AND name = 'Rédacteur';
     `,
   },
 ];
@@ -224,120 +233,120 @@ export const MIGRATIONS: HostMigration[] = [
 export const MODULES: HostModuleDef[] = [
   {
     id: 'guilds',
-    name: 'Guildes',
-    description: 'Page publique des guildes : membres, niveau et bases sur la carte (lecture des sauvegardes).',
+    name: 'Guilds',
+    description: 'Public guild pages: members, level and bases on the map (read from the save files).',
     area: 'public',
     toggleable: true,
     defaultEnabled: true,
   },
   {
     id: 'paldex',
-    name: 'Paldex du serveur',
-    description: 'Pals les plus capturés, les plus rares et meilleurs collectionneurs (lecture des sauvegardes).',
+    name: 'Server Paldex',
+    description: 'All 288 Pals by server, player and guild, with the top collectors (read from the save files).',
     area: 'public',
     toggleable: true,
     defaultEnabled: true,
   },
   {
     id: 'character',
-    name: 'Mon personnage',
-    description: 'Les joueurs inscrits voient leurs Pals, leur inventaire et leur guilde.',
+    name: 'My character',
+    description: 'Registered players see their Pals, inventory and guild.',
     area: 'public',
     toggleable: true,
     defaultEnabled: true,
   },
   {
     id: 'calendar',
-    name: 'Calendrier des événements',
-    description: 'Événements à venir sur le site, avec un compte à rebours sur l’accueil.',
+    name: 'Events calendar',
+    description: 'Upcoming events on the site, with a countdown on the home page.',
     area: 'public',
     toggleable: true,
     defaultEnabled: true,
   },
   {
     id: 'uptime',
-    name: 'Page de disponibilité',
-    description: 'Disponibilité du serveur sur 30 jours, fréquentation et prochain redémarrage.',
+    name: 'Uptime page',
+    description: 'Server uptime over 30 days, attendance and next restart.',
     area: 'public',
     toggleable: true,
     defaultEnabled: true,
   },
   {
     id: 'tickets',
-    name: 'Signalements et suggestions',
-    description: 'Les joueurs inscrits signalent un problème ou proposent une idée à l’équipe.',
+    name: 'Reports and suggestions',
+    description: 'Registered players report a problem or suggest an idea to the team.',
     area: 'public',
     toggleable: true,
     defaultEnabled: true,
   },
   {
     id: 'world',
-    name: 'Données du monde',
-    description: 'Lecture des sauvegardes : inventaires, Pals, guildes et bases.',
+    name: 'World data',
+    description: 'Reads the save files: inventories, Pals, guilds and bases.',
     area: 'server',
     toggleable: false,
     defaultEnabled: true,
   },
   {
     id: 'monitoring',
-    name: 'Surveillance',
-    description: 'Alertes, état des connexions, détection des plantages et statistiques de fréquentation.',
+    name: 'Monitoring',
+    description: 'Alerts, connection status, crash detection and attendance statistics.',
     area: 'server',
     toggleable: false,
     defaultEnabled: true,
   },
   {
     id: 'events',
-    name: 'Événements et préréglages',
-    description: 'Réglages temporaires programmés (week-end XP x3…) et préréglages de configuration.',
+    name: 'Events and presets',
+    description: 'Scheduled temporary settings (XP x3 weekend…) and configuration presets.',
     area: 'server',
     toggleable: false,
     defaultEnabled: true,
   },
   {
     id: 'map',
-    name: 'Carte en temps réel (publique)',
-    description: 'Carte avec la position des joueurs. Désactivé : seuls les admins la voient.',
+    name: 'Live map (public)',
+    description: 'Map with player positions. Turned off: only admins see it.',
     area: 'public',
     toggleable: true,
     defaultEnabled: true,
   },
   {
     id: 'player-stats',
-    name: 'Statistiques des joueurs',
-    description: 'Graphiques d’évolution (niveau, temps de jeu) sur les profils.',
+    name: 'Player statistics',
+    description: 'Progress charts (level, playtime) on profiles.',
     area: 'public',
     toggleable: true,
     defaultEnabled: true,
   },
   {
     id: 'backups',
-    name: 'Sauvegardes',
-    description: 'Sauvegardes automatiques et restauration.',
+    name: 'Backups',
+    description: 'Automatic backups and restore.',
     area: 'server',
     toggleable: false,
     defaultEnabled: true,
   },
   {
     id: 'schedules',
-    name: 'Programmation',
-    description: 'Redémarrages programmés, mises à jour et annonces planifiées.',
+    name: 'Schedules',
+    description: 'Scheduled restarts, updates and announcements.',
     area: 'server',
     toggleable: false,
     defaultEnabled: true,
   },
   {
     id: 'moderation',
-    name: 'Modération',
-    description: 'Expulsions, bannissements et liste blanche.',
+    name: 'Moderation',
+    description: 'Kicks, bans and whitelist.',
     area: 'server',
     toggleable: false,
     defaultEnabled: true,
   },
   {
     id: 'rcon',
-    name: 'Console RCON',
-    description: 'Commandes admin du serveur depuis le panel.',
+    name: 'RCON console',
+    description: 'Server admin commands from the panel.',
     area: 'server',
     toggleable: false,
     defaultEnabled: true,
@@ -345,15 +354,15 @@ export const MODULES: HostModuleDef[] = [
   {
     id: 'discord',
     name: 'Discord',
-    description: 'Notifications sur un salon Discord (webhook).',
+    description: 'Notifications in a Discord channel (webhook).',
     area: 'site',
     toggleable: false,
     defaultEnabled: true,
   },
   {
     id: 'themes',
-    name: 'Thèmes avancés',
-    description: 'Police, fond et CSS personnalisé du site public.',
+    name: 'Advanced themes',
+    description: 'Font, background and custom CSS of the public site.',
     area: 'site',
     toggleable: false,
     defaultEnabled: true,

@@ -9,11 +9,12 @@ import { formatDate } from '../lib/format';
 import { LeaderboardTable, OnlinePlayers, ServerStatusCard } from '../components/live';
 import { Card } from '../components/ui';
 import { Overridable, Slot } from '../lib/extensions';
+import { t } from '../lib/i18n';
 
 const MapWidget = lazy(() => import('../features/mapPages').then((m) => ({ default: m.MapWidget })));
 const EventBanner = lazy(() => import('../features/world-public').then((m) => ({ default: m.EventBanner })));
 
-/** Ce que reçoivent l'accueil et son bandeau, y compris ceux d'un thème. */
+/** What the home page and its banner receive, including a theme's own. */
 export interface HomeProps {
   site: SiteSettings;
   modules: Record<string, boolean>;
@@ -63,20 +64,20 @@ export function DefaultHome(props: HomeProps) {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           {modules.news && (
             <Card
-              title="Dernières actualités"
+              title={t('Latest news')}
               actions={
-                <Link to="/actualites" className="text-sm font-medium text-accent">
-                  Tout voir
+                <Link to="/news" className="text-sm font-medium text-accent">
+                  {t('See all')}
                 </Link>
               }
             >
               {news.length === 0 ? (
-                <p className="text-sm text-slate-500">Aucune actualité pour le moment.</p>
+                <p className="text-sm text-slate-500">{t('No news yet.')}</p>
               ) : (
                 <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                   {news.map((n) => (
                     <li key={n.id} className="py-3 first:pt-0 last:pb-0">
-                      <Link to={`/actualites/${n.slug}`} className="group flex gap-4">
+                      <Link to={`/news/${n.slug}`} className="group flex gap-4">
                         {n.coverUrl && <img src={n.coverUrl} alt="" className="h-16 w-24 shrink-0 rounded-lg object-cover" />}
                         <div className="min-w-0">
                           <p className="font-semibold group-hover:text-accent">{n.title}</p>
@@ -95,12 +96,12 @@ export function DefaultHome(props: HomeProps) {
             <Card
               title={
                 <span className="flex items-center gap-2">
-                  <Trophy className="h-4 w-4 text-yellow-500" /> Top joueurs
+                  <Trophy className="h-4 w-4 text-yellow-500" /> {t('Top players')}
                 </span>
               }
               actions={
-                <Link to="/classement" className="text-sm font-medium text-accent">
-                  Classement complet
+                <Link to="/leaderboard" className="text-sm font-medium text-accent">
+                  {t('Full leaderboard')}
                 </Link>
               }
             >
@@ -128,8 +129,8 @@ export function DefaultHomeHero({ site }: HomeProps) {
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600 dark:text-slate-300">{site.heroText || site.tagline}</p>
         )}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link to="/p/rejoindre" className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 font-semibold text-accent-fg shadow-lg hover:brightness-110">
-            Rejoindre le serveur <ArrowRight className="h-4 w-4" />
+          <Link to={site.joinUrl || '/p/join'} className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 font-semibold text-accent-fg shadow-lg hover:brightness-110">
+            {t('Join the server')} <ArrowRight className="h-4 w-4" />
           </Link>
           {site.discordUrl && (
             <a

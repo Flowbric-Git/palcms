@@ -3,6 +3,7 @@ import { config } from '../config';
 import { db, runMigrations, settings } from '../db';
 import { events } from '../core/events';
 import { modules } from '../core/modules';
+import { siteLang, tr, trMessage } from '../core/i18n';
 import { realtime } from '../core/realtime';
 import { getExternalServer, getServerMode, getSiteSettings, saveSiteSettings } from '../core/site';
 import { readConfigValues, updateConfig } from '../palworld/configService';
@@ -11,7 +12,7 @@ import { poller, publicPlayerId } from '../palworld/poller';
 import { palworld } from '../palworld/restClient';
 import { restartServer, serviceState, startServer, stopServer } from '../palworld/service';
 
-/** Services du cœur du CMS confiés aux fonctionnalités. */
+/** CMS core services handed to features. */
 export function createFeatureHost(): FeatureHost {
   return {
     version: config.version,
@@ -58,6 +59,9 @@ export function createFeatureHost(): FeatureHost {
     },
     site: { get: getSiteSettings, save: saveSiteSettings },
     modules: { isEnabled: (id) => modules.isEnabled(id) },
+    lang: siteLang,
+    t: tr,
+    tMessage: trMessage,
     log: (message) => console.log(`[features] ${message}`),
   };
 }

@@ -1,14 +1,22 @@
-// Thème Aurora : remplace l'en-tête, le bandeau de l'accueil et le pied de page.
-// Chaque composant reçoit "Default" pour réutiliser la version d'origine si besoin.
+// Aurora theme: replaces the header, the home page banner and the footer.
+// Each component receives "Default" to reuse the original version when needed.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CopyAddress, MenuLink, StatusDot, useThemeSettings } from '@palcms/sdk';
+import { CopyAddress, MenuLink, StatusDot, lang, t, useThemeSettings } from '@palcms/sdk';
+
+// Most texts come from the PalCMS translations (t); these ones are specific to the theme.
+const FR = {
+  'My profile': 'Mon profil',
+  'Powered by PalCMS · Aurora theme · Palworld is a trademark of Pocketpair, Inc.':
+    'Propulsé par PalCMS · Thème Aurora · Palworld est une marque de Pocketpair, Inc.',
+};
+const tr = (text, vars) => (lang() === 'fr' && FR[text]) || t(text, vars);
 
 function Header(props) {
   const s = useThemeSettings();
   const { site, menu, user, isAdmin, modules, logout, Default } = props;
   const [open, setOpen] = useState(false);
-  // Aurora est un thème sombre : le mode sombre est imposé sur le site public.
+  // Aurora is a dark theme: dark mode is forced on the public site.
   useEffect(() => {
     document.documentElement.classList.add('dark');
   }, []);
@@ -25,28 +33,28 @@ function Header(props) {
             <MenuLink key={m.label + m.url} label={m.label} href={m.url} />
           ))}
           <span className="mx-2 h-5 w-px bg-white/15" />
-          {isAdmin && <MenuLink label="Panel admin" href="/admin" />}
+          {isAdmin && <MenuLink label={tr('Admin panel')} href="/admin" />}
           {user ? (
             <>
-              <MenuLink label={user.displayName} href="/profil" />
+              <MenuLink label={user.displayName} href="/profile" />
               <button onClick={() => void logout()} className="rounded-lg px-3 py-2 text-sm text-slate-400 hover:text-white">
-                Déconnexion
+                {tr('Log out')}
               </button>
             </>
           ) : (
-            modules.registration && <MenuLink label="Connexion" href="/connexion" />
+            modules.registration && <MenuLink label={tr('Log in')} href="/login" />
           )}
         </nav>
         <button className="rounded-lg px-3 py-1 text-sm ring-1 ring-white/20 md:hidden" onClick={() => setOpen(!open)}>
-          Menu
+          {tr('Menu')}
         </button>
         {open && (
           <nav className="flex w-full flex-col gap-1 md:hidden" onClick={() => setOpen(false)}>
             {menu.map((m) => (
               <MenuLink key={m.label + m.url} label={m.label} href={m.url} />
             ))}
-            {isAdmin && <MenuLink label="Panel admin" href="/admin" />}
-            {user ? <MenuLink label="Mon profil" href="/profil" /> : modules.registration && <MenuLink label="Connexion" href="/connexion" />}
+            {isAdmin && <MenuLink label={tr('Admin panel')} href="/admin" />}
+            {user ? <MenuLink label={tr('My profile')} href="/profile" /> : modules.registration && <MenuLink label={tr('Log in')} href="/login" />}
           </nav>
         )}
       </div>
@@ -66,19 +74,19 @@ function Hero({ site, modules, live }) {
         {s.showStatus && modules.status && status && (
           <div className="mx-auto mt-8 inline-flex flex-wrap items-center justify-center gap-4 rounded-2xl bg-white/5 px-5 py-3 ring-1 ring-white/10 backdrop-blur">
             <span className="flex items-center gap-2 text-sm font-medium">
-              <StatusDot online={status.online} /> {status.online ? 'En ligne' : 'Hors ligne'}
+              <StatusDot online={status.online} /> {status.online ? tr('Online') : tr('Offline')}
             </span>
             {status.online && (
               <span className="text-sm text-slate-300">
-                {status.players}/{status.maxPlayers} joueurs
+                {tr('{n} players', { n: `${status.players}/${status.maxPlayers}` })}
               </span>
             )}
             {status.address && <CopyAddress address={status.address} />}
           </div>
         )}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link to="/p/rejoindre" className="aurora-button rounded-xl px-6 py-3 font-semibold text-slate-950 shadow-lg">
-            Rejoindre le serveur
+          <Link to={site.joinUrl || '/p/join'} className="aurora-button rounded-xl px-6 py-3 font-semibold text-slate-950 shadow-lg">
+            {tr('Join the server')}
           </Link>
           {site.discordUrl && (
             <a href={site.discordUrl} target="_blank" rel="noopener noreferrer" className="rounded-xl px-6 py-3 font-semibold ring-1 ring-white/20 hover:bg-white/5">
@@ -113,19 +121,19 @@ function Footer({ site, menu, modules }) {
           </ul>
         </div>
         <div>
-          <p className="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">Serveur</p>
+          <p className="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">{tr('Server')}</p>
           <ul className="space-y-1 text-sm">
             {modules.uptime && (
               <li>
-                <Link to="/disponibilite" className="text-slate-300 hover:text-white">
-                  Disponibilité
+                <Link to="/uptime" className="text-slate-300 hover:text-white">
+                  {tr('Uptime')}
                 </Link>
               </li>
             )}
             {modules.tickets && (
               <li>
-                <Link to="/signaler" className="text-slate-300 hover:text-white">
-                  Signaler un problème
+                <Link to="/report" className="text-slate-300 hover:text-white">
+                  {tr('Report a problem')}
                 </Link>
               </li>
             )}
@@ -139,7 +147,7 @@ function Footer({ site, menu, modules }) {
           </ul>
         </div>
       </div>
-      <p className="pb-6 text-center text-xs text-slate-500">Propulsé par PalCMS · Thème Aurora · Palworld est une marque de Pocketpair, Inc.</p>
+      <p className="pb-6 text-center text-xs text-slate-500">{tr('Powered by PalCMS · Aurora theme · Palworld is a trademark of Pocketpair, Inc.')}</p>
     </footer>
   );
 }

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-// scrypt (intégré à Node) : pas de dépendance native à compiler sur le VPS.
+// scrypt (built into Node): no native dependency to compile on the VPS.
 const N = 32768;
 const r = 8;
 const p = 1;
@@ -31,6 +31,6 @@ export async function verifyPassword(password: string, stored: string | null): P
   return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
 }
 
-/** Hash factice pour garder un temps de réponse constant quand l'utilisateur n'existe pas. */
+/** Dummy hash that keeps a constant response time when the user does not exist. */
 export const DUMMY_HASH =
   'scrypt$32768$8$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';

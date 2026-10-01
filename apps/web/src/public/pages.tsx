@@ -5,12 +5,13 @@ import type { NewsItem, NewsSummary, PageItem } from '@palcms/shared';
 import { api, ApiError } from '../lib/api';
 import { formatDate } from '../lib/format';
 import { Prose, Spinner } from '../components/ui';
+import { t } from '../lib/i18n';
 
 export function Container({ children, narrow = false }: { children: ReactNode; narrow?: boolean }) {
   return <div className={`mx-auto px-4 py-10 ${narrow ? 'max-w-3xl' : 'max-w-6xl'}`}>{children}</div>;
 }
 
-/** Charge une ressource ; renvoie null pendant le chargement, 'missing' si introuvable. */
+/** Loads a resource; returns null while loading, 'missing' when not found. */
 function useResource<T>(path: string | null): T | null | 'missing' {
   const [data, setData] = useState<T | null | 'missing'>(null);
   useEffect(() => {
@@ -29,9 +30,9 @@ export function NotFound() {
     <Container narrow>
       <div className="py-20 text-center">
         <p className="text-6xl font-extrabold text-accent">404</p>
-        <p className="mt-4 text-lg">Cette page n'existe pas.</p>
+        <p className="mt-4 text-lg">{t('This page does not exist.')}</p>
         <Link to="/" className="mt-6 inline-block font-medium text-accent">
-          Retour à l'accueil
+          {t('Back to home')}
         </Link>
       </div>
     </Container>
@@ -59,13 +60,13 @@ export function NewsList() {
   if (data === 'missing') return <NotFound />;
   return (
     <Container>
-      <h1 className="text-3xl font-bold">Actualités</h1>
-      {data.items.length === 0 && <p className="mt-6 text-slate-500">Aucune actualité publiée.</p>}
+      <h1 className="text-3xl font-bold">{t('News')}</h1>
+      {data.items.length === 0 && <p className="mt-6 text-slate-500">{t('No news published.')}</p>}
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {data.items.map((n) => (
           <Link
             key={n.id}
-            to={`/actualites/${n.slug}`}
+            to={`/news/${n.slug}`}
             className="group overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md dark:bg-slate-900 dark:ring-slate-800"
           >
             {n.coverUrl ? (
@@ -105,13 +106,13 @@ export function NewsDetail() {
   if (item === 'missing') return <NotFound />;
   return (
     <Container narrow>
-      <Link to="/actualites" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-accent">
-        <ArrowLeft className="h-4 w-4" /> Toutes les actualités
+      <Link to="/news" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-accent">
+        <ArrowLeft className="h-4 w-4" /> {t('All news')}
       </Link>
       <h1 className="mt-4 text-3xl font-bold">{item.title}</h1>
       <p className="mt-2 text-sm text-slate-500">
         {formatDate(item.publishedAt)}
-        {item.author && ` · par ${item.author}`}
+        {item.author && ` · ${t('by {name}', { name: item.author })}`}
       </p>
       {item.coverUrl && <img src={item.coverUrl} alt="" className="mt-6 w-full rounded-xl" />}
       <Prose html={item.contentHtml} className="mt-6" />

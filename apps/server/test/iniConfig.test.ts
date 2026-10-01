@@ -11,11 +11,11 @@ import {
 } from '../src/palworld/iniConfig';
 
 const SAMPLE = `[/Script/Pal.PalGameWorldSettings]
-OptionSettings=(Difficulty=None,ExpRate=1.500000,ServerName="Mon, serveur (FR)",PublicPort=8211,bIsPvP=False,CrossplayPlatforms=(Steam,Xbox,PS5,Mac),ServerPassword="")
+OptionSettings=(Difficulty=None,ExpRate=1.500000,ServerName="My, server (EU)",PublicPort=8211,bIsPvP=False,CrossplayPlatforms=(Steam,Xbox,PS5,Mac),ServerPassword="")
 `;
 
 describe('parseOptionSettings', () => {
-  it('découpe correctement, y compris virgules entre guillemets et parenthèses', () => {
+  it('splits correctly, including commas inside quotes and parentheses', () => {
     const entries = parseOptionSettings(SAMPLE);
     expect(entries.map((e) => e.key)).toEqual([
       'Difficulty',
@@ -26,23 +26,23 @@ describe('parseOptionSettings', () => {
       'CrossplayPlatforms',
       'ServerPassword',
     ]);
-    expect(getValue(entries, 'ServerName')).toEqual({ type: 'string', value: 'Mon, serveur (FR)' });
+    expect(getValue(entries, 'ServerName')).toEqual({ type: 'string', value: 'My, server (EU)' });
     expect(getValue(entries, 'CrossplayPlatforms')).toEqual({ type: 'raw', value: '(Steam,Xbox,PS5,Mac)' });
     expect(getValue(entries, 'ExpRate')).toEqual({ type: 'number', value: 1.5, decimals: true });
     expect(getValue(entries, 'bIsPvP')).toEqual({ type: 'bool', value: false });
   });
 
-  it('fait un aller-retour sans perte', () => {
+  it('round-trips without loss', () => {
     const entries = parseOptionSettings(SAMPLE);
     expect(parseOptionSettings(serializeOptionSettings(entries))).toEqual(entries);
   });
 
-  it('refuse un fichier sans OptionSettings ou mal fermé', () => {
+  it('refuses a file without OptionSettings or badly closed', () => {
     expect(() => parseOptionSettings('[x]\nFoo=1')).toThrow();
     expect(() => parseOptionSettings('OptionSettings=(A=1,B=2')).toThrow();
   });
 
-  it('lit les réglages par défaut du serveur dédié', () => {
+  it('reads the default settings of the dedicated server', () => {
     const entries = defaultEntries();
     expect(entries.length).toBeGreaterThan(60);
     expect(getValue(entries, 'BanListURL')).toEqual({ type: 'string', value: 'https://api.palworldgame.com/api/banlist.txt' });
@@ -50,7 +50,7 @@ describe('parseOptionSettings', () => {
 });
 
 describe('setValue / encodeValue', () => {
-  it('conserve le type existant', () => {
+  it('keeps the existing type', () => {
     const entries = parseOptionSettings(SAMPLE);
     setValue(entries, 'ExpRate', '2');
     setValue(entries, 'PublicPort', 9000);
@@ -65,7 +65,7 @@ describe('setValue / encodeValue', () => {
     expect(map.ServerName).toBe('"Nouveau"');
   });
 
-  it('empêche toute injection dans le fichier', () => {
+  it('prevents any injection into the file', () => {
     const entries = parseOptionSettings(SAMPLE);
     setValue(entries, 'ServerName', 'a",AdminPassword="pirate');
     expect(parseOptionSettings(serializeOptionSettings(entries)).filter((e) => e.key === 'AdminPassword')).toHaveLength(0);
@@ -74,7 +74,7 @@ describe('setValue / encodeValue', () => {
     expect(() => encodeValue({ type: 'number', value: Number.NaN, decimals: false })).toThrow();
   });
 
-  it('décode les valeurs', () => {
+  it('decodes the values', () => {
     expect(decodeValue('True')).toEqual({ type: 'bool', value: true });
     expect(decodeValue('32')).toEqual({ type: 'number', value: 32, decimals: false });
     expect(decodeValue('All')).toEqual({ type: 'raw', value: 'All' });
@@ -82,7 +82,7 @@ describe('setValue / encodeValue', () => {
 });
 
 describe('buildIniFromSetup', () => {
-  it('applique le formulaire et force l’API REST', () => {
+  it('applies the form and forces the REST API', () => {
     const ini = buildIniFromSetup({
       serverName: 'Test',
       description: 'desc',

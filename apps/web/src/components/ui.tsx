@@ -8,6 +8,7 @@ import {
   type TextareaHTMLAttributes,
 } from 'react';
 import { AlertTriangle, CheckCircle2, Info, Loader2, XCircle } from 'lucide-react';
+import { t } from '../lib/i18n';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 export { cx };
@@ -65,7 +66,7 @@ export function Select({ className, children, ...rest }: SelectHTMLAttributes<HT
   );
 }
 
-/** Champ avec libellé, aide et message d'erreur. L'enfant reçoit l'id via la fonction render. */
+/** Field with label, help and error message. The child gets the id through the render function. */
 export function Field({
   label,
   help,
@@ -190,7 +191,7 @@ export function Alert({ kind = 'info', children, className }: { kind?: AlertKind
   );
 }
 
-export function Spinner({ label = 'Chargement…' }: { label?: string }) {
+export function Spinner({ label = t('Loading…') }: { label?: string }) {
   return (
     <div className="flex items-center justify-center gap-2 py-10 text-sm text-slate-500">
       <Loader2 className="h-5 w-5 animate-spin" />
@@ -215,7 +216,7 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">{children}</p>;
 }
 
-/** HTML déjà nettoyé côté serveur (pages, actualités). */
+/** HTML already cleaned on the server (pages, news). */
 export function Prose({ html, className }: { html: string; className?: string }) {
   return <div className={cx('prose-cms', className)} dangerouslySetInnerHTML={{ __html: html }} />;
 }

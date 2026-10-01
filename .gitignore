@@ -11,6 +11,6 @@ tools/.dev-data/
 Thumbs.db
 coverage/
 
-# Extensions construites par le kit (sdk/)
+# Extensions built by the kit (sdk/)
 sdk/examples/*/dist/
 sdk/examples/*/*.zip

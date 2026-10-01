@@ -1,6 +1,6 @@
-// Mode démo : un faux serveur PalCMS qui tourne entièrement dans le navigateur.
-// Les données de départ viennent de data.json (réponses d'une vraie installation),
-// les modifications sont gardées dans le localStorage du visiteur.
+// Demo mode: a fake PalCMS server running entirely in the browser.
+// Starting data comes from data.json (responses of a real install),
+// changes are kept in the visitor's localStorage.
 import { ALL_PERMISSIONS, type WsServerMessage } from '@palcms/shared';
 import seed from './data.json';
 import { version } from '../../package.json';
@@ -24,10 +24,10 @@ class DemoError extends Error {
 }
 
 const notInDemo = () => {
-  throw new DemoError(400, "Cette action n'est pas disponible dans la démo.");
+  throw new DemoError(400, 'This action is not available in the demo.');
 };
 
-// Monde simulé
+// Simulated world
 
 const NAMES = ['Lyra', 'Kaito', 'Nova', 'Bastien', 'Mira', 'Oskar', 'Zelie', 'Tanuki', 'Ember', 'Yuki'];
 
@@ -47,7 +47,7 @@ interface Player {
   ip: string;
 }
 
-// Générateur pseudo-aléatoire avec graine : le monde de départ est le même pour tout le monde.
+// Seeded pseudo-random generator: the starting world is the same for everyone.
 function rng(seedValue: number) {
   let s = seedValue;
   return () => {
@@ -79,10 +79,10 @@ function createPlayers(): Player[] {
   });
 }
 
-// État du site (modifiable par le visiteur)
+// Site state (the visitor can change it)
 
 function hydrate(value: Any): Any {
-  // Dans data.json, les dates négatives sont des décalages par rapport à maintenant.
+  // In data.json, negative dates are offsets from now.
   if (Array.isArray(value)) return value.map(hydrate);
   if (value && typeof value === 'object') {
     const out: Any = {};
@@ -101,7 +101,7 @@ function initialState(): Any {
     return { name: backupName(at, h === 0 ? 'manual' : 'auto'), size: 48_000_000 + h * 350_000, createdAt: at, tag: h === 0 ? 'manual' : 'auto' };
   });
   return {
-    v: 1,
+    v: 2,
     user: null,
     service: 'active',
     serviceSince: START - 5 * 3600_000,
@@ -118,16 +118,16 @@ function initialState(): Any {
     pendingRestart: null,
     theme: s.theme,
     whitelist: s.whitelist,
-    bans: [{ uid: 'steam_76561198000009999', name: 'Griefer42', reason: 'Destruction de bases', bannedAt: START - 3 * DAY, bannedBy: 'admin' }],
+    bans: [{ uid: 'steam_76561198000009999', name: 'Griefer42', reason: 'Destroying bases', bannedAt: START - 3 * DAY, bannedBy: 'admin' }],
     backupSettings: s.backupSettings,
     backups,
     map: { public: true, settings: s.map.settings, pois: s.map.pois },
-    announcements: [{ id: 1, message: 'Pensez à rejoindre le Discord !', runAt: START + 2 * 3600_000, repeat: 'daily', createdBy: 'admin' }],
+    announcements: [{ id: 1, message: 'Remember to join the Discord!', runAt: START + 2 * 3600_000, repeat: 'daily', createdBy: 'admin' }],
     audit: [
       audit('backup.create', backups[3].name, START - 120_000),
-      audit('news.create', 'nouvelle-carte-en-direct', START - DAY),
-      audit('map.poi.create', 'Marchand', START - 2 * DAY),
-      audit('news.create', 'evenement-du-week-end-chasse-aux-alphas', START - 4 * DAY),
+      audit('news.create', 'new-live-map', START - DAY),
+      audit('map.poi.create', 'Merchant', START - 2 * DAY),
+      audit('news.create', 'weekend-event-alpha-hunt', START - 4 * DAY),
       audit('player.ban', 'Griefer42', START - 3 * DAY),
       audit('settings.update', 'site', START - 12 * DAY),
     ],
@@ -158,41 +158,42 @@ function load(): Any {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const s = JSON.parse(raw);
-      if (s?.v === 1) return s;
+      // v1 = French demo data (before 1.1.0): start again from the English data.
+      if (s?.v === 2) return s;
     }
   } catch {
-    // localStorage indisponible (navigation privée...) : la démo repart de zéro à chaque visite
+    // localStorage unavailable (private browsing...): the demo starts from scratch on each visit
   }
   return initialState();
 }
 
 let state: Any = load();
 
-// Modules ajoutés depuis la création de data.json (aussi pour une démo déjà enregistrée dans le navigateur)
+// Modules added since data.json was created (also for a demo already saved in the browser)
 const NEW_MODULES = [
-  ['guilds', 'Guildes', 'Page publique des guildes : membres, niveau et bases sur la carte (lecture des sauvegardes).', 'public', true],
-  ['paldex', 'Paldex du serveur', 'Les 288 Pals façon boîte à Pals, par serveur, joueur et guilde (lecture des sauvegardes).', 'public', true],
-  ['character', 'Mon personnage', 'Les joueurs inscrits voient leurs Pals, leur inventaire et leur guilde.', 'public', true],
-  ['calendar', 'Calendrier des événements', 'Événements à venir sur le site, avec un compte à rebours sur l’accueil.', 'public', true],
-  ['uptime', 'Page de disponibilité', 'Disponibilité du serveur sur 30 jours, fréquentation et prochain redémarrage.', 'public', true],
-  ['tickets', 'Signalements et suggestions', 'Les joueurs inscrits signalent un problème ou proposent une idée à l’équipe.', 'public', true],
-  ['world', 'Données du monde', 'Lecture des sauvegardes : inventaires, Pals, guildes et bases.', 'server', false],
-  ['monitoring', 'Surveillance', 'Alertes, état des connexions, détection des plantages et statistiques de fréquentation.', 'server', false],
-  ['events', 'Événements et préréglages', 'Réglages temporaires programmés (week-end XP x3…) et préréglages de configuration.', 'server', false],
+  ['guilds', 'Guilds', 'Public guild pages: members, level and bases on the map (read from the save files).', 'public', true],
+  ['paldex', 'Server Paldex', 'All 288 Pals by server, player and guild, with the top collectors (read from the save files).', 'public', true],
+  ['character', 'My character', 'Registered players see their Pals, inventory and guild.', 'public', true],
+  ['calendar', 'Events calendar', 'Upcoming events on the site, with a countdown on the home page.', 'public', true],
+  ['uptime', 'Uptime page', 'Server uptime over 30 days, attendance and next restart.', 'public', true],
+  ['tickets', 'Reports and suggestions', 'Registered players report a problem or suggest an idea to the team.', 'public', true],
+  ['world', 'World data', 'Reads the save files: inventories, Pals, guilds and bases.', 'server', false],
+  ['monitoring', 'Monitoring', 'Alerts, connection status, crash detection and attendance statistics.', 'server', false],
+  ['events', 'Events and presets', 'Scheduled temporary settings (XP x3 weekend…) and configuration presets.', 'server', false],
 ] as const;
 for (const [id, name, description, area, toggleable] of NEW_MODULES) {
   if (!state.modules.some((m: Any) => m.id === id)) state.modules.push({ id, name, description, area, toggleable, enabled: true });
 }
 for (const item of [
-  { label: 'Événements', url: '/evenements', after: '/actualites' },
-  { label: 'Guildes', url: '/guildes', after: '/carte' },
-  { label: 'Paldex', url: '/paldex', after: '/guildes' },
+  { label: 'Events', url: '/events', after: '/news' },
+  { label: 'Guilds', url: '/guilds', after: '/map' },
+  { label: 'Paldex', url: '/paldex', after: '/guilds' },
 ]) {
   if (state.site.menu.some((m: Any) => m.url === item.url)) continue;
   const i = state.site.menu.findIndex((m: Any) => m.url === item.after);
   state.site.menu.splice(i >= 0 ? i + 1 : state.site.menu.length, 0, { label: item.label, url: item.url });
 }
-// Lien direct vers /admin (ex. depuis le README) : on entre dans le panel sans passer par la connexion.
+// Direct link to /admin (e.g. from the README): enter the panel without logging in.
 if (!state.user && location.pathname.startsWith(`${import.meta.env.BASE_URL}admin`)) state.user = seed.adminUser;
 const players = createPlayers();
 const metrics: { ts: number; fps: number; players: number }[] = [];
@@ -202,7 +203,7 @@ function save() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
-    // tant pis, la démo marche quand même
+    // never mind, the demo still works
   }
 }
 
@@ -210,12 +211,12 @@ export function resetDemo() {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
-    // rien
+    // nothing to do
   }
   location.href = import.meta.env.BASE_URL;
 }
 
-// Temps réel
+// Real time
 
 type Listener = (msg: WsServerMessage) => void;
 const listeners = new Set<Listener>();
@@ -249,7 +250,7 @@ function status() {
     fps: serverOnline() ? 55 + Math.round(Math.random() * 5) : null,
     days: serverOnline() ? 14 + Math.floor((Date.now() - START) / 1_200_000) : null,
     uptime: serverOnline() ? Math.round((Date.now() - state.serviceSince) / 1000) : null,
-    address: state.site.serverAddress || 'play.palpagos.fr:8211',
+    address: state.site.serverAddress || 'play.palpagos.net:8211',
     updatedAt: Date.now(),
   };
 }
@@ -302,8 +303,8 @@ function tick() {
   if (isOn('map') && (state.map.public || state.user)) emit({ type: 'feature', event: 'map', data: mapPlayers() });
 }
 
-// Historique de départ pour le tableau de bord et les logs
-// 24 h de mesures toutes les 5 minutes, avec plus de monde le soir
+// Starting history for the dashboard and the logs
+// 24 h of measures every 5 minutes, with more players in the evening
 for (let i = 287; i >= 0; i--) {
   const ts = START - i * 300_000;
   const hour = new Date(ts).getHours();
@@ -314,10 +315,10 @@ for (const p of players.filter((x) => x.online)) logs.push(`${new Date(START - 6
 logs.unshift(`${new Date(state.serviceSince).toISOString()} palworld[4242]: Running Palworld dedicated server on :8211`);
 setInterval(tick, 3000);
 
-// Routeur
+// Router
 
 const requireStaff = () => {
-  if (!state.user) throw new DemoError(401, 'Connexion requise');
+  if (!state.user) throw new DemoError(401, 'Login required');
 };
 
 const findPlayer = (id: string) => players.find((p) => p.publicId === id || p.uid === id);
@@ -364,7 +365,7 @@ const bootstrap = () => ({
   serverMode: 'managed',
   site: state.site,
   modules: Object.fromEntries(state.modules.map((m: Any) => [m.id, m.enabled])),
-  // Dans la démo, le visiteur a toutes les permissions du panel.
+  // In the demo, the visitor has every panel permission.
   user: state.user ? { ...state.user, permissions: ALL_PERMISSIONS } : null,
   extensions: extensions.boot(),
 });
@@ -411,21 +412,21 @@ function handle(method: string, fullPath: string, body: Any): Any {
   }
   if (method === 'GET' && seg[0] === 'public' && seg[1] === 'news') {
     const n = state.news.find((x: Any) => x.slug === seg[2] && x.published);
-    if (!n) throw new DemoError(404, 'Article introuvable');
+    if (!n) throw new DemoError(404, 'Article not found');
     return n;
   }
   if (method === 'GET' && seg[0] === 'public' && seg[1] === 'pages') {
     const p = state.pages.find((x: Any) => x.slug === seg[2] && x.published);
-    if (!p) throw new DemoError(404, 'Page introuvable');
+    if (!p) throw new DemoError(404, 'Page not found');
     return p;
   }
   if (method === 'GET' && seg[0] === 'public' && seg[1] === 'players') {
     const p = findPlayer(seg[2]);
-    if (!p) throw new DemoError(404, 'Joueur introuvable');
+    if (!p) throw new DemoError(404, 'Player not found');
     return profile(p);
   }
 
-  // Comptes : dans la démo, toute connexion ouvre la session administrateur.
+  // Accounts: in the demo, any login opens the administrator session.
   if (route === 'POST auth/login') {
     state.user = seed.adminUser;
     return { user: state.user };
@@ -434,7 +435,7 @@ function handle(method: string, fullPath: string, body: Any): Any {
     state.user = null;
     return { ok: true };
   }
-  if (route === 'POST auth/register') throw new DemoError(400, "L'inscription est désactivée dans la démo. Utilise « Entrer dans le panel ».");
+  if (route === 'POST auth/register') throw new DemoError(400, 'Sign-up is turned off in the demo. Use "Enter the admin panel".');
   if (route === 'PATCH auth/me') {
     requireStaff();
     if (body?.newPassword) notInDemo();
@@ -442,15 +443,15 @@ function handle(method: string, fullPath: string, body: Any): Any {
     return { user: state.user };
   }
 
-  // Carte (publique si l'admin l'a laissée publique)
+  // Map (public if the admin left it public)
   if (route === 'GET features/map') {
-    if (!state.map.public && !state.user) throw new DemoError(403, 'La carte est réservée à l’équipe');
+    if (!state.map.public && !state.user) throw new DemoError(403, 'The map is for the team only');
     return { ...state.map, officialUrl: `${import.meta.env.BASE_URL}map-palpagos.jpg`, players: mapPlayers() };
   }
   if (route === 'GET features/leaderboard') return { by: q.get('by') ?? 'level', entries: leaderboard(q.get('by') ?? 'level') };
   if (method === 'GET' && seg[0] === 'features' && seg[1] === 'players' && seg[3] === 'stats') {
     const p = findPlayer(seg[2]);
-    if (!p) throw new DemoError(404, 'Joueur introuvable');
+    if (!p) throw new DemoError(404, 'Player not found');
     return playerStats(p);
   }
   if (route === 'GET features/theme') return state.theme;
@@ -462,7 +463,7 @@ function handle(method: string, fullPath: string, body: Any): Any {
 
   if (seg[0] === 'setup') notInDemo();
 
-  // Tout le reste est réservé à l'équipe
+  // Everything else is for the team only
   requireStaff();
   return handleAdmin(method, path, seg, q, body);
 }
@@ -492,7 +493,7 @@ function handleAdmin(method: string, path: string, seg: string[], q: URLSearchPa
       log('Running Palworld dedicated server on :8211');
     }
     record(`server.${action}`);
-    return { message: { start: 'Serveur démarré.', stop: 'Serveur arrêté.', restart: 'Serveur redémarré.' }[action] };
+    return { message: { start: 'Server started', stop: 'Server stopped', restart: 'Server restarted' }[action] };
   }
   if (route === 'GET admin/server/config') return { entries: state.config };
   if (route === 'PUT admin/server/config') {
@@ -502,7 +503,7 @@ function handleAdmin(method: string, path: string, seg: string[], q: URLSearchPa
     }
     record('server.config');
     if (body.restart) state.serviceSince = Date.now();
-    return { message: body.restart ? 'Configuration enregistrée, serveur redémarré.' : 'Configuration enregistrée. Elle sera appliquée au prochain redémarrage.' };
+    return { message: body.restart ? 'Configuration saved, server restarted' : 'Configuration saved (applied on next restart)' };
   }
   if (route === 'GET admin/server/logs') return { lines: logs.slice(-Number(q.get('lines') ?? 300)) };
   if (route === 'GET admin/server/players') {
@@ -537,7 +538,7 @@ function handleAdmin(method: string, path: string, seg: string[], q: URLSearchPa
   }
   if (route === 'GET admin/site/pages') return state.pages;
   if (route === 'POST admin/site/pages') {
-    if (state.pages.some((p: Any) => p.slug === body.slug)) throw new DemoError(409, 'Cette adresse est déjà utilisée');
+    if (state.pages.some((p: Any) => p.slug === body.slug)) throw new DemoError(409, 'This address is already used');
     const p = { ...body, id: state.nextId++, updatedAt: Date.now() };
     state.pages.push(p);
     record('page.create', p.slug);
@@ -545,7 +546,7 @@ function handleAdmin(method: string, path: string, seg: string[], q: URLSearchPa
   }
   if (seg[0] === 'admin' && seg[1] === 'site' && seg[2] === 'pages') {
     const i = state.pages.findIndex((p: Any) => p.id === id);
-    if (i < 0) throw new DemoError(404, 'Page introuvable');
+    if (i < 0) throw new DemoError(404, 'Page not found');
     if (method === 'GET') return state.pages[i];
     if (method === 'PUT') {
       state.pages[i] = { ...state.pages[i], ...body, updatedAt: Date.now() };
@@ -570,7 +571,7 @@ function handleAdmin(method: string, path: string, seg: string[], q: URLSearchPa
   }
   if (seg[0] === 'admin' && seg[1] === 'site' && seg[2] === 'news') {
     const i = state.news.findIndex((n: Any) => n.id === id);
-    if (i < 0) throw new DemoError(404, 'Article introuvable');
+    if (i < 0) throw new DemoError(404, 'Article not found');
     if (method === 'GET') return state.news[i];
     if (method === 'PUT') {
       const old = state.news[i];
@@ -585,9 +586,9 @@ function handleAdmin(method: string, path: string, seg: string[], q: URLSearchPa
     }
   }
   if (route === 'POST admin/site/upload' || route === 'POST features/map/image') {
-    // demoRequest a déjà converti le fichier en data URL
+    // demoRequest already turned the file into a data URL
     const url = body?.dataUrl;
-    if (!url) throw new DemoError(400, 'Aucun fichier');
+    if (!url) throw new DemoError(400, 'No file');
     if (path === 'features/map/image') {
       state.map.settings = { ...state.map.settings, image: 'custom', customUrl: url };
       return state.map.settings;
@@ -603,8 +604,8 @@ function handleAdmin(method: string, path: string, seg: string[], q: URLSearchPa
   if (route === 'GET admin/members/players') return players.map((p) => ({ uid: p.uid, name: p.name, level: p.level, lastSeen: p.lastSeen }));
   if (seg[0] === 'admin' && seg[1] === 'members') {
     const m = state.members.find((x: Any) => x.id === Number(seg[2]));
-    if (!m) throw new DemoError(404, 'Membre introuvable');
-    if (m.role === 'superadmin') throw new DemoError(403, 'Le compte administrateur principal ne peut pas être modifié ici');
+    if (!m) throw new DemoError(404, 'Member not found');
+    if (m.role === 'superadmin') throw new DemoError(403, 'The main administrator account cannot be changed here');
     if (method === 'DELETE') {
       state.members = state.members.filter((x: Any) => x !== m);
       return { ok: true };
@@ -685,10 +686,10 @@ function handleAdmin(method: string, path: string, seg: string[], q: URLSearchPa
     return { ok: true };
   }
 
-  // Modération
+  // Moderation
   if (method === 'POST' && seg[0] === 'features' && seg[1] === 'players') {
     const p = findPlayer(decodeURIComponent(seg[2]));
-    if (!p) throw new DemoError(404, 'Joueur introuvable');
+    if (!p) throw new DemoError(404, 'Player not found');
     p.online = false;
     if (seg[3] === 'ban') state.bans.push({ uid: p.uid, name: p.name, reason: body.reason ?? '', bannedAt: Date.now(), bannedBy: state.user.username });
     log(`${p.name} was ${seg[3] === 'ban' ? 'banned' : 'kicked'} by PalCMS`);
@@ -729,7 +730,7 @@ function handleAdmin(method: string, path: string, seg: string[], q: URLSearchPa
     state.discord = { ...state.discord, ...body };
     return { ok: true };
   }
-  if (route === 'POST features/discord/test') throw new DemoError(400, "Pas d'envoi vers Discord depuis la démo.");
+  if (route === 'POST features/discord/test') throw new DemoError(400, 'Nothing is sent to Discord from the demo.');
 
   // Carte
   if (route === 'PUT features/map/settings') {
@@ -751,13 +752,13 @@ function handleAdmin(method: string, path: string, seg: string[], q: URLSearchPa
     return { ok: true };
   }
 
-  // Thème
+  // Theme
   if (route === 'PUT features/theme') {
     state.theme = { ...state.theme, ...body };
     return state.theme;
   }
 
-  // Équipe et rôles
+  // Team and roles
   if (route === 'GET features/team') return state.team;
   if (route === 'GET features/team/candidates') {
     const term = (q.get('q') ?? '').toLowerCase();
@@ -782,7 +783,7 @@ function handleAdmin(method: string, path: string, seg: string[], q: URLSearchPa
   if (seg[0] === 'features' && seg[1] === 'roles') {
     const rid = Number(seg[2]);
     const r = state.team.roles.find((x: Any) => x.id === rid);
-    if (r?.builtin) throw new DemoError(403, 'Les rôles prêts à l’emploi ne peuvent pas être modifiés dans la démo');
+    if (r?.builtin) throw new DemoError(403, 'Built-in roles cannot be changed in the demo');
     if (method === 'PUT') state.team.roles = state.team.roles.map((x: Any) => (x.id === rid ? { ...x, ...body } : x));
     if (method === 'DELETE') state.team.roles = state.team.roles.filter((x: Any) => x.id !== rid);
     return { ok: true };
@@ -795,7 +796,7 @@ function handleAdmin(method: string, path: string, seg: string[], q: URLSearchPa
     return { items: items.slice(0, 50), page: 1, pages: 1 };
   }
 
-  throw new DemoError(404, 'Introuvable');
+  throw new DemoError(404, 'Not found');
 }
 
 function nextTime(times: string[]): number | null {
@@ -834,15 +835,15 @@ function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new DemoError(400, 'Fichier illisible'));
+    reader.onerror = () => reject(new DemoError(400, 'Unreadable file'));
     reader.readAsDataURL(file);
   });
 }
 
-// Point d'entrée utilisé par lib/api.ts
+// Entry point used by lib/api.ts
 
 export async function demoRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
-  // Petite latence pour que l'interface se comporte comme avec un vrai serveur
+  // Small delay so the interface behaves as with a real server
   await new Promise((r) => setTimeout(r, 80 + Math.random() * 120));
   if (body instanceof FormData) {
     const file = body.get('file');

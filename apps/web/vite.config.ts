@@ -6,8 +6,8 @@ import tailwindcss from '@tailwindcss/vite';
 
 const api = 'http://127.0.0.1:3000';
 
-// Pour les hébergements statiques sans redirection vers index.html : on copie la page en 404.html
-// pour que les liens directs (/carte, /admin...) fonctionnent.
+// For static hosting without a fallback to index.html: copy the page to 404.html
+// so that direct links (/map, /admin...) work.
 const spaFallback = (): Plugin => ({
   name: 'spa-fallback',
   closeBundle() {
@@ -16,8 +16,8 @@ const spaFallback = (): Plugin => ({
   },
 });
 
-// La démo embarque les extensions d'exemple construites par le kit (sdk/examples/*/dist) :
-// servies sous /extensions/<id>/ en développement, copiées dans dist-demo/extensions/ au build.
+// The demo ships the example extensions built by the kit (sdk/examples/*/dist):
+// served under /extensions/<id>/ in development, copied to dist-demo/extensions/ at build time.
 const EXAMPLES_DIR = path.resolve('../../sdk/examples');
 const exampleDists = () =>
   fs.existsSync(EXAMPLES_DIR)
@@ -43,7 +43,7 @@ const demoExtensions = (): Plugin => ({
   },
   closeBundle() {
     for (const { id, dir } of exampleDists()) {
-      // Le code serveur ne tourne pas dans la démo : ses routes sont simulées par demo/extensions.ts.
+      // Server code does not run in the demo: its routes are simulated by demo/extensions.ts.
       fs.cpSync(dir, path.resolve('dist-demo', 'extensions', id), { recursive: true, filter: (f) => !/server\.js$|README\.md$/.test(f) });
     }
   },
@@ -52,14 +52,14 @@ const demoExtensions = (): Plugin => ({
 export default defineConfig(({ mode }) => {
   const demo = mode === 'demo';
   return {
-    // Chemins relatifs : le serveur injecte <base href="/cms/"> selon le chemin choisi à l'installation.
-    // La démo est servie à la racine de son propre domaine (demo.palcms.online).
+    // Relative paths: the server injects <base href="/cms/"> according to the path chosen at install.
+    // The demo is served at the root of its own domain (demo.palcms.online).
     base: demo ? '/' : './',
     plugins: [react(), tailwindcss(), ...(demo ? [spaFallback(), demoExtensions()] : [])],
     server: {
       port: 5173,
       proxy: {
-        // changeOrigin: false garde l'en-tête Host du navigateur, comme Nginx en production.
+        // changeOrigin: false keeps the browser Host header, like Nginx in production.
         '/api': { target: api, changeOrigin: false },
         '/uploads': { target: api, changeOrigin: false },
         '/extensions': { target: api, changeOrigin: false },

@@ -11,14 +11,14 @@ function makeDefs(calls: string[], failOn: { id: string; times: number } | null 
       ctx.log(`run ${id}`);
       if (failOn?.id === id && failures < failOn.times) {
         failures++;
-        throw new Error(`échec ${id}`);
+        throw new Error(`failure ${id}`);
       }
     },
   }));
 }
 
 describe('TaskRunner', () => {
-  it('exécute toutes les étapes dans l’ordre', async () => {
+  it('runs every step in order', async () => {
     const calls: string[] = [];
     const events: string[] = [];
     const runner = new TaskRunner(new MemoryTaskStore(), makeDefs(calls), (e) => events.push(e.type));
@@ -28,7 +28,7 @@ describe('TaskRunner', () => {
     expect(events).toContain('task-log');
   });
 
-  it('s’arrête à la première erreur puis reprend à l’étape en échec', async () => {
+  it('stops at the first error, then resumes at the failed step', async () => {
     const calls: string[] = [];
     const store = new MemoryTaskStore();
     const runner = new TaskRunner(store, makeDefs(calls, { id: 'b', times: 1 }));
@@ -37,15 +37,15 @@ describe('TaskRunner', () => {
     expect(calls).toEqual(['a', 'b']);
     const failed = runner.state().find((t) => t.id === 'b')!;
     expect(failed.status).toBe('failed');
-    expect(failed.error).toBe('échec b');
+    expect(failed.error).toBe('failure b');
     expect(runner.state().find((t) => t.id === 'c')!.status).toBe('pending');
-    expect(store.getLog('b')).toContain('✖ échec b');
+    expect(store.getLog('b')).toContain('✖ failure b');
 
     expect(await runner.runAll()).toBe(true);
     expect(calls).toEqual(['a', 'b', 'b', 'c']);
   });
 
-  it('marque en échec une étape interrompue par un crash', () => {
+  it('marks a step interrupted by a crash as failed', () => {
     const store = new MemoryTaskStore();
     store.save({ id: 'a', status: 'running', error: null, startedAt: 1, finishedAt: null });
     const runner = new TaskRunner(store, makeDefs([]));
@@ -53,7 +53,7 @@ describe('TaskRunner', () => {
     expect(runner.state()[0].status).toBe('failed');
   });
 
-  it('refuse deux installations en parallèle', async () => {
+  it('refuses two installs at the same time', async () => {
     let release!: () => void;
     const slow: TaskDef = { id: 's', label: 'S', run: () => new Promise<void>((r) => (release = r)) };
     const runner = new TaskRunner(new MemoryTaskStore(), [slow]);

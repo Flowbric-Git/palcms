@@ -7,10 +7,11 @@ import * as format from '../lib/format';
 import * as ui from '../components/ui';
 import { useApp } from '../lib/app';
 import { BarChart, LineChart } from './components';
+import { t } from '../lib/i18n';
 
 const { Badge, Card, Empty, Spinner, cx } = ui;
 
-// Classement complet
+// Full leaderboard
 
 type RankBy = 'level' | 'playtime' | 'seniority' | 'buildings';
 
@@ -26,15 +27,15 @@ interface RankEntry {
 }
 
 const CRITERIA: { id: RankBy; label: string; Icon: typeof Trophy }[] = [
-  { id: 'level', label: 'Niveau', Icon: Trophy },
-  { id: 'playtime', label: 'Temps de jeu', Icon: Clock },
-  { id: 'seniority', label: 'Ancienneté', Icon: Medal },
-  { id: 'buildings', label: 'Constructions', Icon: Hammer },
+  { id: 'level', label: 'Level', Icon: Trophy },
+  { id: 'playtime', label: 'Playtime', Icon: Clock },
+  { id: 'seniority', label: 'Seniority', Icon: Medal },
+  { id: 'buildings', label: 'Buildings', Icon: Hammer },
 ];
 
 export function LeaderboardPage() {
   const [params, setParams] = useSearchParams();
-  const by = (CRITERIA.find((c) => c.id === params.get('par'))?.id ?? 'level') as RankBy;
+  const by = (CRITERIA.find((c) => c.id === (params.get('by') ?? params.get('par')))?.id ?? 'level') as RankBy;
   const [entries, setEntries] = useState<RankEntry[] | null>(null);
 
   useEffect(() => {
@@ -55,7 +56,7 @@ export function LeaderboardPage() {
 
   const value = (e: RankEntry) =>
     ({
-      level: `niv. ${e.level}`,
+      level: t('lvl {level}', { level: e.level }),
       playtime: format.formatDuration(e.playtimeSeconds),
       seniority: format.formatDate(e.firstSeen),
       buildings: `${e.buildings}`,
@@ -66,21 +67,21 @@ export function LeaderboardPage() {
       <div className="flex items-center gap-3">
         <Trophy className="h-8 w-8 text-yellow-500" />
         <div>
-          <h1 className="text-3xl font-bold">Classement</h1>
-          <p className="text-sm text-slate-500">Mis à jour en temps réel</p>
+          <h1 className="text-3xl font-bold">{t('Leaderboard')}</h1>
+          <p className="text-sm text-slate-500">{t('Updated in real time')}</p>
         </div>
       </div>
       <div className="mt-6 flex flex-wrap gap-2">
         {CRITERIA.map((c) => (
           <button
             key={c.id}
-            onClick={() => setParams({ par: c.id })}
+            onClick={() => setParams({ by: c.id })}
             className={cx(
               'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium',
               by === c.id ? 'bg-accent text-accent-fg' : 'bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800',
             )}
           >
-            <c.Icon className="h-4 w-4" /> {c.label}
+            <c.Icon className="h-4 w-4" /> {t(c.label)}
           </button>
         ))}
       </div>
@@ -88,7 +89,7 @@ export function LeaderboardPage() {
         {!entries ? (
           <Spinner />
         ) : entries.length === 0 ? (
-          <Empty>Aucun joueur classé pour l’instant.</Empty>
+          <Empty>{t('No ranked player yet.')}</Empty>
         ) : (
           <table className="w-full text-sm">
             <tbody>
@@ -102,7 +103,7 @@ export function LeaderboardPage() {
                     )}
                   </td>
                   <td className="py-2">
-                    <Link to={`/joueurs/${e.id}`} className="flex items-center gap-2 font-medium hover:text-accent">
+                    <Link to={`/players/${e.id}`} className="flex items-center gap-2 font-medium hover:text-accent">
                       {e.online && <span className="h-2 w-2 rounded-full bg-green-500" />}
                       {e.name}
                     </Link>
@@ -118,7 +119,7 @@ export function LeaderboardPage() {
   );
 }
 
-// Profil joueur avec statistiques
+// Player profile with statistics
 
 interface Stats {
   days: { day: string; level: number; playtimeSeconds: number }[];
@@ -140,7 +141,7 @@ export function PlayerPage() {
   if (p === 'missing') {
     return (
       <div className="mx-auto max-w-3xl px-4 py-20 text-center">
-        <p className="text-lg">Joueur introuvable.</p>
+        <p className="text-lg">{t('Player not found.')}</p>
       </div>
     );
   }
@@ -156,22 +157,22 @@ export function PlayerPage() {
     <div className="mx-auto max-w-4xl px-4 py-10">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-bold">{p.name}</h1>
-        {p.online ? <Badge tone="green">En ligne</Badge> : <Badge>Vu {format.timeAgo(p.lastSeen)}</Badge>}
+        {p.online ? <Badge tone="green">{t('Online')}</Badge> : <Badge>{t('Seen {when}', { when: format.timeAgo(p.lastSeen) })}</Badge>}
       </div>
-      {p.member && <p className="mt-1 text-sm text-slate-500">Membre du site : {p.member.displayName}</p>}
+      {p.member && <p className="mt-1 text-sm text-slate-500">{t('Site member: {name}', { name: p.member.displayName })}</p>}
       <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-5">
-        {stat('Niveau', p.level)}
-        {stat('Rang', p.rank ? `#${p.rank}` : '—')}
-        {stat('Temps de jeu', format.formatDuration(p.playtimeSeconds))}
-        {stat('Constructions', stats?.buildings ?? '—')}
-        {stat('Arrivé le', <span className="text-base">{format.formatDate(p.firstSeen)}</span>)}
+        {stat(t('Level'), p.level)}
+        {stat(t('Rank'), p.rank ? `#${p.rank}` : '—')}
+        {stat(t('Playtime'), format.formatDuration(p.playtimeSeconds))}
+        {stat(t('Buildings'), stats?.buildings ?? '—')}
+        {stat(t('Joined on'), <span className="text-base">{format.formatDate(p.firstSeen)}</span>)}
       </div>
       {stats && (
         <div className="mt-8 grid gap-6 md:grid-cols-2">
-          <Card title="Évolution du niveau">
+          <Card title={t('Level over time')}>
             <LineChart points={stats.days.map((d) => ({ label: shortDay(d.day), value: d.level }))} />
           </Card>
-          <Card title="Temps de jeu par jour">
+          <Card title={t('Playtime per day')}>
             <BarChart
               points={stats.days.map((d) => ({ label: shortDay(d.day), value: d.playtimeSeconds }))}
               format={(v) => format.formatDuration(v)}

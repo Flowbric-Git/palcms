@@ -1,36 +1,38 @@
 import { z } from 'zod';
 
-/** Texte qui sera écrit entre guillemets dans PalWorldSettings.ini : pas de guillemet ni de retour à la ligne. */
+/** Text written between quotes in PalWorldSettings.ini: no quote, backslash or line break. */
 const iniText = (max: number) =>
   z
     .string()
     .max(max)
-    .regex(/^[^"\r\n\\]*$/, 'Les guillemets, antislash et retours à la ligne sont interdits');
+    .regex(/^[^"\r\n\\]*$/, 'Quotes, backslashes and line breaks are not allowed');
 
 export const usernameSchema = z
   .string()
   .trim()
-  .min(3, '3 caractères minimum')
-  .max(24, '24 caractères maximum')
-  .regex(/^[A-Za-z0-9_.-]+$/, 'Lettres, chiffres, « _ », « . » et « - » uniquement');
+  .min(3, 'At least 3 characters')
+  .max(24, '24 characters maximum')
+  .regex(/^[A-Za-z0-9_.-]+$/, 'Letters, digits, "_", "." and "-" only');
 
-export const passwordSchema = z.string().min(8, '8 caractères minimum').max(200);
+export const passwordSchema = z.string().min(8, 'At least 8 characters').max(200);
 
-export const emailSchema = z.string().trim().toLowerCase().email('Email invalide').max(200);
+export const emailSchema = z.string().trim().toLowerCase().email('Invalid email').max(200);
 
-const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Couleur invalide (#RRGGBB)');
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Invalid color (#RRGGBB)');
 
 const urlOrPath = z
   .string()
   .trim()
   .max(500)
-  .refine((v) => v === '' || v.startsWith('/') || /^https?:\/\//.test(v), 'Lien invalide (doit commencer par / ou http(s)://)');
+  .refine((v) => v === '' || v.startsWith('/') || /^https?:\/\//.test(v), 'Invalid link (must start with / or http(s)://)');
 
 const optionalUrl = z
   .string()
   .trim()
   .max(500)
-  .refine((v) => v === '' || /^https?:\/\//.test(v), 'Lien invalide (doit commencer par http:// ou https://)');
+  .refine((v) => v === '' || /^https?:\/\//.test(v), 'Invalid link (must start with http:// or https://)');
+
+export const langSchema = z.enum(['en', 'fr']);
 
 // Setup
 
@@ -38,10 +40,10 @@ export const setupTokenSchema = z.object({ token: z.string().trim().min(8).max(2
 
 export const palworldSetupSchema = z
   .object({
-    serverName: iniText(64).trim().min(1, 'Nom obligatoire'),
+    serverName: iniText(64).trim().min(1, 'Name is required'),
     description: iniText(200).default(''),
     serverPassword: iniText(64).default(''),
-    adminPassword: iniText(64).min(6, '6 caractères minimum'),
+    adminPassword: iniText(64).min(6, 'At least 6 characters'),
     maxPlayers: z.coerce.number().int().min(1).max(32),
     port: z.coerce.number().int().min(1024).max(65535),
     restApiPort: z.coerce.number().int().min(1024).max(65535),
@@ -54,7 +56,7 @@ export const palworldSetupSchema = z
     pvp: z.boolean(),
   })
   .refine((d) => d.port !== d.restApiPort, {
-    message: "Le port de l'API REST doit être différent du port de jeu",
+    message: 'The REST API port must be different from the game port',
     path: ['restApiPort'],
   });
 export type PalworldSetup = z.infer<typeof palworldSetupSchema>;
@@ -67,7 +69,7 @@ export const adminSetupSchema = z.object({
 
 export const menuItemSchema = z.object({
   label: z.string().trim().min(1).max(40),
-  url: urlOrPath.refine((v) => v !== '', 'Lien obligatoire'),
+  url: urlOrPath.refine((v) => v !== '', 'Link is required'),
 });
 
 export const siteSettingsSchema = z.object({
@@ -76,6 +78,8 @@ export const siteSettingsSchema = z.object({
   accentColor: hexColor,
   defaultTheme: z.enum(['dark', 'light', 'system']),
   allowThemeToggle: z.boolean(),
+  /** Language of the public site and of the messages sent by the server (Discord, in-game). */
+  language: langSchema.default('en'),
   discordUrl: optionalUrl.default(''),
   logoUrl: urlOrPath.default(''),
   bannerUrl: urlOrPath.default(''),
@@ -83,6 +87,8 @@ export const siteSettingsSchema = z.object({
   heroText: z.string().trim().max(500).default(''),
   footerText: z.string().trim().max(300).default(''),
   serverAddress: z.string().trim().max(200).default(''),
+  /** Link of the "Join the server" button on the home page. */
+  joinUrl: urlOrPath.default('/p/join'),
   menu: z.array(menuItemSchema).max(20),
   registration: z.object({ steam: z.boolean(), email: z.boolean() }),
 });
@@ -93,18 +99,19 @@ export const siteSetupSchema = z.object({
   tagline: z.string().trim().max(160).default(''),
   accentColor: hexColor,
   defaultTheme: z.enum(['dark', 'light', 'system']),
+  language: langSchema.default('en'),
   discordUrl: optionalUrl.default(''),
   logoUrl: urlOrPath.default(''),
 });
 
-// Contenu
+// Content
 
 export const slugSchema = z
   .string()
   .trim()
   .min(1)
   .max(60)
-  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Minuscules, chiffres et tirets uniquement');
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Lowercase letters, digits and dashes only');
 
 export const pageSchema = z.object({
   slug: slugSchema,
@@ -122,7 +129,7 @@ export const newsSchema = z.object({
   published: z.boolean(),
 });
 
-// Comptes
+// Accounts
 
 export const loginSchema = z.object({
   login: z.string().trim().min(1).max(200),
@@ -133,7 +140,7 @@ export const registerSchema = z.object({
   username: usernameSchema,
   email: emailSchema,
   password: passwordSchema,
-  inGameName: z.string().trim().min(1, 'Pseudo en jeu obligatoire').max(32),
+  inGameName: z.string().trim().min(1, 'In-game name is required').max(32),
 });
 
 export const profileUpdateSchema = z.object({
@@ -141,7 +148,6 @@ export const profileUpdateSchema = z.object({
   currentPassword: z.string().max(200).optional(),
   newPassword: passwordSchema.optional(),
 });
-
 
 export const memberDecisionSchema = z.object({
   playerUid: z.string().max(100).nullable().optional(),
@@ -152,7 +158,7 @@ export const serverConfigUpdateSchema = z.object({
   restart: z.boolean().default(false),
 });
 
-// Serveur Palworld : installé ou externe
+// Palworld server: installed by PalCMS or external
 
 export const serverModeSchema = z.object({ mode: z.enum(['managed', 'external', 'none']) });
 export type ServerMode = z.infer<typeof serverModeSchema>['mode'];
@@ -160,18 +166,18 @@ export type ServerMode = z.infer<typeof serverModeSchema>['mode'];
 const hostname = z
   .string()
   .trim()
-  .min(1, 'Adresse obligatoire')
+  .min(1, 'Address is required')
   .max(253)
-  .regex(/^[A-Za-z0-9.-]+$|^\[?[0-9a-fA-F:]+\]?$/, 'Adresse invalide (nom de domaine ou IP)');
+  .regex(/^[A-Za-z0-9.-]+$|^\[?[0-9a-fA-F:]+\]?$/, 'Invalid address (domain name or IP)');
 
-/** Connexion à l'API REST d'un serveur Palworld existant (non installé par PalCMS). */
+/** Connection to the REST API of an existing Palworld server (not installed by PalCMS). */
 export const externalServerSchema = z.object({
   apiHost: hostname,
   apiPort: z.coerce.number().int().min(1).max(65535),
-  adminPassword: z.string().min(1, 'Mot de passe admin obligatoire').max(64),
-  /** Adresse que les joueurs saisissent en jeu (ex. play.monserveur.fr:8211). */
+  adminPassword: z.string().min(1, 'Admin password is required').max(64),
+  /** Address players type in game (e.g. play.myserver.com:8211). */
   publicAddress: z.string().trim().max(200).default(''),
-  /** Port RCON (facultatif) pour la console du panel. */
+  /** Optional RCON port, for the panel console. */
   rconPort: z.coerce.number().int().min(1).max(65535).nullable().default(null),
 });
 export type ExternalServer = z.infer<typeof externalServerSchema>;

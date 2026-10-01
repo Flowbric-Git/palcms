@@ -6,18 +6,21 @@ import { api } from '../lib/api';
 import { useApp } from '../lib/app';
 import { useMapData } from './components';
 import { LiveMap, POI_ICONS, type MapLayers, type MapPlayer } from './map/LiveMap';
+import { t } from '../lib/i18n';
 
 const { Badge, Card, Empty, Spinner, Alert } = ui;
 
-// Carte publique
+// Public map
 
 const LAYER_LABELS: { id: keyof MapLayers; label: string }[] = [
-  { id: 'bases', label: '🏰 Bases des guildes' },
-  { id: 'fastTravel', label: '🔵 Voyage rapide' },
-  { id: 'bossTowers', label: '🗼 Tours de boss' },
+  { id: 'bases', label: '🏰 {label}' },
+  { id: 'fastTravel', label: '🔵 {label}' },
+  { id: 'bossTowers', label: '🗼 {label}' },
 ];
 
-/** Calques de la carte (bases, voyage rapide, tours), avec le choix de l'utilisateur mémorisé. */
+const LAYER_NAMES: Record<keyof MapLayers, string> = { bases: 'Guild bases', fastTravel: 'Fast travel', bossTowers: 'Boss towers' };
+
+/** Map layers (bases, fast travel, towers), with the visitor's choice remembered. */
 export function useMapLayers() {
   const [all, setAll] = useState<MapLayers | null>(null);
   const [shown, setShown] = useState<Record<string, boolean>>(() => {
@@ -39,7 +42,7 @@ export function useMapLayers() {
     try {
       localStorage.setItem('palcms-map-layers', JSON.stringify(next));
     } catch {
-      // préférence non mémorisée, sans conséquence
+      // preference not remembered, no harm done
     }
   };
   const layers = useMemo<MapLayers | undefined>(
@@ -67,8 +70,8 @@ export function MapPage() {
       <div className="mb-6 flex items-center gap-3">
         <MapIcon className="h-8 w-8 text-accent" />
         <div>
-          <h1 className="text-3xl font-bold">Carte en direct</h1>
-          <p className="text-sm text-slate-500">Position des joueurs connectés, mise à jour toutes les 5 secondes.</p>
+          <h1 className="text-3xl font-bold">{t('Live map')}</h1>
+          <p className="text-sm text-slate-500">{t('Positions of online players, updated every 5 seconds.')}</p>
         </div>
       </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
@@ -79,17 +82,17 @@ export function MapPage() {
             height="min(75vh, 760px)"
             focus={focus}
             layers={layers}
-            onBaseClick={(id) => navigate(`/guildes/${id}`)}
+            onBaseClick={(id) => navigate(`/guilds/${id}`)}
           />
         </div>
         <div className="space-y-6">
           {all && (
-            <Card title="Afficher">
+            <Card title={t('Show')}>
               <div className="space-y-2">
                 {LAYER_LABELS.filter((l) => (all[l.id]?.length ?? 0) > 0).map((l) => (
                   <label key={l.id} className="flex cursor-pointer items-center gap-2 text-sm">
                     <input type="checkbox" checked={!!shown[l.id]} onChange={(e) => toggle(l.id, e.target.checked)} className="accent-[var(--accent)]" />
-                    {l.label}
+                    {l.label.replace('{label}', t(LAYER_NAMES[l.id]))}
                   </label>
                 ))}
               </div>
@@ -98,13 +101,13 @@ export function MapPage() {
           <Card
             title={
               <span className="flex items-center gap-2">
-                <Users className="h-4 w-4" /> En ligne
+                <Users className="h-4 w-4" /> {t('Online')}
               </span>
             }
             actions={<Badge tone="accent">{players.length}</Badge>}
           >
             {players.length === 0 ? (
-              <Empty>Personne sur la carte.</Empty>
+              <Empty>{t('Nobody on the map.')}</Empty>
             ) : (
               <ul className="space-y-1">
                 {players.map((p: MapPlayer) => (
@@ -117,7 +120,7 @@ export function MapPage() {
                         <span className="h-2 w-2 rounded-full bg-green-500" />
                         {p.name}
                       </span>
-                      <span className="text-xs text-slate-500">niv. {p.level}</span>
+                      <span className="text-xs text-slate-500">{t('lvl {level}', { level: p.level })}</span>
                     </button>
                   </li>
                 ))}
@@ -125,7 +128,7 @@ export function MapPage() {
             )}
           </Card>
           {data.pois.length > 0 && (
-            <Card title="Lieux">
+            <Card title={t('Places')}>
               <ul className="space-y-1">
                 {data.pois.map((poi) => (
                   <li key={poi.id}>
@@ -141,14 +144,14 @@ export function MapPage() {
               </ul>
             </Card>
           )}
-          {!data.public && <Alert kind="warning">Carte masquée au public : seule l’équipe la voit.</Alert>}
+          {!data.public && <Alert kind="warning">{t('Map hidden from the public: only the team sees it.')}</Alert>}
         </div>
       </div>
     </div>
   );
 }
 
-/** Aperçu de la carte sur l'accueil. */
+/** Map preview on the home page. */
 export function MapWidget() {
   const { boot } = useApp();
   const { data, players } = useMapData('public');
@@ -157,12 +160,12 @@ export function MapWidget() {
     <Card
       title={
         <span className="flex items-center gap-2">
-          <MapIcon className="h-4 w-4 text-accent" /> Carte en direct
+          <MapIcon className="h-4 w-4 text-accent" /> {t('Live map')}
         </span>
       }
       actions={
-        <Link to="/carte" className="text-sm font-medium text-accent">
-          Plein écran
+        <Link to="/map" className="text-sm font-medium text-accent">
+          {t('Full screen')}
         </Link>
       }
     >

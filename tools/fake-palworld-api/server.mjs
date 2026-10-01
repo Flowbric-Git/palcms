@@ -1,5 +1,5 @@
-// Faux serveur Palworld (API REST v1) pour développer le site sans vrai serveur de jeu.
-// Il ne répond que si le "service" simulé est démarré, et fait bouger / progresser des joueurs.
+// Fake Palworld server (REST API v1) to build the site without a real game server.
+// It only answers when the simulated "service" is started, and makes players move and level up.
 import http from 'node:http';
 import { readIniBasics, readState, writeState, appendLog } from '../dev-state.mjs';
 
@@ -38,14 +38,14 @@ const json = (res, code, body) => {
   res.end(body === undefined ? '' : JSON.stringify(body));
 };
 
-// FAKE_PAL_PASSWORD défini : simule un serveur "existant", toujours allumé, indépendant de PalCMS
-// (pour tester la connexion d'un serveur externe).
+// FAKE_PAL_PASSWORD set: simulates an "existing" server, always on, independent from PalCMS
+// (to test connecting an external server).
 const EXTERNAL_PASSWORD = process.env.FAKE_PAL_PASSWORD;
 
 const server = http.createServer((req, res) => {
   const state = readState();
-  const ini = EXTERNAL_PASSWORD ? { adminPassword: EXTERNAL_PASSWORD, restPort: PORT, serverName: 'Serveur existant', maxPlayers: 24 } : readIniBasics();
-  // Service arrêté : on coupe la connexion, comme un vrai serveur éteint.
+  const ini = EXTERNAL_PASSWORD ? { adminPassword: EXTERNAL_PASSWORD, restPort: PORT, serverName: 'Existing server', maxPlayers: 24 } : readIniBasics();
+  // Service stopped: drop the connection, like a real server that is off.
   if (!EXTERNAL_PASSWORD && (!state.service.active || !ini)) return req.socket.destroy();
 
   const auth = req.headers.authorization ?? '';
@@ -59,7 +59,7 @@ const server = http.createServer((req, res) => {
     const online = players.filter((p) => p.online);
     switch (`${req.method} ${route}`) {
       case 'GET info':
-        return json(res, 200, { version: 'v0.6.4.70000', servername: ini.serverName, description: 'Serveur simulé', worldguid: 'DEV0000' });
+        return json(res, 200, { version: 'v0.6.4.70000', servername: ini.serverName, description: 'Simulated server', worldguid: 'DEV0000' });
       case 'GET metrics':
         return json(res, 200, {
           serverfps: 55 + Math.round(Math.random() * 5),
@@ -98,4 +98,4 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, '127.0.0.1', () => console.log(`[faux Palworld] API REST simulée sur http://127.0.0.1:${PORT}/v1/api`));
+server.listen(PORT, '127.0.0.1', () => console.log(`[fake Palworld] simulated REST API at http://127.0.0.1:${PORT}/v1/api`));

@@ -1,19 +1,21 @@
+import { t, tm } from './i18n';
+
 declare global {
   interface Window {
     __PALCMS__?: { basePath: string };
   }
 }
 
-/** Build de démo (GitHub Pages) : pas de serveur, l'API est simulée dans le navigateur. */
+/** Demo build: no server, the API is simulated in the browser. */
 export const isDemo = import.meta.env.VITE_DEMO === '1';
 
-/** Chemin sous lequel le site est servi ("/" ou "/cms/"), injecté par le serveur. */
+/** Path the site is served under ("/" or "/cms/"), injected by the server. */
 export const basePath = isDemo ? import.meta.env.BASE_URL : (window.__PALCMS__?.basePath ?? '/');
 
-/** URL absolue d'une ressource du site : url("api/x") -> "/cms/api/x". */
+/** Absolute URL of a site resource: url("api/x") -> "/cms/api/x". */
 export const url = (path: string) => basePath + path.replace(/^\/+/, '');
 
-/** Convertit un lien du menu ("/actualites") en chemin du routeur, ou laisse une URL externe. */
+/** True for an external link (http/https), as opposed to a path of the site ("/news"). */
 export const isExternal = (href: string) => /^https?:\/\//.test(href);
 
 export class ApiError extends Error {
@@ -25,7 +27,8 @@ export class ApiError extends Error {
     super(message);
   }
   field(name: string): string | undefined {
-    return this.details?.fieldErrors?.[name]?.[0];
+    const msg = this.details?.fieldErrors?.[name]?.[0];
+    return msg ? tm(msg) : undefined;
   }
 }
 
@@ -35,7 +38,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     try {
       return await demoRequest<T>(method, path, body);
     } catch (e) {
-      throw new ApiError((e as Error).message, (e as { status?: number }).status ?? 500);
+      throw new ApiError(tm((e as Error).message), (e as { status?: number }).status ?? 500);
     }
   }
   const res = await fetch(url(`api/${path}`), {
@@ -53,7 +56,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
   if (!res.ok) {
     const d = data as { error?: string; details?: ApiError['details'] } | null;
-    throw new ApiError(d?.error ?? `Erreur ${res.status}`, res.status, d?.details);
+    throw new ApiError(d?.error ? tm(d.error) : t('Error {status}', { status: res.status }), res.status, d?.details);
   }
   return data as T;
 }

@@ -1,6 +1,6 @@
-// Faux market pour le développement : construit les extensions d'exemple (sdk/examples),
-// les signe avec la clé de dev et les sert au format de l'API du market (docs/market-api.md).
-// Le PalCMS de dev fait confiance à cette clé via PALCMS_TRUSTED_KEYS (.env.development).
+// Fake market for development: builds the example extensions (sdk/examples),
+// signs them with the dev key and serves them in the market API format (docs/market-api.md).
+// The dev PalCMS trusts this key through PALCMS_TRUSTED_KEYS (.env.development).
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -13,7 +13,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../..');
 const PORT = Number(process.env.MARKET_PORT ?? 3100);
 const base = `http://127.0.0.1:${PORT}`;
-// Clé de dev créée au premier lancement (jamais publiée : tools/.dev-data est ignoré par git).
+// Dev key created on first run (never published: tools/.dev-data is ignored by git).
 const keyDir = path.join(root, 'tools', '.dev-data');
 const privFile = path.join(keyDir, 'market-dev-private.pem');
 if (!fs.existsSync(privFile)) {
@@ -32,7 +32,7 @@ for (const name of EXAMPLES) {
   const dir = path.join(root, 'sdk', 'examples', name);
   const res = spawnSync(process.execPath, [path.join(root, 'sdk', 'palcms-ext.mjs'), 'build', dir], { stdio: 'pipe', encoding: 'utf8' });
   if (res.status !== 0) {
-    console.error(`[market] ${name} : ${res.stderr || res.stdout}`);
+    console.error(`[market] ${name}: ${res.stderr || res.stdout}`);
     continue;
   }
   const m = JSON.parse(fs.readFileSync(path.join(dir, 'palcms.json'), 'utf8'));
@@ -73,5 +73,5 @@ http
     res.end('{"error":"Introuvable"}');
   })
   .listen(PORT, '127.0.0.1', () => {
-    console.log(`[market] faux market sur ${base}/api/market/resources (${resources.map((r) => r.id).join(', ')})`);
+    console.log(`[market] fake market at ${base}/api/market/resources (${resources.map((r) => r.id).join(', ')})`);
   });

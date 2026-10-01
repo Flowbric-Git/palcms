@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Kit de création des extensions PalCMS : construit, empaquette et signe les plugins et les thèmes.
+// PalCMS extension kit: builds, packages and signs plugins and themes.
 // Documentation : sdk/README.md
 
 import crypto from 'node:crypto';
@@ -18,7 +18,7 @@ const require = createRequire(import.meta.url);
 const ID_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
 const VERSION_RE = /^\d+\.\d+\.\d+$/;
 
-// Modules fournis par le site (window.PalCMS.modules) : ils ne sont pas inclus dans web.js.
+// Modules provided by the site (window.PalCMS.modules): they are not bundled into web.js.
 const SHARED = {
   react: [
     'Children', 'Component', 'Fragment', 'PureComponent', 'StrictMode', 'Suspense', 'cloneElement', 'createContext',
@@ -35,7 +35,7 @@ const SHARED = {
   ],
   '@palcms/sdk': [
     'version', 'api', 'url', 'basePath', 'errorText', 'isExternal', 'cx', 'useApp', 'useLiveServer', 'useLoad',
-    'useRealtime', 'useThemeSettings', 'formatBytes', 'formatDate', 'formatDateTime', 'formatDuration', 'timeAgo',
+    'useRealtime', 'useThemeSettings', 'formatBytes', 'formatDate', 'formatDateTime', 'formatDuration', 'timeAgo', 'lang', 't',
     'Alert', 'Badge', 'Button', 'Card', 'Empty', 'Field', 'Input', 'PageHeader', 'Prose', 'Select', 'Spinner',
     'Textarea', 'Toggle', 'ImageField', 'ThemeToggle', 'CopyAddress', 'LeaderboardTable', 'OnlinePlayers',
     'ServerStatusCard', 'StatusDot', 'MenuLink', 'DefaultHeader', 'DefaultFooter', 'DefaultHome', 'DefaultHomeHero',
@@ -75,17 +75,17 @@ function flag(args, name) {
 
 function readManifest(dir) {
   const file = path.join(dir, 'palcms.json');
-  if (!fs.existsSync(file)) die(`palcms.json introuvable dans ${dir}`);
+  if (!fs.existsSync(file)) die(`palcms.json not found in ${dir}`);
   let m;
   try {
     m = JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (e) {
-    die(`palcms.json invalide : ${e.message}`);
+    die(`invalid palcms.json: ${e.message}`);
   }
-  if (!ID_RE.test(m.id ?? '')) die('palcms.json : "id" doit contenir 2 à 40 minuscules, chiffres ou tirets');
-  if (!['plugin', 'theme'].includes(m.type)) die('palcms.json : "type" doit valoir "plugin" ou "theme"');
-  if (!m.name) die('palcms.json : "name" est obligatoire');
-  if (!VERSION_RE.test(m.version ?? '')) die('palcms.json : "version" doit être au format 1.2.3');
+  if (!ID_RE.test(m.id ?? '')) die('palcms.json: "id" must have 2 to 40 lowercase letters, digits or dashes');
+  if (!['plugin', 'theme'].includes(m.type)) die('palcms.json: "type" must be "plugin" or "theme"');
+  if (!m.name) die('palcms.json: "name" is required');
+  if (!VERSION_RE.test(m.version ?? '')) die('palcms.json: "version" must use the 1.2.3 format');
   return m;
 }
 
@@ -103,12 +103,12 @@ function listFiles(dir, base = dir) {
   });
 }
 
-// Classe principale d'un sélecteur Tailwind (.md\:flex:hover -> md:flex).
+// Main class of a Tailwind selector (.md\:flex:hover -> md:flex).
 function selectorClass(selector) {
   return selector.find((part) => part.type === 'class')?.name;
 }
 
-/** Classes déjà générées dans le CSS du site (sdk/site-classes.json, mis à jour au build de PalCMS). */
+/** Classes already generated in the site CSS (sdk/site-classes.json, updated when PalCMS is built). */
 function siteClasses() {
   try {
     return new Set(JSON.parse(fs.readFileSync(path.join(SDK_DIR, 'site-classes.json'), 'utf8')));
@@ -118,8 +118,8 @@ function siteClasses() {
 }
 
 /**
- * Retire du CSS de l'extension les classes que le site fournit déjà : redéclarées après le CSS du site,
- * elles casseraient l'ordre de ses classes (ex. hidden écraserait lg:block).
+ * Removes from the extension CSS the classes the site already provides: declared again after the site CSS,
+ * they would break the order of its classes (e.g. hidden would override lg:block).
  */
 function withoutSiteClasses(file) {
   const known = siteClasses();
@@ -161,7 +161,7 @@ function writeSiteClasses(args) {
     });
   }
   fs.writeFileSync(path.join(SDK_DIR, 'site-classes.json'), `${JSON.stringify([...classes].sort())}\n`);
-  console.log(`✔ ${classes.size} classes du site enregistrées dans sdk/site-classes.json`);
+  console.log(`✔ ${classes.size} site classes saved in sdk/site-classes.json`);
 }
 
 function buildCss(dir, out, tailwind) {
@@ -172,7 +172,7 @@ function buildCss(dir, out, tailwind) {
     fs.copyFileSync(src, target);
     return true;
   }
-  // Les classes Tailwind utilisées dans src/ sont générées avec les réglages du site.
+  // The Tailwind classes used in src/ are generated with the site settings.
   const entry = path.join(dir, 'src', '.palcms-style.css');
   const slash = (p) => p.split(path.sep).join('/');
   fs.writeFileSync(
@@ -182,7 +182,7 @@ function buildCss(dir, out, tailwind) {
   try {
     const cli = path.join(path.dirname(require.resolve('@tailwindcss/cli/package.json')), 'dist', 'index.mjs');
     const res = spawnSync(process.execPath, [cli, '-i', entry, '-o', target, '--minify'], { cwd: SDK_DIR, stdio: 'pipe', encoding: 'utf8' });
-    if (res.status !== 0) die(`Tailwind : ${res.stderr || res.stdout}`);
+    if (res.status !== 0) die(`Tailwind: ${res.stderr || res.stdout}`);
     withoutSiteClasses(target);
   } finally {
     fs.rmSync(entry, { force: true });
@@ -201,7 +201,7 @@ async function build(args) {
 
   const serverEntry = firstExisting(path.join(dir, 'src'), ['server.ts', 'server.js', 'server.mjs']);
   const webEntry = firstExisting(path.join(dir, 'src'), ['web.tsx', 'web.jsx', 'web.ts', 'web.js']);
-  if (manifest.type === 'theme' && serverEntry) die('Un thème ne peut pas avoir de code serveur (src/server.*)');
+  if (manifest.type === 'theme' && serverEntry) die('A theme cannot have server code (src/server.*)');
 
   if (serverEntry) {
     await esbuild.build({
@@ -211,7 +211,7 @@ async function build(args) {
       platform: 'node',
       format: 'esm',
       target: 'node20',
-      // Pour les dépendances CommonJS incluses dans le paquet.
+      // For CommonJS dependencies bundled into the package.
       banner: { js: "import { createRequire as __palcmsRequire } from 'node:module'; const require = __palcmsRequire(import.meta.url);" },
       logLevel: 'warning',
     });
@@ -232,21 +232,21 @@ async function build(args) {
     });
   }
   const hasCss = buildCss(dir, out, tailwind);
-  // Un "import './x.css'" dans web.* produit web.css : on le regroupe dans style.css.
+  // An "import './x.css'" in web.* produces web.css: it is merged into style.css.
   const webCss = path.join(out, 'web.css');
   if (fs.existsSync(webCss)) {
     fs.appendFileSync(path.join(out, 'style.css'), `\n${fs.readFileSync(webCss, 'utf8')}`);
     fs.rmSync(webCss);
   }
   if (!serverEntry && !webEntry && !hasCss && !fs.existsSync(path.join(out, 'style.css'))) {
-    die('Rien à construire : ajoute src/web.jsx, src/server.js ou src/style.css');
+    die('Nothing to build: add src/web.jsx, src/server.js or src/style.css');
   }
 
   copyDir(path.join(dir, 'assets'), path.join(out, 'assets'));
   for (const f of ['README.md', 'LICENSE', 'LICENSE.md', 'CHANGELOG.md']) {
     if (fs.existsSync(path.join(dir, f))) fs.copyFileSync(path.join(dir, f), path.join(out, f));
   }
-  if (manifest.icon && !fs.existsSync(path.join(out, manifest.icon))) die(`Icône introuvable : ${manifest.icon}`);
+  if (manifest.icon && !fs.existsSync(path.join(out, manifest.icon))) die(`Icon not found: ${manifest.icon}`);
   fs.writeFileSync(path.join(out, 'palcms.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
   const files = {};
@@ -256,16 +256,16 @@ async function build(args) {
   const zipFile = path.join(dir, `${manifest.id}-${manifest.version}.zip`);
   fs.writeFileSync(zipFile, zip);
 
-  console.log(`✔ ${manifest.type === 'theme' ? 'Thème' : 'Plugin'} ${manifest.name} ${manifest.version}`);
+  console.log(`✔ ${manifest.type === 'theme' ? 'Theme' : 'Plugin'} ${manifest.name} ${manifest.version}`);
   console.log(`  ${Object.keys(files).join(', ')}`);
-  console.log(`  → ${path.relative(process.cwd(), zipFile)} (${(zip.byteLength / 1024).toFixed(1)} Ko)`);
+  console.log(`  → ${path.relative(process.cwd(), zipFile)} (${(zip.byteLength / 1024).toFixed(1)} KB)`);
 
   if (installTo) {
-    // Développement : dépose l'extension dans le dossier d'un PalCMS local (elle apparaît dans le panel).
+    // Development: drops the extension into the folder of a local PalCMS (it shows up in the panel).
     const target = path.join(path.resolve(installTo), 'extensions', manifest.id);
     fs.rmSync(target, { recursive: true, force: true });
     copyDir(out, target);
-    console.log(`  installé dans ${target}`);
+    console.log(`  installed in ${target}`);
   }
 }
 
@@ -273,22 +273,22 @@ function keygen(args) {
   const dir = path.resolve(args[0] ?? '.');
   fs.mkdirSync(dir, { recursive: true });
   const priv = path.join(dir, 'market-private.pem');
-  if (fs.existsSync(priv)) die(`${priv} existe déjà : je ne l'écrase pas`);
+  if (fs.existsSync(priv)) die(`${priv} already exists: not overwriting it`);
   const { privateKey, publicKey } = crypto.generateKeyPairSync('ed25519');
   fs.writeFileSync(priv, privateKey.export({ type: 'pkcs8', format: 'pem' }), { mode: 0o600 });
   fs.writeFileSync(path.join(dir, 'market-public.pem'), publicKey.export({ type: 'spki', format: 'pem' }));
-  console.log(`✔ Clés créées dans ${dir}\n  Garde market-private.pem secrète : elle seule permet de signer des paquets.`);
+  console.log(`✔ Keys created in ${dir}\n  Keep market-private.pem secret: it alone can sign packages.`);
 }
 
 function sign(args) {
   const key = flag(args, '--key');
   const download = flag(args, '--download');
   const file = args[0];
-  if (!file || !key) die('Utilisation : palcms-ext sign <paquet.zip> --key market-private.pem [--download https://…/paquet.zip]');
+  if (!file || !key) die('Usage: palcms-ext sign <package.zip> --key market-private.pem [--download https://…/package.zip]');
   const data = fs.readFileSync(file);
   const signature = crypto.sign(null, data, crypto.createPrivateKey(fs.readFileSync(key))).toString('base64');
   const sha256 = crypto.createHash('sha256').update(data).digest('hex');
-  // Le manifeste est relu dans le zip pour préremplir l'entrée du catalogue.
+  // The manifest is read again from the zip to prefill the catalogue entry.
   const { unzipSync } = require('fflate');
   const entries = unzipSync(new Uint8Array(data), { filter: (f) => /(^|\/)palcms\.json$/.test(f.name) });
   const raw = Object.values(entries)[0];
@@ -312,22 +312,22 @@ function verify(args) {
   const pub = flag(args, '--pub');
   const sig = flag(args, '--sig');
   const file = args[0];
-  if (!file || !pub || !sig) die('Utilisation : palcms-ext verify <paquet.zip> --pub market-public.pem --sig <signature base64>');
+  if (!file || !pub || !sig) die('Usage: palcms-ext verify <package.zip> --pub market-public.pem --sig <base64 signature>');
   const ok = crypto.verify(null, fs.readFileSync(file), crypto.createPublicKey(fs.readFileSync(pub)), Buffer.from(sig, 'base64'));
-  console.log(ok ? '✔ Signature valide' : '✖ Signature invalide');
+  console.log(ok ? '✔ Valid signature' : '✖ Invalid signature');
   process.exit(ok ? 0 : 1);
 }
 
-const HELP = `palcms-ext : kit de création des extensions PalCMS
+const HELP = `palcms-ext: PalCMS extension kit
 
-  build <dossier> [--install <dossier de données>] [--no-tailwind]
-      Construit l'extension (src/ → dist/) et crée <id>-<version>.zip.
-      --install copie aussi le résultat dans <données>/extensions/<id> (développement).
+  build <folder> [--install <data folder>] [--no-tailwind]
+      Builds the extension (src/ → dist/) and creates <id>-<version>.zip.
+      --install also copies the result to <data>/extensions/<id> (development).
 
-  keygen <dossier>            Crée une paire de clés de signature (pour le market).
-  sign <zip> --key <pem>      Signe un paquet et affiche son entrée pour le catalogue du market.
+  keygen <folder>             Creates a signing key pair (for the market).
+  sign <zip> --key <pem>      Signs a package and prints its entry for the market catalogue.
   verify <zip> --pub <pem> --sig <signature>
-  site-classes <dossier css>  Liste les classes du site (build de PalCMS).
+  site-classes <css folder>   Lists the site classes (PalCMS build).
 `;
 
 const [cmd, ...args] = process.argv.slice(2);

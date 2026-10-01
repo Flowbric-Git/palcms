@@ -11,7 +11,7 @@ interface Row {
   finished_at: number | null;
 }
 
-/** Persistance SQLite des étapes d'installation (table setup_tasks). */
+/** SQLite persistence of the setup steps (setup_tasks table). */
 export class DbTaskStore implements TaskStore {
   get(id: string): StoredTask | undefined {
     const r = db.prepare<[string], Row>('SELECT id, status, error, started_at, finished_at FROM setup_tasks WHERE id = ?').get(id);
@@ -38,7 +38,7 @@ export class DbTaskStore implements TaskStore {
     db.prepare('UPDATE setup_tasks SET log = ? WHERE id = ?').run('', id);
   }
 
-  /** Remet des étapes "à faire" (ex. après modification du formulaire du serveur). */
+  /** Resets steps to "to do" (e.g. after the server form changed). */
   reset(ids: string[]): void {
     const stmt = db.prepare('DELETE FROM setup_tasks WHERE id = ?');
     for (const id of ids) stmt.run(id);

@@ -7,20 +7,20 @@ import { errorText, every, httpError, parseBody, type Feature, type FeatureBus }
 
 export { compareVersions };
 
-/** Lit la sortie de "palctl check-update" (installed=… / latest=…). */
+/** Reads the output of "palctl check-update" (installed=… / latest=…). */
 export function parseBuildIds(output: string): { installed: string | null; latest: string | null } {
   const get = (k: string) => new RegExp(`^${k}=(\\d+)$`, 'm').exec(output)?.[1] ?? null;
   return { installed: get('installed'), latest: get('latest') };
 }
 
-/** Dépôt GitHub des versions, lu dans install.sh (même valeur que pour l'installation). */
+/** GitHub repository of the releases, read from install.sh (same value as for installing). */
 function releaseRepo(): string | null {
   for (const p of [path.resolve('../install.sh'), path.resolve('../../install.sh')]) {
     try {
       const m = /PALCMS_REPO="\$\{PALCMS_REPO:-([\w.-]+\/[\w.-]+)\}"/.exec(fs.readFileSync(p, 'utf8'));
       if (m) return m[1];
     } catch {
-      // fichier absent, on essaie le suivant
+      // missing file, try the next one
     }
   }
   return null;
@@ -60,7 +60,7 @@ export function createUpdates(host: FeatureHost, bus: FeatureBus, backups: Backu
       const ids = parseBuildIds(await host.palctl(['check-update'], { timeoutMs: 3 * 60_000 }));
       server.installed = ids.installed;
       server.latest = ids.latest;
-      server.error = ids.latest ? null : 'Version en ligne introuvable (steamcmd)';
+      server.error = ids.latest ? null : 'Online version not found (steamcmd)';
     } catch (e) {
       server.error = errorText(e);
     }
@@ -76,11 +76,11 @@ export function createUpdates(host: FeatureHost, bus: FeatureBus, backups: Backu
       await host.server.stop();
       await host.palctl(['update-palworld'], { timeoutMs: 60 * 60_000 });
       await host.server.start();
-      server.lastResult = `Mis à jour le ${new Date().toLocaleString('fr-FR')}`;
+      server.lastResult = `Updated on ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`;
       bus.emit('restart:done', { updated: true });
       await checkServer();
     } catch (e) {
-      server.lastResult = `Échec : ${errorText(e)}`;
+      server.lastResult = `Failed: ${errorText(e)}`;
       bus.emit('restart:failed', { error: errorText(e) });
     } finally {
       server.running = false;
@@ -89,7 +89,7 @@ export function createUpdates(host: FeatureHost, bus: FeatureBus, backups: Backu
 
   const schedule = (minutes: number) => {
     const s = settings();
-    // Les avertissements plus longs que le délai sont considérés comme déjà envoyés.
+    // Warnings longer than the delay count as already sent.
     server.pending = { at: Date.now() + minutes * 60_000, sent: new Set(s.warnings.filter((w) => w > minutes)) };
   };
 
@@ -105,7 +105,7 @@ export function createUpdates(host: FeatureHost, bus: FeatureBus, backups: Backu
     for (const w of s.warnings) {
       if (!server.pending.sent.has(w) && left <= w * 60_000 && left > (w - 1) * 60_000 - 30_000) {
         server.pending.sent.add(w);
-        await host.palworld.announce(`Mise à jour du serveur dans ${w} minute(s). Pensez à vous mettre à l'abri !`).catch(() => {});
+        await host.palworld.announce(host.t('Server update in {n} minute(s). Get to safety!', { n: w })).catch(() => {});
         bus.emit('restart:warning', { minutes: w });
       }
     }
@@ -118,7 +118,7 @@ export function createUpdates(host: FeatureHost, bus: FeatureBus, backups: Backu
   const checkPalcms = async () => {
     const repo = releaseRepo();
     if (!repo) {
-      palcms.error = 'Dépôt GitHub inconnu';
+      palcms.error = 'Unknown GitHub repository';
       return;
     }
     try {
@@ -126,7 +126,7 @@ export function createUpdates(host: FeatureHost, bus: FeatureBus, backups: Backu
         headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'PalCMS' },
         signal: AbortSignal.timeout(10_000),
       });
-      if (!res.ok) throw new Error(`GitHub a répondu ${res.status}`);
+      if (!res.ok) throw new Error(`GitHub answered ${res.status}`);
       const r = (await res.json()) as { tag_name?: string; body?: string; html_url?: string };
       palcms.latest = r.tag_name ?? null;
       palcms.notes = (r.body ?? '').slice(0, 5000);
@@ -205,7 +205,7 @@ export function createUpdates(host: FeatureHost, bus: FeatureBus, backups: Backu
         access: 'staff',
         permission: 'server.schedules',
         handler: async () => {
-          if (host.server.mode() !== 'managed') throw httpError(409, 'Disponible uniquement pour un serveur installé par PalCMS sur ce VPS');
+          if (host.server.mode() !== 'managed') throw httpError(409, 'Only available for a server installed by PalCMS on this VPS');
           await checkServer();
           return { installed: server.installed, latest: server.latest, outdated: serverOutdated(), error: server.error };
         },
@@ -216,9 +216,9 @@ export function createUpdates(host: FeatureHost, bus: FeatureBus, backups: Backu
         access: 'staff',
         permission: 'server.schedules',
         handler: ({ body, user }) => {
-          if (host.server.mode() !== 'managed') throw httpError(409, 'Disponible uniquement pour un serveur installé par PalCMS sur ce VPS');
+          if (host.server.mode() !== 'managed') throw httpError(409, 'Only available for a server installed by PalCMS on this VPS');
           const { delayMinutes } = parseBody(z.object({ delayMinutes: z.number().int().min(0).max(60) }), body);
-          if (server.running || server.pending) throw httpError(409, 'Une mise à jour est déjà prévue ou en cours');
+          if (server.running || server.pending) throw httpError(409, 'An update is already planned or running');
           host.events.emit('audit', { userId: user!.id, username: user!.username, action: 'server.update', target: `${delayMinutes} min` });
           if (delayMinutes === 0) void runServerUpdate();
           else schedule(delayMinutes);
@@ -231,9 +231,9 @@ export function createUpdates(host: FeatureHost, bus: FeatureBus, backups: Backu
         access: 'staff',
         permission: 'server.schedules',
         handler: async () => {
-          if (!server.pending) throw httpError(404, 'Aucune mise à jour prévue');
+          if (!server.pending) throw httpError(404, 'No update planned');
           server.pending = null;
-          await host.palworld.announce('La mise à jour prévue est annulée.').catch(() => {});
+          await host.palworld.announce(host.t('The planned update is cancelled.')).catch(() => {});
           return { ok: true };
         },
       },
@@ -255,7 +255,7 @@ export function createUpdates(host: FeatureHost, bus: FeatureBus, backups: Backu
         permission: 'admin.updates',
         handler: async ({ user }) => {
           const info = palcmsInfo();
-          if (!info.available || !info.latest) throw httpError(409, 'Aucune nouvelle version à installer');
+          if (!info.available || !info.latest) throw httpError(409, 'No new version to install');
           host.events.emit('audit', { userId: user!.id, username: user!.username, action: 'palcms.update', target: info.latest });
           const out = await host.palctl(['self-update', info.latest], { timeoutMs: 2 * 60_000 });
           return { ok: true, version: info.latest, output: out.trim().split('\n').pop() };

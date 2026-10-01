@@ -1,6 +1,6 @@
 /**
- * Liste blanche des commandes palctl. La même liste est appliquée côté root dans scripts/palctl :
- * le CMS ne peut rien demander d'autre au système, même s'il est compromis.
+ * Whitelist of palctl commands. The same list is enforced as root in scripts/palctl:
+ * the CMS cannot ask the system for anything else, even if it is compromised.
  */
 const isPort = (v: string) => /^\d{1,5}$/.test(v) && Number(v) >= 1024 && Number(v) <= 65535;
 const isPlayers = (v: string) => /^\d{1,2}$/.test(v) && Number(v) >= 1 && Number(v) <= 32;
@@ -37,10 +37,10 @@ const SPEC: Record<string, Check> = {
 
 export const PALCTL_COMMANDS = Object.keys(SPEC);
 
-/** Renvoie null si la commande est autorisée, sinon un message d'erreur. */
+/** Returns null when the command is allowed, otherwise an error message. */
 export function validatePalctlArgs(args: string[]): string | null {
   const [cmd, ...rest] = args;
-  if (!cmd || !(cmd in SPEC)) return `Commande palctl inconnue : ${cmd ?? '(vide)'}`;
-  if (!SPEC[cmd](rest)) return `Arguments invalides pour palctl ${cmd}`;
+  if (!cmd || !(cmd in SPEC)) return `Unknown palctl command: ${cmd ?? '(empty)'}`;
+  if (!SPEC[cmd](rest)) return `Invalid arguments for palctl ${cmd}`;
   return null;
 }

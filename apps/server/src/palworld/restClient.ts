@@ -1,8 +1,8 @@
 import { palworldConnection, type PalworldConnection } from '../core/site';
 
 /**
- * Client de l'API REST officielle du serveur dédié Palworld (http://hôte:8212/v1/api/...).
- * Le serveur peut être installé par PalCMS (127.0.0.1) ou exister ailleurs (serveur externe).
+ * Client for the official REST API of the Palworld dedicated server (http://host:8212/v1/api/...).
+ * The server may be installed by PalCMS (127.0.0.1) or live elsewhere (external server).
  */
 
 export interface PalInfo {
@@ -50,9 +50,9 @@ async function call<T>(
   body?: unknown,
   conn: PalworldConnection | null = palworldConnection(),
 ): Promise<T> {
-  if (!conn) throw new PalworldApiError('Aucun serveur Palworld connecté', null);
+  if (!conn) throw new PalworldApiError('No Palworld server connected', null);
   const auth = Buffer.from(`admin:${conn.password}`).toString('base64');
-  // Une adresse IPv6 doit être entre crochets dans une URL.
+  // An IPv6 address must be in brackets in a URL.
   const host = conn.host.includes(':') && !conn.host.startsWith('[') ? `[${conn.host}]` : conn.host;
   let res: Response;
   try {
@@ -67,10 +67,10 @@ async function call<T>(
       signal: AbortSignal.timeout(4000),
     });
   } catch {
-    throw new PalworldApiError('Serveur Palworld injoignable', null);
+    throw new PalworldApiError('Palworld server unreachable', null);
   }
-  if (res.status === 401) throw new PalworldApiError("Mot de passe admin refusé par l'API Palworld", 401);
-  if (!res.ok) throw new PalworldApiError(`API Palworld : erreur ${res.status}`, res.status);
+  if (res.status === 401) throw new PalworldApiError('Admin password refused by the Palworld API', 401);
+  if (!res.ok) throw new PalworldApiError(`Palworld API: error ${res.status}`, res.status);
   const text = await res.text();
   if (!text) return undefined as T;
   try {
@@ -80,19 +80,19 @@ async function call<T>(
   }
 }
 
-/** Teste une connexion à l'API REST (ex. serveur existant saisi par l'admin) sans l'enregistrer. */
-export async function testConnection(conn: PalworldConnection): Promise<{ ok: true; info: PalInfo } | { ok: false; error: string }> {
+/** Tests a REST API connection (e.g. existing server entered by the admin) without saving it. */
+export async function testConnection(conn: PalworldConnection): Promise<{ ok: true; info: PalInfo } | { ok: false; error: string; hint: string }> {
   try {
     return { ok: true, info: await call<PalInfo>('GET', 'info', undefined, conn) };
   } catch (e) {
     const err = e as PalworldApiError;
     const hint =
       err.status === 401
-        ? 'Vérifie le mot de passe admin (AdminPassword).'
+        ? 'Check the admin password (AdminPassword).'
         : err.status === null
-          ? 'Vérifie l’adresse, le port, que RESTAPIEnabled=True sur le serveur et que ce port est joignable depuis ce VPS.'
+          ? 'Check the address, the port, that RESTAPIEnabled=True on the server and that this port can be reached from this VPS.'
           : '';
-    return { ok: false, error: `${err.message}. ${hint}`.trim() };
+    return { ok: false, error: err.message, hint };
   }
 }
 

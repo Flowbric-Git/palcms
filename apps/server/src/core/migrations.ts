@@ -98,5 +98,5 @@ const BASE_MIGRATIONS: Migration[] = [
   },
 ];
 
-/** Toutes les migrations, dans l'ordre : tables du cœur puis des fonctionnalités. */
+/** All migrations, in order: core tables, then feature tables. */
 export const CORE_MIGRATIONS: Migration[] = [...BASE_MIGRATIONS, ...FEATURE_MIGRATIONS];

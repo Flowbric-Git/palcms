@@ -45,19 +45,19 @@ interface Row {
 const ACTIVE_THEME = 'extensions.theme';
 const settingsKey = (id: string) => `extensions.settings.${id}`;
 
-/** Dossier des extensions installées (un sous-dossier par extension). */
+/** Folder of installed extensions (one sub-folder per extension). */
 export function extensionsDir(): string {
   return path.join(config.dataDir, 'extensions');
 }
 
 export function extensionPath(id: string, file = ''): string {
-  if (!EXTENSION_ID_RE.test(id)) throw new PackageError('Identifiant invalide');
+  if (!EXTENSION_ID_RE.test(id)) throw new PackageError('Invalid id');
   return path.join(extensionsDir(), id, file);
 }
 
 const manifests = new Map<string, { mtime: number; manifest: ExtensionManifest | null }>();
 
-/** Manifeste d'une extension installée (relu seulement si le fichier a changé). */
+/** Manifest of an installed extension (read again only when the file changed). */
 export function readManifest(id: string): ExtensionManifest | null {
   const file = extensionPath(id, 'palcms.json');
   let mtime = 0;
@@ -83,7 +83,7 @@ const has = (id: string, file: string) => fs.existsSync(extensionPath(id, file))
 const rows = () => db.prepare<[], Row>('SELECT * FROM extensions ORDER BY type, id').all();
 const row = (id: string) => db.prepare<[string], Row>('SELECT * FROM extensions WHERE id = ?').get(id);
 
-/** Erreurs de chargement des plugins, affichées dans le panel. */
+/** Plugin loading errors, shown in the panel. */
 export const loadErrors = new Map<string, string>();
 
 export function activeThemeId(): string | null {
@@ -96,16 +96,16 @@ export function activeThemeId(): string | null {
 export function setActiveTheme(id: string | null): void {
   if (id) {
     const r = row(id);
-    if (!r || r.type !== 'theme') throw new PackageError('Thème introuvable');
+    if (!r || r.type !== 'theme') throw new PackageError('Theme not found');
     const m = readManifest(id);
     if (m && !satisfiesVersion(config.version, m.palcms)) {
-      throw new PackageError(`Ce thème demande PalCMS ${m.palcms} (version installée : ${config.version})`);
+      throw new PackageError(`This theme requires PalCMS ${m.palcms} (installed version: ${config.version})`);
     }
   }
   settings.set(ACTIVE_THEME, id);
 }
 
-/** Valeurs des réglages, complétées par les valeurs par défaut du manifeste. */
+/** Setting values, completed with the manifest defaults. */
 export function extensionSettings(id: string, defs: ExtensionSettingDef[] = readManifest(id)?.settings ?? []): ExtensionSettingValues {
   const saved = settings.get<ExtensionSettingValues>(settingsKey(id), {});
   const out: ExtensionSettingValues = {};
@@ -118,7 +118,7 @@ export function extensionSettings(id: string, defs: ExtensionSettingDef[] = read
 
 export function saveExtensionSettings(id: string, values: Record<string, unknown>): ExtensionSettingValues {
   const m = readManifest(id);
-  if (!m) throw new PackageError('Extension introuvable');
+  if (!m) throw new PackageError('Extension not found');
   const clean: ExtensionSettingValues = {};
   for (const d of m.settings ?? []) {
     const v = values[d.key];
@@ -165,8 +165,8 @@ function toInstalled(r: Row): InstalledExtension | null {
 }
 
 /**
- * Enregistre les dossiers déposés à la main dans le dossier des extensions (développement) :
- * ils apparaissent désactivés et non vérifiés.
+ * Registers folders dropped by hand into the extensions folder (development):
+ * they show up disabled and unverified.
  */
 export function scanLocalExtensions(): void {
   const dir = extensionsDir();
@@ -197,7 +197,7 @@ export function getExtension(id: string): InstalledExtension | null {
   return r ? toInstalled(r) : null;
 }
 
-/** Plugins à charger côté serveur. */
+/** Plugins to load on the server. */
 export function enabledPlugins(): InstalledExtension[] {
   return listExtensions().filter((e) => e.type === 'plugin' && e.enabled && e.compatible);
 }
@@ -219,13 +219,13 @@ export function bootExtensions(): BootExtensions {
 }
 
 /**
- * Installe (ou met à jour) un paquet : les fichiers sont écrits dans un dossier temporaire
- * puis remplacent l'ancienne version d'un coup.
+ * Installs (or updates) a package: files are written to a temporary folder,
+ * then replace the old version in one go.
  */
 export function installPackage(pkg: ExtensionPackage, opts: { source: ExtensionSource; verified: boolean }): InstalledExtension {
   const { manifest, files } = pkg;
   const existing = row(manifest.id);
-  if (existing && existing.type !== manifest.type) throw new PackageError(`Une extension "${manifest.id}" d'un autre type est déjà installée`);
+  if (existing && existing.type !== manifest.type) throw new PackageError(`An extension "${manifest.id}" of another type is already installed`);
 
   const dir = extensionsDir();
   fs.mkdirSync(dir, { recursive: true });
@@ -235,7 +235,7 @@ export function installPackage(pkg: ExtensionPackage, opts: { source: ExtensionS
   try {
     for (const [name, content] of files) {
       const file = path.join(tmp, name);
-      if (!file.startsWith(tmp + path.sep)) throw new PackageError(`Chemin interdit : ${name}`);
+      if (!file.startsWith(tmp + path.sep)) throw new PackageError(`Forbidden path: ${name}`);
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, content);
     }
@@ -263,16 +263,16 @@ export function installFromZip(data: Uint8Array, opts: { source: ExtensionSource
 
 export function setEnabled(id: string, enabled: boolean): void {
   const r = row(id);
-  if (!r) throw new PackageError('Extension introuvable');
+  if (!r) throw new PackageError('Extension not found');
   if (enabled && !satisfiesVersion(config.version, readManifest(id)?.palcms)) {
-    throw new PackageError('Extension incompatible avec cette version de PalCMS');
+    throw new PackageError('Extension incompatible with this PalCMS version');
   }
   db.prepare('UPDATE extensions SET enabled = ? WHERE id = ?').run(enabled ? 1 : 0, id);
 }
 
-/** Supprime les fichiers d'une extension. Les tables créées par un plugin sont conservées. */
+/** Removes an extension's files. Tables created by a plugin are kept. */
 export function removeExtension(id: string): void {
-  if (!row(id)) throw new PackageError('Extension introuvable');
+  if (!row(id)) throw new PackageError('Extension not found');
   if (activeThemeId() === id) settings.set(ACTIVE_THEME, null);
   db.prepare('DELETE FROM extensions WHERE id = ?').run(id);
   fs.rmSync(extensionPath(id), { recursive: true, force: true });

@@ -18,7 +18,7 @@ export interface StoredTask {
   finishedAt: number | null;
 }
 
-/** Persistance de l'état des tâches (SQLite en production, mémoire dans les tests). */
+/** Task state persistence (SQLite in production, memory in tests). */
 export interface TaskStore {
   get(id: string): StoredTask | undefined;
   save(task: StoredTask): void;
@@ -30,10 +30,10 @@ export interface TaskStore {
 export type TaskEvent = { type: 'task'; data: TaskState } | { type: 'task-log'; data: { id: string; line: string } };
 
 /**
- * Exécute des étapes d'installation les unes après les autres.
- * - une étape réussie n'est jamais rejouée (reprise après crash ou après une erreur) ;
- * - la première erreur arrête la suite, "Réessayer" relance à partir de l'étape en échec ;
- * - une étape restée "running" (crash du CMS) est marquée en échec au redémarrage.
+ * Runs setup steps one after the other.
+ * - a successful step never runs again (resume after a crash or an error);
+ * - the first error stops the rest, "Retry" starts again from the failed step;
+ * - a step left "running" (CMS crash) is marked as failed on restart.
  */
 export class TaskRunner {
   private busy = false;
@@ -56,19 +56,19 @@ export class TaskRunner {
     return this.defs.every((d) => this.store.get(d.id)?.status === 'done');
   }
 
-  /** À appeler au démarrage du CMS. */
+  /** To call when the CMS starts. */
   recover(): void {
     for (const d of this.defs) {
       const t = this.store.get(d.id);
       if (t?.status === 'running') {
-        this.store.save({ ...t, status: 'failed', error: 'Interrompu (redémarrage du CMS)', finishedAt: Date.now() });
+        this.store.save({ ...t, status: 'failed', error: 'Interrupted (CMS restart)', finishedAt: Date.now() });
       }
     }
   }
 
-  /** Lance toutes les étapes restantes. Renvoie true si tout est terminé avec succès. */
+  /** Runs every remaining step. Returns true when everything succeeded. */
   async runAll(): Promise<boolean> {
-    if (this.busy) throw new Error('Une installation est déjà en cours');
+    if (this.busy) throw new Error('An install is already running');
     this.busy = true;
     try {
       for (const def of this.defs) {

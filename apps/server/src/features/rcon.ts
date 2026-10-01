@@ -1,8 +1,8 @@
 import net from 'node:net';
 
 /**
- * Client RCON (protocole Source, utilisé par le serveur dédié Palworld).
- * Paquet : taille (int32 LE) | id (int32) | type (int32) | corps (ASCII) \0 \0
+ * RCON client (Source protocol, used by the Palworld dedicated server).
+ * Packet: size (int32 LE) | id (int32) | type (int32) | body (ASCII) \0 \0
  */
 const AUTH = 3;
 const EXEC = 2;
@@ -14,7 +14,7 @@ export function encodePacket(id: number, type: number, body: string): Buffer {
   buf.writeInt32LE(id, 4);
   buf.writeInt32LE(type, 8);
   payload.copy(buf, 12);
-  // les deux derniers octets restent à 0 (fin de chaîne + paquet)
+  // the last two bytes stay at 0 (end of string + packet)
   return buf;
 }
 
@@ -23,7 +23,7 @@ export function decodePackets(buf: Buffer): { packets: { id: number; type: numbe
   let offset = 0;
   while (buf.length - offset >= 4) {
     const size = buf.readInt32LE(offset);
-    if (size < 10 || size > 1024 * 1024) throw new Error('Réponse RCON invalide');
+    if (size < 10 || size > 1024 * 1024) throw new Error('Invalid RCON response');
     if (buf.length - offset < size + 4) break;
     packets.push({
       id: buf.readInt32LE(offset + 4),
@@ -35,7 +35,7 @@ export function decodePackets(buf: Buffer): { packets: { id: number; type: numbe
   return { packets, rest: buf.subarray(offset) };
 }
 
-/** Se connecte, s'authentifie, envoie une commande et renvoie la réponse. */
+/** Connects, authenticates, sends a command and returns the answer. */
 export function rconCommand(host: string, port: number, password: string, command: string, timeoutMs = 5000): Promise<string> {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection({ host, port });
@@ -51,7 +51,7 @@ export function rconCommand(host: string, port: number, password: string, comman
       if (err) reject(err);
       else resolve(output.trim());
     };
-    const timer = setTimeout(() => (authed ? finish(null) : finish(new Error('RCON : pas de réponse du serveur'))), timeoutMs);
+    const timer = setTimeout(() => (authed ? finish(null) : finish(new Error('RCON: no answer from the server'))), timeoutMs);
 
     socket.on('connect', () => socket.write(encodePacket(1, AUTH, password)));
     socket.on('error', (e) => finish(new Error(`RCON injoignable : ${e.message}`)));
@@ -66,7 +66,7 @@ export function rconCommand(host: string, port: number, password: string, comman
       buffer = decoded.rest;
       for (const p of decoded.packets) {
         if (!authed) {
-          if (p.id === -1) return finish(new Error('RCON : mot de passe admin refusé'));
+          if (p.id === -1) return finish(new Error('RCON: admin password refused'));
           if (p.type === 2 && p.id === 1) {
             authed = true;
             socket.write(encodePacket(2, EXEC, command));
@@ -75,7 +75,7 @@ export function rconCommand(host: string, port: number, password: string, comman
         }
         if (p.id === 2) {
           output += p.body;
-          // Palworld répond en un seul paquet : on attend un court instant au cas où d'autres suivraient.
+          // Palworld answers in a single packet: wait a moment in case more follow.
           if (settle) clearTimeout(settle);
           settle = setTimeout(() => finish(null), 150);
         }

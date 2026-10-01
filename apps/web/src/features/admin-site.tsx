@@ -12,12 +12,13 @@ import { LiveMap, POI_ICONS, type MapData, type MapPoi } from './map/LiveMap';
 import { gameToWorld, worldToGame } from '@palcms/shared';
 import { applyTheme, FONTS, type ThemeSettings } from './theme';
 import { InstalledThemes } from './admin-extensions';
+import { t } from '../lib/i18n';
 
 const { Alert, Badge, Button, Card, Empty, Field, Input, PageHeader, Select, Spinner, Textarea, Toggle, cx } = ui;
 
 type Msg = { kind: 'success' | 'error'; text: string } | null;
 
-// Carte
+// Map
 
 const OFFICIAL_BOUNDS: MapData['settings']['bounds'] = [349400, 724400, -1099400, -724400];
 
@@ -39,7 +40,7 @@ export function MapAdminPage() {
     try {
       const saved = await api.put<MapData['settings']>('features/map/settings', next);
       setData({ ...data, settings: saved });
-      setMsg({ kind: 'success', text: 'Carte mise à jour.' });
+      setMsg({ kind: 'success', text: t('Map updated.') });
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
     }
@@ -52,7 +53,7 @@ export function MapAdminPage() {
     try {
       const settings = (await api.upload('features/map/image', file)) as unknown as MapData['settings'];
       setData({ ...data, settings });
-      setMsg({ kind: 'success', text: 'Image importée et utilisée comme carte.' });
+      setMsg({ kind: 'success', text: t('Image uploaded and used as the map.') });
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
     } finally {
@@ -76,17 +77,15 @@ export function MapAdminPage() {
   return (
     <>
       <PageHeader
-        title="Carte"
-        description={
-          boot.modules.map ? 'La carte est visible par tout le monde sur /carte.' : 'La carte est masquée au public (Modules > Carte en temps réel).'
-        }
+        title={t('Map')}
+        description={boot.modules.map ? t('The map is visible to everyone at /map.') : t('The map is hidden from the public (Modules > Live map).')}
       />
       {msg && <Alert kind={msg.kind} className="mb-4">{msg.text}</Alert>}
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <div className="space-y-2">
           {placing && (
             <Alert kind="info">
-              <MousePointerClick className="mr-1 inline h-4 w-4" /> Clique sur la carte pour placer le point.
+              <MousePointerClick className="mr-1 inline h-4 w-4" /> {t('Click the map to place the point.')}
             </Alert>
           )}
           <div className="overflow-hidden rounded-xl ring-1 ring-slate-200 dark:ring-slate-800">
@@ -108,10 +107,10 @@ export function MapAdminPage() {
         </div>
 
         <div className="space-y-6">
-          <Card title={draft.id ? 'Modifier le point' : 'Nouveau point d’intérêt'}>
+          <Card title={draft.id ? t('Edit the point') : t('New point of interest')}>
             <div className="space-y-3">
-              <Input value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} placeholder="Nom (ex. Spawn, Boutique…)" maxLength={60} />
-              <Textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Description (facultatif)" rows={2} />
+              <Input value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} placeholder={t('Name (e.g. Spawn, Shop…)')} maxLength={60} />
+              <Textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder={t('Description (optional)')} rows={2} />
               <div className="flex flex-wrap gap-1">
                 {Object.entries(POI_ICONS).map(([k, v]) => (
                   <button
@@ -126,7 +125,7 @@ export function MapAdminPage() {
                 <input type="color" value={draft.color} onChange={(e) => setDraft({ ...draft, color: e.target.value })} className="h-9 w-10 cursor-pointer bg-transparent" />
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <Field label="X (en jeu)">
+                <Field label={t('X (in game)')}>
                   {(id) => (
                     <Input
                       id={id}
@@ -136,7 +135,7 @@ export function MapAdminPage() {
                     />
                   )}
                 </Field>
-                <Field label="Y (en jeu)">
+                <Field label={t('Y (in game)')}>
                   {(id) => (
                     <Input
                       id={id}
@@ -149,10 +148,10 @@ export function MapAdminPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="secondary" onClick={() => setPlacing(true)}>
-                  <MousePointerClick className="h-4 w-4" /> Placer sur la carte
+                  <MousePointerClick className="h-4 w-4" /> {t('Place on the map')}
                 </Button>
                 <Button onClick={() => void savePoi()} disabled={!draft.label.trim()}>
-                  <Save className="h-4 w-4" /> {draft.id ? 'Enregistrer' : 'Ajouter'}
+                  <Save className="h-4 w-4" /> {draft.id ? t('Save') : t('Add')}
                 </Button>
                 {draft.id && (
                   <Button
@@ -171,13 +170,13 @@ export function MapAdminPage() {
             </div>
           </Card>
 
-          <Card title="Image de la carte">
+          <Card title={t('Map image')}>
             <div className="space-y-3 text-sm">
               {(
                 [
-                  ['official', 'Carte officielle de Palworld', 'Fournie avec PalCMS (© Pocketpair).'],
-                  ['custom', 'Image importée', s.customUrl ? 'Ton image personnalisée.' : 'Importe une image ci-dessous.'],
-                  ['neutral', 'Carte neutre', 'Quadrillage simple, sans image.'],
+                  ['official', t('Official Palworld map'), t('Shipped with PalCMS (© Pocketpair).')],
+                  ['custom', t('Uploaded image'), s.customUrl ? t('Your own image.') : t('Upload an image below.')],
+                  ['neutral', t('Neutral map'), t('Plain grid, no image.')],
                 ] as const
               ).map(([id, label, help]) => (
                 <label key={id} className="flex cursor-pointer items-start gap-2">
@@ -196,14 +195,13 @@ export function MapAdminPage() {
                 </label>
               ))}
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 font-medium hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700">
-                <Upload className="h-4 w-4" /> {uploading ? 'Envoi…' : 'Importer une image (25 Mo max)'}
+                <Upload className="h-4 w-4" /> {uploading ? t('Uploading…') : t('Upload an image (25 MB max)')}
                 <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => void upload(e.target.files?.[0])} />
               </label>
               <details>
-                <summary className="cursor-pointer text-xs text-slate-500">Calibration (avancé)</summary>
+                <summary className="cursor-pointer text-xs text-slate-500">{t('Calibration (advanced)')}</summary>
                 <p className="mt-2 text-xs text-slate-500">
-                  Coordonnées monde des bords de l’image [maxX, maxY, minX, minY]. Les valeurs par défaut correspondent à la carte officielle, à n’importe
-                  quelle résolution.
+                  {t('World coordinates of the image edges [maxX, maxY, minX, minY]. The default values match the official map, at any resolution.')}
                 </p>
                 <Input
                   className="mt-2 font-mono text-xs"
@@ -214,15 +212,15 @@ export function MapAdminPage() {
                   }}
                 />
                 <Button variant="ghost" className="mt-1" onClick={() => void saveSettings({ ...s, bounds: OFFICIAL_BOUNDS })}>
-                  Réinitialiser
+                  {t('Reset')}
                 </Button>
               </details>
             </div>
           </Card>
 
-          <Card title={`Points d’intérêt (${data.pois.length})`}>
+          <Card title={t('Points of interest ({count})', { count: data.pois.length })}>
             {data.pois.length === 0 ? (
-              <Empty>Aucun point.</Empty>
+              <Empty>{t('No point.')}</Empty>
             ) : (
               <ul className="space-y-1">
                 {data.pois.map((p) => (
@@ -241,28 +239,28 @@ export function MapAdminPage() {
   );
 }
 
-// Thèmes
+// Themes
 
 export function ThemesPage() {
   const { data, error } = useLoad<ThemeSettings>('features/theme');
-  const [t, setT] = useState<ThemeSettings | null>(null);
+  const [th, setTh] = useState<ThemeSettings | null>(null);
   const [msg, setMsg] = useState<Msg>(null);
   useEffect(() => {
-    if (data) setT(data);
+    if (data) setTh(data);
   }, [data]);
   if (error) return <Alert kind="error">{error}</Alert>;
-  if (!t) return <Spinner />;
+  if (!th) return <Spinner />;
 
   const update = (patch: Partial<ThemeSettings>) => {
-    const next = { ...t, ...patch };
-    setT(next);
+    const next = { ...th, ...patch };
+    setTh(next);
     applyTheme(next);
   };
   const save = async () => {
     setMsg(null);
     try {
-      await api.put('features/theme', t);
-      setMsg({ kind: 'success', text: 'Thème enregistré.' });
+      await api.put('features/theme', th);
+      setMsg({ kind: 'success', text: t('Theme saved.') });
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
     }
@@ -271,55 +269,55 @@ export function ThemesPage() {
   return (
     <>
       <PageHeader
-        title="Thèmes"
-        description="Choisis un thème installé, puis ajuste les réglages avancés : ils s’ajoutent aux couleurs de « Apparence ». L’aperçu est immédiat ; pense à enregistrer."
+        title={t('Themes')}
+        description={t('Pick an installed theme, then fine-tune the advanced settings: they add to the colors of "Appearance". The preview is instant; remember to save.')}
         actions={
           <Button onClick={() => void save()}>
-            <Save className="h-4 w-4" /> Enregistrer
+            <Save className="h-4 w-4" /> {t('Save')}
           </Button>
         }
       />
       {msg && <Alert kind={msg.kind} className="mb-4">{msg.text}</Alert>}
       <InstalledThemes />
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Police et fond">
+        <Card title={t('Font and background')}>
           <div className="space-y-4">
-            <Field label="Police du site">
+            <Field label={t('Site font')}>
               {(id) => (
-                <Select id={id} value={t.font} onChange={(e) => update({ font: e.target.value as ThemeSettings['font'] })}>
+                <Select id={id} value={th.font} onChange={(e) => update({ font: e.target.value as ThemeSettings['font'] })}>
                   {FONTS.map((f) => (
                     <option key={f} value={f}>
-                      {f === 'system' ? 'Police du système' : f}
+                      {f === 'system' ? t('System font') : f}
                     </option>
                   ))}
                 </Select>
               )}
             </Field>
-            <Field label="Fond des pages">
+            <Field label={t('Page background')}>
               {(id) => (
-                <Select id={id} value={t.background} onChange={(e) => update({ background: e.target.value as ThemeSettings['background'] })}>
-                  <option value="plain">Uni</option>
-                  <option value="gradient">Dégradé de la couleur principale</option>
-                  <option value="dots">Motif à points</option>
-                  <option value="image">Image</option>
+                <Select id={id} value={th.background} onChange={(e) => update({ background: e.target.value as ThemeSettings['background'] })}>
+                  <option value="plain">{t('Plain')}</option>
+                  <option value="gradient">{t('Main color gradient')}</option>
+                  <option value="dots">{t('Dot pattern')}</option>
+                  <option value="image">{t('Image')}</option>
                 </Select>
               )}
             </Field>
-            {t.background === 'image' && (
-              <Field label="Image de fond">{() => <ImageField value={t.backgroundImage} onChange={(v) => update({ backgroundImage: v })} previewClass="h-16 w-28" />}</Field>
+            {th.background === 'image' && (
+              <Field label={t('Background image')}>{() => <ImageField value={th.backgroundImage} onChange={(v) => update({ backgroundImage: v })} previewClass="h-16 w-28" />}</Field>
             )}
-            <Toggle checked={t.glass} onChange={(v) => update({ glass: v })} label="Effet verre" description="Cartes semi-transparentes et floutées." />
+            <Toggle checked={th.glass} onChange={(v) => update({ glass: v })} label={t('Glass effect')} description={t('Semi-transparent, blurred cards.')} />
           </div>
         </Card>
-        <Card title="CSS personnalisé">
+        <Card title={t('Custom CSS')}>
           <Textarea
-            value={t.customCss}
+            value={th.customCss}
             onChange={(e) => update({ customCss: e.target.value })}
             rows={14}
             className="font-mono text-xs"
-            placeholder={'/* Exemple */\nh1 { letter-spacing: -0.02em; }'}
+            placeholder={'/* Example */\nh1 { letter-spacing: -0.02em; }'}
           />
-          <p className="mt-2 text-xs text-slate-500">Appliqué à tout le site public. Réservé aux utilisateurs avancés.</p>
+          <p className="mt-2 text-xs text-slate-500">{t('Applied to the whole public site. For advanced users.')}</p>
         </Card>
       </div>
     </>
@@ -348,7 +346,7 @@ export function DiscordPage() {
     setMsg(null);
     try {
       await fn();
-      setMsg({ kind: 'success', text });
+      setMsg({ kind: 'success', text: t(text) });
       reload();
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
@@ -357,13 +355,13 @@ export function DiscordPage() {
 
   return (
     <>
-      <PageHeader title="Discord" description="Notifications envoyées automatiquement sur un salon de ton serveur Discord." />
+      <PageHeader title="Discord" description={t('Notifications sent automatically to a channel of your Discord server.')} />
       {msg && <Alert kind={msg.kind} className="mb-4">{msg.text}</Alert>}
       <Card>
         <div className="space-y-5">
           <Field
-            label="Lien du webhook"
-            help="Sur Discord : Paramètres du salon > Intégrations > Webhooks > Nouveau webhook > Copier l’URL."
+            label={t('Webhook link')}
+            help={t('On Discord: Channel settings > Integrations > Webhooks > New webhook > Copy URL.')}
           >
             {(id) => (
               <Input
@@ -379,34 +377,34 @@ export function DiscordPage() {
             <Toggle
               checked={form.events.server}
               onChange={(v) => setForm({ ...form, events: { ...form.events, server: v } })}
-              label="Démarrage, arrêt, crash"
-              description="Serveur en ligne ou hors ligne, avec détection automatique des crashs."
+              label={t('Start, stop, crash')}
+              description={t('Server online or offline, with automatic crash detection.')}
             />
             <Toggle
               checked={form.events.schedule}
               onChange={(v) => setForm({ ...form, events: { ...form.events, schedule: v } })}
-              label="Redémarrages et sauvegardes"
-              description="Annonces avant un redémarrage programmé, résultat des redémarrages et des sauvegardes manuelles."
+              label={t('Restarts and backups')}
+              description={t('Warnings before a scheduled restart, result of restarts and of manual backups.')}
             />
             <Toggle
               checked={form.events.content}
               onChange={(v) => setForm({ ...form, events: { ...form.events, content: v } })}
-              label="Actualités, membres et signalements"
-              description="Nouvel article publié, nouvelle inscription à valider, nouveau signalement ou suggestion."
+              label={t('News, members and reports')}
+              description={t('New article published, new sign-up to approve, new report or suggestion.')}
             />
             <Toggle
               checked={form.events.alerts ?? true}
               onChange={(v) => setForm({ ...form, events: { ...form.events, alerts: v } })}
-              label="Alertes"
-              description="FPS bas, mémoire ou disque presque pleins, API injoignable, soupçon de triche, nouvelle version de PalCMS."
+              label={t('Alerts')}
+              description={t('Low FPS, memory or disk almost full, API unreachable, suspected cheating, new PalCMS version.')}
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void run(() => api.put('features/discord', form), 'Réglages Discord enregistrés.')}>
-              <Save className="h-4 w-4" /> Enregistrer
+            <Button onClick={() => void run(() => api.put('features/discord', form), 'Discord settings saved.')}>
+              <Save className="h-4 w-4" /> {t('Save')}
             </Button>
-            <Button variant="secondary" disabled={!data?.configured} onClick={() => void run(() => api.post('features/discord/test'), 'Message de test envoyé.')}>
-              <Send className="h-4 w-4" /> Envoyer un test
+            <Button variant="secondary" disabled={!data?.configured} onClick={() => void run(() => api.post('features/discord/test'), 'Test message sent.')}>
+              <Send className="h-4 w-4" /> {t('Send a test')}
             </Button>
           </div>
         </div>
@@ -415,7 +413,7 @@ export function DiscordPage() {
   );
 }
 
-// Équipe et rôles
+// Team and roles
 
 interface Role {
   id: number;
@@ -441,8 +439,8 @@ export function TeamPage() {
 
   useEffect(() => {
     if (q.length < 2) return setCandidates([]);
-    const t = setTimeout(() => api.get<typeof candidates>(`features/team/candidates?q=${encodeURIComponent(q)}`).then(setCandidates).catch(() => {}), 250);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => api.get<typeof candidates>(`features/team/candidates?q=${encodeURIComponent(q)}`).then(setCandidates).catch(() => {}), 250);
+    return () => clearTimeout(timer);
   }, [q]);
 
   if (error) return <Alert kind="error">{error}</Alert>;
@@ -452,7 +450,7 @@ export function TeamPage() {
     setMsg(null);
     try {
       await fn();
-      if (text) setMsg({ kind: 'success', text });
+      if (text) setMsg({ kind: 'success', text: t(text) });
       reload();
     } catch (e) {
       setMsg({ kind: 'error', text: errorText(e) });
@@ -463,48 +461,48 @@ export function TeamPage() {
     editing &&
     void run(
       () => (editing.id ? api.put(`features/roles/${editing.id}`, editing) : api.post('features/roles', editing)),
-      'Rôle enregistré.',
+      'Role saved.',
     ).then(() => setEditing(null));
 
   return (
     <>
-      <PageHeader title="Équipe et rôles" description="Donne accès au panel à des membres du site, avec des permissions précises." />
+      <PageHeader title={t('Team and roles')} description={t('Give site members access to the panel, with precise permissions.')} />
       {msg && <Alert kind={msg.kind} className="mb-4">{msg.text}</Alert>}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title={`Équipe (${data.staff.length})`}>
+        <Card title={t('Team ({count})', { count: data.staff.length })}>
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {data.staff.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center gap-2 py-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{s.displayName}</p>
                   <p className="text-xs text-slate-500">
-                    @{s.username} · {s.lastLoginAt ? `vu ${format.timeAgo(s.lastLoginAt)}` : 'jamais connecté'}
+                    @{s.username} · {s.lastLoginAt ? t('seen {when}', { when: format.timeAgo(s.lastLoginAt) }) : t('never logged in')}
                   </p>
                 </div>
                 {s.role === 'superadmin' ? (
-                  <Badge tone="accent">Administrateur principal</Badge>
+                  <Badge tone="accent">{t('Main administrator')}</Badge>
                 ) : (
                   <>
                     <Select
                       value={s.roleId ?? ''}
                       disabled={s.id === boot.user?.id}
-                      onChange={(e) => void run(() => api.put(`features/team/${s.id}`, { roleId: Number(e.target.value) }), 'Rôle modifié.')}
+                      onChange={(e) => void run(() => api.put(`features/team/${s.id}`, { roleId: Number(e.target.value) }), 'Role changed.')}
                       className="w-40"
                     >
-                      {s.roleId === null && <option value="">Admin (tous droits)</option>}
+                      {s.roleId === null && <option value="">{t('Admin (all rights)')}</option>}
                       {data.roles.map((r) => (
                         <option key={r.id} value={r.id}>
-                          {r.name}
+                          {t(r.name)}
                         </option>
                       ))}
                     </Select>
                     {s.id !== boot.user?.id && (
                       <Button
                         variant="ghost"
-                        title="Retirer de l’équipe"
+                        title={t('Remove from the team')}
                         onClick={() =>
-                          window.confirm(`Retirer ${s.displayName} de l’équipe ? Il redeviendra simple joueur.`) &&
-                          void run(() => api.put(`features/team/${s.id}`, { roleId: null }), 'Membre retiré de l’équipe.')
+                          window.confirm(t('Remove {name} from the team? They become a regular player again.', { name: s.displayName })) &&
+                          void run(() => api.put(`features/team/${s.id}`, { roleId: null }), 'Member removed from the team.')
                         }
                       >
                         <Trash2 className="h-4 w-4 text-red-500" />
@@ -516,14 +514,14 @@ export function TeamPage() {
             ))}
           </ul>
           <div className="mt-4 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/40">
-            <p className="mb-2 text-sm font-medium">Ajouter un membre du site à l’équipe</p>
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un membre…" />
+            <p className="mb-2 text-sm font-medium">{t('Add a site member to the team')}</p>
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Search a member…')} />
             <div className="mt-2 flex gap-2">
               <Select value={addRole} onChange={(e) => setAddRole(e.target.value ? Number(e.target.value) : '')}>
-                <option value="">— Rôle —</option>
+                <option value="">— {t('Role')} —</option>
                 {data.roles.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.name}
+                    {t(r.name)}
                   </option>
                 ))}
               </Select>
@@ -539,13 +537,13 @@ export function TeamPage() {
                       variant="secondary"
                       disabled={!addRole}
                       onClick={() =>
-                        void run(() => api.put(`features/team/${c.id}`, { roleId: addRole }), `${c.displayName} a rejoint l’équipe.`).then(() => {
+                        void run(() => api.put(`features/team/${c.id}`, { roleId: addRole }), t('{name} joined the team.', { name: c.displayName })).then(() => {
                           setQ('');
                           setCandidates([]);
                         })
                       }
                     >
-                      <Plus className="h-4 w-4" /> Ajouter
+                      <Plus className="h-4 w-4" /> {t('Add')}
                     </Button>
                   </li>
                 ))}
@@ -555,10 +553,10 @@ export function TeamPage() {
         </Card>
 
         <Card
-          title="Rôles"
+          title={t('Roles')}
           actions={
             <Button variant="secondary" onClick={() => setEditing({ name: '', permissions: [] })}>
-              <Plus className="h-4 w-4" /> Nouveau rôle
+              <Plus className="h-4 w-4" /> {t('New role')}
             </Button>
           }
         >
@@ -570,11 +568,11 @@ export function TeamPage() {
                   className={cx('w-full rounded-lg p-3 text-left ring-1 ring-slate-200 dark:ring-slate-800', !r.all && 'hover:ring-accent')}
                 >
                   <span className="flex items-center gap-2 font-medium">
-                    <Shield className="h-4 w-4 text-accent" /> {r.name}
-                    {r.builtin && <Badge>Prêt à l’emploi</Badge>}
-                    <span className="ml-auto text-xs text-slate-500">{r.members} membre(s)</span>
+                    <Shield className="h-4 w-4 text-accent" /> {t(r.name)}
+                    {r.builtin && <Badge>{t('Built-in')}</Badge>}
+                    <span className="ml-auto text-xs text-slate-500">{t('{n} member(s)', { n: r.members })}</span>
                   </span>
-                  <span className="mt-1 block text-xs text-slate-500">{r.all ? 'Tous les droits' : `${r.permissions.length} permission(s)`}</span>
+                  <span className="mt-1 block text-xs text-slate-500">{r.all ? t('All rights') : t('{n} permission(s)', { n: r.permissions.length })}</span>
                 </button>
               </li>
             ))}
@@ -583,15 +581,15 @@ export function TeamPage() {
       </div>
 
       {editing && (
-        <Card className="mt-6" title={editing.id ? `Modifier « ${editing.name} »` : 'Nouveau rôle'}>
+        <Card className="mt-6" title={editing.id ? t('Edit "{name}"', { name: t(editing.name) }) : t('New role')}>
           <div className="space-y-4">
             {!editing.builtin && (
-              <Field label="Nom du rôle">{(id) => <Input id={id} value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />}</Field>
+              <Field label={t('Role name')}>{(id) => <Input id={id} value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />}</Field>
             )}
             <div className="grid gap-4 md:grid-cols-3">
               {PERMISSION_GROUPS.map((g) => (
                 <div key={g.title}>
-                  <p className="mb-2 text-sm font-semibold">{g.title}</p>
+                  <p className="mb-2 text-sm font-semibold">{t(g.title)}</p>
                   <div className="space-y-1.5">
                     {g.keys.map((p) => (
                       <label key={p} className="flex items-start gap-2 text-sm">
@@ -606,7 +604,7 @@ export function TeamPage() {
                             })
                           }
                         />
-                        {PERMISSIONS[p]}
+                        {t(PERMISSIONS[p])}
                       </label>
                     ))}
                   </div>
@@ -615,14 +613,14 @@ export function TeamPage() {
             </div>
             <div className="flex gap-2">
               <Button onClick={saveRole}>
-                <Save className="h-4 w-4" /> Enregistrer
+                <Save className="h-4 w-4" /> {t('Save')}
               </Button>
               <Button variant="secondary" onClick={() => setEditing(null)}>
-                Annuler
+                {t('Cancel')}
               </Button>
               {editing.id && !editing.builtin && (
-                <Button variant="danger" onClick={() => void run(() => api.del(`features/roles/${editing.id}`), 'Rôle supprimé.').then(() => setEditing(null))}>
-                  <Trash2 className="h-4 w-4" /> Supprimer
+                <Button variant="danger" onClick={() => void run(() => api.del(`features/roles/${editing.id}`), 'Role deleted.').then(() => setEditing(null))}>
+                  <Trash2 className="h-4 w-4" /> {t('Delete')}
                 </Button>
               )}
             </div>
@@ -633,37 +631,37 @@ export function TeamPage() {
   );
 }
 
-// Journal des actions
+// Audit log
 
 const ACTIONS: Record<string, string> = {
-  'server.start': 'a démarré le serveur',
-  'server.stop': 'a arrêté le serveur',
-  'server.restart': 'a redémarré le serveur',
-  'server.restart-planned': 'a programmé un redémarrage',
-  'server.update': 'a lancé une mise à jour',
-  'server.config': 'a modifié la configuration',
-  'server.announce': 'a envoyé une annonce',
-  'player.kick': 'a expulsé',
-  'player.ban': 'a banni',
-  'player.unban': 'a débanni',
-  'backup.create': 'a créé une sauvegarde',
-  'backup.restore': 'a restauré',
-  'backup.delete': 'a supprimé la sauvegarde',
-  'backup.download': 'a téléchargé',
-  'rcon.exec': 'a lancé une commande RCON',
-  'member.approve': 'a validé le membre',
-  'member.rejected': 'a refusé le membre',
-  'member.banned': 'a banni du site',
-  'member.active': 'a réactivé',
-  'member.delete': 'a supprimé le compte',
-  'page.create': 'a créé la page',
-  'page.update': 'a modifié la page',
-  'page.delete': 'a supprimé la page',
-  'news.create': 'a créé l’article',
-  'news.update': 'a modifié l’article',
-  'news.delete': 'a supprimé l’article',
-  'team.set-role': 'a changé le rôle de',
-  'team.remove': 'a retiré de l’équipe',
+  'server.start': 'started the server',
+  'server.stop': 'stopped the server',
+  'server.restart': 'restarted the server',
+  'server.restart-planned': 'scheduled a restart',
+  'server.update': 'started an update',
+  'server.config': 'changed the configuration',
+  'server.announce': 'sent an announcement',
+  'player.kick': 'kicked',
+  'player.ban': 'banned',
+  'player.unban': 'unbanned',
+  'backup.create': 'created a backup',
+  'backup.restore': 'restored',
+  'backup.delete': 'deleted the backup',
+  'backup.download': 'downloaded',
+  'rcon.exec': 'ran an RCON command',
+  'member.approve': 'approved the member',
+  'member.rejected': 'refused the member',
+  'member.banned': 'banned from the site',
+  'member.active': 'reactivated',
+  'member.delete': 'deleted the account',
+  'page.create': 'created the page',
+  'page.update': 'edited the page',
+  'page.delete': 'deleted the page',
+  'news.create': 'created the article',
+  'news.update': 'edited the article',
+  'news.delete': 'deleted the article',
+  'team.set-role': 'changed the role of',
+  'team.remove': 'removed from the team',
 };
 
 export function AuditPage() {
@@ -677,8 +675,8 @@ export function AuditPage() {
   return (
     <>
       <PageHeader
-        title="Journal des actions"
-        description="Qui a fait quoi dans le panel (conservé 180 jours)."
+        title={t('Audit log')}
+        description={t('Who did what in the panel (kept 180 days).')}
         actions={
           <form
             onSubmit={(e) => {
@@ -687,7 +685,7 @@ export function AuditPage() {
               setQuery(q);
             }}
           >
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher…" className="w-56" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Search…')} className="w-56" />
           </form>
         }
       />
@@ -695,14 +693,14 @@ export function AuditPage() {
         {!data ? (
           <Spinner />
         ) : data.items.length === 0 ? (
-          <Empty>Aucune action enregistrée.</Empty>
+          <Empty>{t('No recorded action.')}</Empty>
         ) : (
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {data.items.map((a) => (
               <li key={a.id} className="flex flex-wrap items-baseline gap-2 py-2 text-sm">
                 <span className="w-32 shrink-0 text-xs text-slate-500">{format.formatDateTime(a.ts)}</span>
-                <span className="font-medium">{a.username ?? 'Système'}</span>
-                <span>{ACTIONS[a.action] ?? a.action}</span>
+                <span className="font-medium">{a.username ?? t('System')}</span>
+                <span>{ACTIONS[a.action] ? t(ACTIONS[a.action]) : a.action}</span>
                 {a.target && <span className="font-medium">{a.target}</span>}
               </li>
             ))}
@@ -711,13 +709,13 @@ export function AuditPage() {
         {data && data.pages > 1 && (
           <div className="mt-4 flex justify-center gap-2">
             <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-              Précédent
+              {t('Previous')}
             </Button>
             <span className="self-center text-sm">
               {page} / {data.pages}
             </span>
             <Button variant="secondary" disabled={page >= data.pages} onClick={() => setPage(page + 1)}>
-              Suivant
+              {t('Next')}
             </Button>
           </div>
         )}

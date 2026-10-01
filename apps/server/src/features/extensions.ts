@@ -23,12 +23,12 @@ const ALLOW_UNVERIFIED = 'extensions.allowUnverified';
 
 let runtime: PluginRuntime | null = null;
 
-/** Plugins chargés côté serveur (null avant le démarrage des fonctionnalités). */
+/** Plugins loaded on the server (null before features start). */
 export function pluginRuntime(): PluginRuntime | null {
   return runtime;
 }
 
-/** Market, plugins et thèmes installés. */
+/** Market and installed plugins and themes. */
 export function createExtensions(host: FeatureHost): Feature {
   runtime = new PluginRuntime(host);
   const rt = runtime;
@@ -36,7 +36,7 @@ export function createExtensions(host: FeatureHost): Feature {
 
   const found = (id: string) => {
     const ext = getExtension(id);
-    if (!ext) throw httpError(404, 'Extension introuvable');
+    if (!ext) throw httpError(404, 'Extension not found');
     return ext;
   };
 
@@ -95,7 +95,7 @@ export function createExtensions(host: FeatureHost): Feature {
         handler: async (ctx) => {
           const { data } = await ctx.readUpload(MAX_PACKAGE_BYTES);
           const pkg = readPackage(data);
-          // Un fichier téléchargé depuis le market reste vérifié : on retrouve sa signature dans le catalogue.
+          // A file downloaded from the market stays verified: its signature is found in the catalog.
           let verified = false;
           try {
             const hash = sha256(data);
@@ -107,7 +107,7 @@ export function createExtensions(host: FeatureHost): Feature {
           if (!verified && !allowUnverified()) {
             throw httpError(
               403,
-              'Ce paquet n’est pas signé par le market. Active « Autoriser les extensions non vérifiées » si tu fais confiance à sa source.',
+              'This package is not signed by the market. Turn on "Allow unverified extensions" if you trust its source.',
             );
           }
           const before = getExtension(pkg.manifest.id);
@@ -125,9 +125,9 @@ export function createExtensions(host: FeatureHost): Feature {
         handler: async ({ params, body, user }) => {
           const ext = found(params.id);
           const { enabled } = parseBody(z.object({ enabled: z.boolean() }), body);
-          if (ext.type !== 'plugin') throw httpError(400, 'Un thème s’active depuis la page Thèmes');
+          if (ext.type !== 'plugin') throw httpError(400, 'A theme is enabled from the Themes page');
           if (enabled && !ext.verified && !allowUnverified()) {
-            throw httpError(403, 'Extension non vérifiée : autorise les extensions non vérifiées pour l’activer');
+            throw httpError(403, 'Unverified extension: allow unverified extensions to enable it');
           }
           setEnabled(ext.id, enabled);
           audit(host, user, enabled ? 'extensions.enable' : 'extensions.disable', ext.id);
@@ -172,11 +172,11 @@ export function createExtensions(host: FeatureHost): Feature {
           if (id) {
             const ext = found(id);
             if (!ext.verified && !allowUnverified()) {
-              throw httpError(403, 'Thème non vérifié : autorise les extensions non vérifiées pour l’utiliser');
+              throw httpError(403, 'Unverified theme: allow unverified extensions to use it');
             }
           }
           setActiveTheme(id);
-          audit(host, user, 'theme.activate', id ?? 'défaut');
+          audit(host, user, 'theme.activate', id ?? 'default');
           return { active: activeThemeId() };
         },
       },
@@ -186,7 +186,7 @@ export function createExtensions(host: FeatureHost): Feature {
         access: 'staff',
         handler: ({ params, can }) => {
           const ext = found(params.id);
-          if (!can(ext.type === 'theme' ? 'site.appearance' : 'admin.extensions')) throw httpError(403, 'Permission insuffisante');
+          if (!can(ext.type === 'theme' ? 'site.appearance' : 'admin.extensions')) throw httpError(403, 'Insufficient permission');
           return { settings: ext.settings, values: extensionSettings(ext.id, ext.settings) };
         },
       },
@@ -196,7 +196,7 @@ export function createExtensions(host: FeatureHost): Feature {
         access: 'staff',
         handler: ({ params, body, can, user }) => {
           const ext = found(params.id);
-          if (!can(ext.type === 'theme' ? 'site.appearance' : 'admin.extensions')) throw httpError(403, 'Permission insuffisante');
+          if (!can(ext.type === 'theme' ? 'site.appearance' : 'admin.extensions')) throw httpError(403, 'Insufficient permission');
           const values = parseBody(z.record(z.unknown()), body);
           const saved = saveExtensionSettings(ext.id, values);
           audit(host, user, 'extensions.settings', ext.id);

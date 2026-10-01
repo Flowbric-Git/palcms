@@ -39,7 +39,7 @@ const toPage = (r: PageRow): PageItem => ({
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 
 export async function adminSiteRoutes(app: FastifyInstance) {
-  // Réglages du site
+  // Site settings
 
   app.get('/settings', P.appearance, async () => ({ site: getSiteSettings(), steamApiKeySet: !!steamApiKey() }));
 
@@ -52,7 +52,7 @@ export async function adminSiteRoutes(app: FastifyInstance) {
   });
 
   app.put('/steam-api-key', P.appearance, async (req, reply) => {
-    const body = parse(z.object({ key: z.string().trim().max(64).regex(/^[A-Fa-f0-9]*$/, 'Clé Steam invalide') }), req.body, reply);
+    const body = parse(z.object({ key: z.string().trim().max(64).regex(/^[A-Fa-f0-9]*$/, 'Invalid Steam key') }), req.body, reply);
     if (!body) return;
     settings.set('secret.steamApiKey', body.key);
     return { steamApiKeySet: !!body.key };
@@ -81,13 +81,13 @@ export async function adminSiteRoutes(app: FastifyInstance) {
   app.get('/pages/:id', P.pages, async (req, reply) => {
     const { id } = idParam.parse(req.params);
     const row = db.prepare<[number], PageRow>('SELECT * FROM pages WHERE id = ?').get(id);
-    return row ? toPage(row) : reply.code(404).send({ error: 'Page introuvable' });
+    return row ? toPage(row) : reply.code(404).send({ error: 'Page not found' });
   });
 
   app.post('/pages', P.pages, async (req, reply) => {
     const body = parse(pageSchema, req.body, reply);
     if (!body) return;
-    if (db.prepare('SELECT 1 FROM pages WHERE slug = ?').get(body.slug)) return reply.code(409).send({ error: 'Cette adresse est déjà utilisée' });
+    if (db.prepare('SELECT 1 FROM pages WHERE slug = ?').get(body.slug)) return reply.code(409).send({ error: 'This address is already used' });
     const res = db
       .prepare('INSERT INTO pages (slug, title, content_html, published, updated_at) VALUES (?, ?, ?, ?, ?)')
       .run(body.slug, body.title, cleanHtml(body.contentHtml), body.published ? 1 : 0, Date.now());
@@ -100,12 +100,12 @@ export async function adminSiteRoutes(app: FastifyInstance) {
     const body = parse(pageSchema, req.body, reply);
     if (!body) return;
     if (db.prepare('SELECT 1 FROM pages WHERE slug = ? AND id != ?').get(body.slug, id)) {
-      return reply.code(409).send({ error: 'Cette adresse est déjà utilisée' });
+      return reply.code(409).send({ error: 'This address is already used' });
     }
     const res = db
       .prepare('UPDATE pages SET slug = ?, title = ?, content_html = ?, published = ?, updated_at = ? WHERE id = ?')
       .run(body.slug, body.title, cleanHtml(body.contentHtml), body.published ? 1 : 0, Date.now(), id);
-    if (!res.changes) return reply.code(404).send({ error: 'Page introuvable' });
+    if (!res.changes) return reply.code(404).send({ error: 'Page not found' });
     audit(req, 'page.update', body.slug);
     return toPage(db.prepare<[number], PageRow>('SELECT * FROM pages WHERE id = ?').get(id)!);
   });
@@ -117,7 +117,7 @@ export async function adminSiteRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
-  // Actualités
+  // News
 
   app.get('/news', P.news, async () =>
     db
@@ -129,7 +129,7 @@ export async function adminSiteRoutes(app: FastifyInstance) {
   app.get('/news/:id', P.news, async (req, reply) => {
     const { id } = idParam.parse(req.params);
     const row = db.prepare(`${NEWS_SELECT} WHERE n.id = ?`).get(id);
-    return row ? toNewsItem(row as Parameters<typeof toNewsItem>[0]) : reply.code(404).send({ error: 'Article introuvable' });
+    return row ? toNewsItem(row as Parameters<typeof toNewsItem>[0]) : reply.code(404).send({ error: 'Article not found' });
   });
 
   const uniqueNewsSlug = (base: string, exceptId: number | null) => {
@@ -159,7 +159,7 @@ export async function adminSiteRoutes(app: FastifyInstance) {
     const body = parse(newsSchema, req.body, reply);
     if (!body) return;
     const current = db.prepare<[number], { published_at: number | null }>('SELECT published_at FROM news WHERE id = ?').get(id);
-    if (!current) return reply.code(404).send({ error: 'Article introuvable' });
+    if (!current) return reply.code(404).send({ error: 'Article not found' });
     const now = Date.now();
     const slug = uniqueNewsSlug(body.slug || slugify(body.title), id);
     db.prepare(
@@ -192,7 +192,7 @@ export async function adminSiteRoutes(app: FastifyInstance) {
 
   app.post('/upload', async (req, reply) => {
     const file = await req.file();
-    if (!file) return reply.code(400).send({ error: 'Aucun fichier' });
+    if (!file) return reply.code(400).send({ error: 'No file' });
     try {
       return { url: await saveImageUpload(file) };
     } catch (e) {

@@ -38,10 +38,10 @@ export function emailTaken(email: string): boolean {
   return !!db.prepare('SELECT 1 FROM users WHERE email = ?').get(email);
 }
 
-/** Trouve un nom d'utilisateur libre à partir d'une base (pseudo Steam…). */
+/** Finds a free username from a base name (Steam name…). */
 export function uniqueUsername(base: string): string {
   let clean = base.replace(/[^A-Za-z0-9_.-]/g, '').slice(0, 20);
-  if (clean.length < 3) clean = `joueur${clean}`;
+  if (clean.length < 3) clean = `player${clean}`;
   let candidate = clean;
   for (let i = 2; usernameTaken(candidate); i++) candidate = `${clean.slice(0, 20)}${i}`;
   return candidate;
