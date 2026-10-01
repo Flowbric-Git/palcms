@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // PalCMS extension kit: builds, packages and signs plugins and themes.
-// Documentation : sdk/README.md
+// Docs: sdk/README.md
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';

@@ -8,15 +8,15 @@
 - **un panel admin** en deux espaces :
   - **Serveur** : tableau de bord, **surveillance** (jauges, alertes, historique), **statistiques de fréquentation**, démarrer / arrêter / redémarrer, éditeur de `PalWorldSettings.ini`, **événements et préréglages**, joueurs, **données du monde** (inventaires, Pals, guildes, recherche d'objets), logs en direct, sauvegardes, redémarrages programmés, **mises à jour automatiques du serveur**, annonces en jeu, modération, **sanctions**, **anti-triche**, console RCON ;
   - **Site** : pages, actualités, menu, apparence et thèmes, carte, Discord (notifications et alertes), modules, membres, signalements ;
-- **un market de plugins et de thèmes** : installation en un clic, ressources vérifiées et signées, [kit de création](sdk/README.md) pour faire les tiens ;
+- **un market de plugins et de thèmes** : installation en un clic, ressources vérifiées et signées, [kit de création](sdk/README.fr.md) pour faire les tiens ;
 - **mise à jour de PalCMS en un clic** depuis le panel ;
 - **une équipe avec des rôles** (Administrateur, Modérateur, Rédacteur, rôles personnalisés) et un **journal des actions**.
 
 **Anglais et français** : l'interface est en anglais par défaut. La langue du site se choisit dans l'assistant d'installation et se change ensuite dans *Site > Apparence* ; chaque visiteur peut aussi basculer avec le bouton **EN / FR**. Les pages que tu écris (actualités, règles, menu…) peuvent être dans n'importe quelle langue.
 
-Licence **MIT**, voir [LICENSE](LICENSE). Historique des versions : [CHANGELOG.md](CHANGELOG.md).
+Licence **MIT**, voir [LICENSE](LICENSE). Historique des versions : [CHANGELOG.fr.md](CHANGELOG.fr.md).
 
-🌐 Site officiel : **[palcms.online](https://palcms.online/)** · ✉️ Contact : [contact@flowbric.fr](mailto:contact@flowbric.fr)
+🌐 Site officiel : **[palcms.online/fr](https://palcms.online/fr/)** · 📖 Documentation : [docs.palcms.online/fr](https://docs.palcms.online/fr/) · ✉️ Contact : [contact@flowbric.fr](mailto:contact@flowbric.fr)
 
 ## Démo
 
@@ -99,8 +99,8 @@ sudo cat /var/lib/palcms/setup-token   # retrouver le jeton d'installation
 
 Le panel propose un **Market** (*Extensions > Market*) : chaque ressource est validée puis signée sur [palcms.online](https://palcms.online/), et PalCMS vérifie cette signature avant de l’installer. Les plugins s’activent et se désactivent dans *Extensions > Plugins*, les thèmes se choisissent et se personnalisent dans *Site > Thèmes*. Un fichier `.zip` peut aussi être installé directement ; s’il ne vient pas du market, l’admin doit d’abord autoriser les extensions non vérifiées.
 
-- **Créer un plugin ou un thème** : [sdk/README.md](sdk/README.md) (en anglais), avec un plugin et un thème d’exemple.
-- **Format de l’API du market** : [docs/market-api.md](docs/market-api.md).
+- **Créer un plugin ou un thème** : [sdk/README.fr.md](sdk/README.fr.md), avec un plugin et un thème d’exemple.
+- **Format de l’API du market** : [docs/market-api.fr.md](docs/market-api.fr.md).
 
 ---
 

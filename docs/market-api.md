@@ -1,5 +1,7 @@
 # Market API
 
+🇫🇷 [Version française](market-api.fr.md)
+
 This document describes what the market site (palcms.online) must provide so that every PalCMS can show the catalogue and install resources in one click.
 
 ## Address

@@ -1,5 +1,7 @@
 # Announcement banner (example plugin)
 
+🇫🇷 [Version française](README.fr.md)
+
 Shows a banner at the top of every page of the site: event, maintenance, wipe, Discord link… The message, the link, the color, the end date and whether visitors can close it are set in *Admin panel > Extensions > Plugins > Announcement banner* (Settings icon). Clicks on the button are counted day by day in *Extensions > Announcement banner*.
 
 This plugin shows:

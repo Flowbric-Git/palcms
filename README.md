@@ -18,7 +18,7 @@
 
 **MIT** license, see [LICENSE](LICENSE). Release history: [CHANGELOG.md](CHANGELOG.md).
 
-🌐 Website: **[palcms.online](https://palcms.online/)** · ✉️ Contact: [contact@flowbric.fr](mailto:contact@flowbric.fr)
+🌐 Website: **[palcms.online](https://palcms.online/)** · 📖 Docs: [docs.palcms.online](https://docs.palcms.online/) · ✉️ Contact: [contact@flowbric.fr](mailto:contact@flowbric.fr)
 
 ## Demo
 

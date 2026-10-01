@@ -1,5 +1,7 @@
 # Changelog
 
+🇫🇷 [Version française](CHANGELOG.fr.md)
+
 ## 1.1.0
 
 **English and French**

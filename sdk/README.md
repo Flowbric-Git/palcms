@@ -1,5 +1,7 @@
 # Building plugins and themes for PalCMS
 
+🇫🇷 [Version française](README.fr.md)
+
 An extension is a `.zip` file installed from the PalCMS panel: either in one click from the [market](https://palcms.online/), or with *Install a .zip file*.
 
 - A **plugin** adds features: API routes, database tables, public pages, panel pages, blocks on the site.
