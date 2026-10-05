@@ -4,7 +4,7 @@ import { newsSchema, pageSchema, siteSettingsSchema, type PageItem } from '@palc
 import { db, settings } from '../../db';
 import { modules } from '../../core/modules';
 import { cleanHtml, slugify } from '../../core/sanitize';
-import { getSiteSettings, saveSiteSettings, steamApiKey } from '../../core/site';
+import { applyFixedMenu, getSiteSettings, saveSiteSettings, steamApiKey, updateMenuLinks } from '../../core/site';
 import { saveImageUpload } from '../../core/uploads';
 import { NEWS_SELECT, toNewsItem } from '../public';
 import { errorMessage, parse } from '../util';
@@ -46,9 +46,10 @@ export async function adminSiteRoutes(app: FastifyInstance) {
   app.put('/settings', P.appearance, async (req, reply) => {
     const body = parse(siteSettingsSchema, req.body, reply);
     if (!body) return;
-    saveSiteSettings(body);
+    const site = { ...body, menu: applyFixedMenu(body.menu) };
+    saveSiteSettings(site);
     audit(req, 'site.settings');
-    return { site: body };
+    return { site };
   });
 
   app.put('/steam-api-key', P.appearance, async (req, reply) => {
@@ -102,10 +103,15 @@ export async function adminSiteRoutes(app: FastifyInstance) {
     if (db.prepare('SELECT 1 FROM pages WHERE slug = ? AND id != ?').get(body.slug, id)) {
       return reply.code(409).send({ error: 'This address is already used' });
     }
+    const before = db.prepare<[number], { slug: string }>('SELECT slug FROM pages WHERE id = ?').get(id);
     const res = db
       .prepare('UPDATE pages SET slug = ?, title = ?, content_html = ?, published = ?, updated_at = ? WHERE id = ?')
       .run(body.slug, body.title, cleanHtml(body.contentHtml), body.published ? 1 : 0, Date.now(), id);
     if (!res.changes) return reply.code(404).send({ error: 'Page not found' });
+    // The menu keeps pointing to the page when its address changes.
+    if (before && before.slug !== body.slug) {
+      updateMenuLinks((m) => (m.url === `/p/${before.slug}` ? { ...m, url: `/p/${body.slug}` } : m));
+    }
     audit(req, 'page.update', body.slug);
     return toPage(db.prepare<[number], PageRow>('SELECT * FROM pages WHERE id = ?').get(id)!);
   });
@@ -113,7 +119,10 @@ export async function adminSiteRoutes(app: FastifyInstance) {
   app.delete('/pages/:id', P.pages, async (req) => {
     const { id } = idParam.parse(req.params);
     audit(req, 'page.delete', String(id));
+    const page = db.prepare<[number], { slug: string }>('SELECT slug FROM pages WHERE id = ?').get(id);
     db.prepare('DELETE FROM pages WHERE id = ?').run(id);
+    // A deleted page also leaves the menu.
+    if (page) updateMenuLinks((m) => (m.url === `/p/${page.slug}` ? null : m));
     return { ok: true };
   });
 

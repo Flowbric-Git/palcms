@@ -49,20 +49,56 @@ export function isSetupDone(): boolean {
 /** Language before any choice is saved: French for sites installed before 1.1.0 (which were French only). */
 const legacyLang = (): Lang => (isSetupDone() ? 'fr' : 'en');
 
+export function storedLanguage(): Lang {
+  return settings.get<Partial<SiteSettings>>('site', {}).language ?? legacyLang();
+}
+
+// Menu links locked by the active theme (provided by the extensions store, which depends on this module).
+export interface FixedMenuLink {
+  url: string;
+  label: string;
+}
+let fixedMenuProvider: () => FixedMenuLink[] = () => [];
+export function setFixedMenuProvider(fn: () => FixedMenuLink[]): void {
+  fixedMenuProvider = fn;
+}
+
+/**
+ * Puts the theme's locked links first, in the theme's order, then the other links as they were.
+ * A locked link keeps the label already in the menu when there is one.
+ */
+export function applyFixedMenu(menu: SiteSettings['menu'], fixed: FixedMenuLink[] = fixedMenuProvider()): SiteSettings['menu'] {
+  if (fixed.length === 0) return menu;
+  const locked = fixed.map((f) => ({ label: menu.find((m) => m.url === f.url)?.label ?? f.label, url: f.url }));
+  const urls = new Set(fixed.map((f) => f.url));
+  return [...locked, ...menu.filter((m) => !urls.has(m.url))].slice(0, 20);
+}
+
 export function getSiteSettings(): SiteSettings {
   const stored = settings.get<Partial<SiteSettings>>('site', {});
   const lang = stored.language ?? legacyLang();
   const base = defaultSite(lang);
-  return {
+  const site = {
     ...base,
     ...stored,
     language: lang,
     registration: { ...base.registration, ...stored.registration },
   };
+  return { ...site, menu: applyFixedMenu(site.menu) };
 }
 
 export function saveSiteSettings(value: SiteSettings): void {
   settings.set('site', value);
+}
+
+/**
+ * Rewrites or removes the links to a page when it is renamed or deleted: the menu links, and the "Join" button
+ * address of the home page (emptied when its page is deleted). Return null from `change` to remove a menu link.
+ */
+export function updateMenuLinks(change: (link: SiteSettings['menu'][number]) => SiteSettings['menu'][number] | null): void {
+  const site = getSiteSettings();
+  const join = change({ label: '', url: site.joinUrl });
+  saveSiteSettings({ ...site, menu: site.menu.flatMap((m) => change(m) ?? []), joinUrl: join?.url ?? '' });
 }
 
 // Old French URLs of the public site, replaced by English ones in 1.1.0 (the old ones still redirect).

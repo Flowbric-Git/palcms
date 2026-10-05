@@ -394,6 +394,13 @@ export default {
   'Move down': 'Descendre',
   'New link': 'Nouveau lien',
   'Add a link': 'Ajouter un lien',
+  Management: 'Gestion',
+  Design: 'Design',
+  Community: 'Communauté',
+  'Fixed links of the theme': 'Liens fixes du thème',
+  'The active theme lays these links out itself: they cannot be moved or deleted. Everything below can be changed.':
+    'Le thème actif place lui-même ces liens : ils ne peuvent être ni déplacés ni supprimés. Tout ce qui est en dessous est modifiable.',
+  'Other links': 'Autres liens',
   'Available pages: / (home), /news, /leaderboard, /map, /guilds, /paldex, /events, /uptime, /report, /p/<address> for your pages, /register, /login.':
     'Pages disponibles : / (accueil), /news, /leaderboard, /map, /guilds, /paldex, /events, /uptime, /report, /p/<adresse> pour tes pages, /register, /login.',
   'Steam key saved.': 'Clé Steam enregistrée.',

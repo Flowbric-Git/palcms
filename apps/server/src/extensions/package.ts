@@ -27,6 +27,19 @@ export const manifestSchema = z.object({
   palcms: z.string().max(60).optional(),
   icon: z.string().max(200).optional(),
   settings: z.array(settingSchema).max(40).optional(),
+  menu: z
+    .object({
+      fixed: z
+        .array(
+          z.object({
+            url: z.string().regex(/^\/[A-Za-z0-9_\-/]*$/, 'Invalid menu link (internal path such as /news)').max(80),
+            label: z.string().min(1).max(40),
+            labelFr: z.string().min(1).max(40).optional(),
+          }),
+        )
+        .max(8),
+    })
+    .optional(),
 });
 
 /** Files accepted in a package: anything else is refused to keep packages clean. */

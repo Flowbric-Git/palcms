@@ -78,6 +78,8 @@ my-plugin/
 | `icon` | square image (PNG, JPG or WebP) in `assets/` |
 | `settings` | settings editable in the panel (see below) |
 
+**Locked menu links (themes)**: a theme that lays out some links of the site menu itself can lock them with `"menu": { "fixed": [{ "url": "/news", "label": "News", "labelFr": "Actualités" }] }` (internal paths, 8 at most). While the theme is active, these links are always first in the menu, in this order, and the panel (*Website > Menu*) shows them locked: they can't be moved or deleted. Every other link stays editable, and the theme decides where to show it (for instance in a "More" menu).
+
 **Setting types**: `text`, `textarea`, `number`, `toggle`, `color`, `image`, `select`. A `select` takes `"options": [{ "value": "a", "label": "Choice A" }]`.
 
 ## Server code (plugins)

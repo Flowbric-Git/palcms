@@ -13,6 +13,7 @@ import {
 } from '@palcms/shared';
 import { config } from '../config';
 import { db, runMigrations, settings } from '../db';
+import { setFixedMenuProvider, storedLanguage } from '../core/site';
 import { manifestSchema, readPackage, PackageError, type ExtensionPackage } from './package';
 
 runMigrations([
@@ -204,13 +205,31 @@ export function enabledPlugins(): InstalledExtension[] {
 
 const rev = (e: InstalledExtension) => `${e.version}-${e.installedAt.toString(36)}`;
 
+/** Menu links locked by the active theme (palcms.json "menu.fixed"), labels in the site language. */
+export function activeThemeMenuFixed(): { url: string; label: string }[] {
+  const id = activeThemeId();
+  const theme = id ? getExtension(id) : null;
+  if (!theme || !theme.compatible) return [];
+  const fr = storedLanguage() === 'fr';
+  return (readManifest(theme.id)?.menu?.fixed ?? []).map((l) => ({ url: l.url, label: (fr && l.labelFr) || l.label }));
+}
+setFixedMenuProvider(activeThemeMenuFixed);
+
 export function bootExtensions(): BootExtensions {
   const list = listExtensions();
   const themeId = activeThemeId();
   const theme = themeId ? list.find((e) => e.id === themeId && e.compatible) : undefined;
   return {
     theme: theme
-      ? { id: theme.id, version: theme.version, rev: rev(theme), web: theme.hasWeb, css: theme.hasCss, settings: extensionSettings(theme.id, theme.settings) }
+      ? {
+          id: theme.id,
+          version: theme.version,
+          rev: rev(theme),
+          web: theme.hasWeb,
+          css: theme.hasCss,
+          settings: extensionSettings(theme.id, theme.settings),
+          menuFixed: activeThemeMenuFixed(),
+        }
       : null,
     plugins: list
       .filter((e) => e.type === 'plugin' && e.enabled && e.compatible && !loadErrors.has(e.id) && (e.hasWeb || e.hasCss))

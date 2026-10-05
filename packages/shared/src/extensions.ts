@@ -21,6 +21,15 @@ export interface ExtensionSettingDef {
 
 export type ExtensionSettingValues = Record<string, string | number | boolean>;
 
+/** Menu link locked by a theme: always present, first in the menu, cannot be moved or deleted in the panel. */
+export interface ThemeMenuLink {
+  /** Internal path, e.g. "/news". */
+  url: string;
+  label: string;
+  /** Label used when the site language is French. */
+  labelFr?: string;
+}
+
 /** Contents of palcms.json, at the root of the package. */
 export interface ExtensionManifest {
   id: string;
@@ -35,6 +44,8 @@ export interface ExtensionManifest {
   /** Package image (e.g. "assets/icon.png"). */
   icon?: string;
   settings?: ExtensionSettingDef[];
+  /** Themes only: links of the site menu the theme lays out itself (the rest of the menu stays editable). */
+  menu?: { fixed: ThemeMenuLink[] };
 }
 
 export type ExtensionSource = 'market' | 'upload' | 'local';
@@ -104,7 +115,8 @@ export interface BootExtension {
 }
 
 export interface BootExtensions {
-  theme: (BootExtension & { settings: ExtensionSettingValues }) | null;
+  /** menuFixed: locked menu links of the theme, labels already in the site language. */
+  theme: (BootExtension & { settings: ExtensionSettingValues; menuFixed?: { url: string; label: string }[] }) | null;
   plugins: BootExtension[];
 }
 

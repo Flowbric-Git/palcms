@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, Ban, Check, Gamepad2, Link2, Plus, Save, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Ban, Check, Gamepad2, Link2, Lock, Plus, Save, Trash2, X } from 'lucide-react';
 import { LANGS, type Lang, type ModuleInfo, type SiteSettings } from '@palcms/shared';
 import { api, ApiError, errorText } from '../lib/api';
 import { useApp } from '../lib/app';
@@ -41,14 +41,20 @@ function useSiteSettings() {
 
 export function MenuPage() {
   const { site, setSite, save, busy, msg, error } = useSiteSettings();
+  const { boot } = useApp();
   if (error) return <Alert kind="error">{error}</Alert>;
   if (!site) return <Spinner />;
-  const menu = site.menu;
-  const update = (i: number, patch: Partial<(typeof menu)[number]>) => setSite({ ...site, menu: menu.map((m, j) => (j === i ? { ...m, ...patch } : m)) });
+  // Links locked by the active theme are shown apart: they cannot be moved, renamed or deleted.
+  const fixed = boot.extensions?.theme?.menuFixed ?? [];
+  const fixedUrls = new Set(fixed.map((f) => f.url));
+  const locked = fixed.map((f) => ({ label: site.menu.find((m) => m.url === f.url)?.label ?? f.label, url: f.url }));
+  const menu = site.menu.filter((m) => !fixedUrls.has(m.url));
+  const setMenu = (next: typeof menu) => setSite({ ...site, menu: [...locked, ...next] });
+  const update = (i: number, patch: Partial<(typeof menu)[number]>) => setMenu(menu.map((m, j) => (j === i ? { ...m, ...patch } : m)));
   const move = (i: number, d: -1 | 1) => {
     const next = [...menu];
     [next[i], next[i + d]] = [next[i + d], next[i]];
-    setSite({ ...site, menu: next });
+    setMenu(next);
   };
   return (
     <>
@@ -62,7 +68,21 @@ export function MenuPage() {
         }
       />
       {msg && <Alert kind={msg.kind} className="mb-4">{msg.text}</Alert>}
-      <Card>
+      {locked.length > 0 && (
+        <Card title={t('Fixed links of the theme')} className="mb-4">
+          <p className="mb-3 text-xs text-slate-500">{t('The active theme lays these links out itself: they cannot be moved or deleted. Everything below can be changed.')}</p>
+          <div className="flex flex-wrap gap-2">
+            {locked.map((m) => (
+              <span key={m.url} className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm dark:bg-slate-800">
+                <Lock className="h-3.5 w-3.5 text-slate-400" />
+                {m.label}
+                <span className="font-mono text-xs text-slate-400">{m.url}</span>
+              </span>
+            ))}
+          </div>
+        </Card>
+      )}
+      <Card title={locked.length > 0 ? t('Other links') : undefined}>
         <div className="space-y-2">
           {menu.map((m, i) => (
             <div key={i} className="flex flex-wrap items-center gap-2">
@@ -74,13 +94,13 @@ export function MenuPage() {
               <Button variant="ghost" disabled={i === menu.length - 1} onClick={() => move(i, 1)} aria-label={t('Move down')}>
                 <ArrowDown className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" onClick={() => setSite({ ...site, menu: menu.filter((_, j) => j !== i) })} aria-label={t('Delete')}>
+              <Button variant="ghost" onClick={() => setMenu(menu.filter((_, j) => j !== i))} aria-label={t('Delete')}>
                 <Trash2 className="h-4 w-4 text-red-500" />
               </Button>
             </div>
           ))}
         </div>
-        <Button variant="secondary" className="mt-4" disabled={menu.length >= 20} onClick={() => setSite({ ...site, menu: [...menu, { label: t('New link'), url: '/' }] })}>
+        <Button variant="secondary" className="mt-4" disabled={locked.length + menu.length >= 20} onClick={() => setMenu([...menu, { label: t('New link'), url: '/' }])}>
           <Plus className="h-4 w-4" /> {t('Add a link')}
         </Button>
         <p className="mt-4 text-xs text-slate-500">
