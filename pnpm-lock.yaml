@@ -93,6 +93,9 @@ importers:
       '@tiptap/starter-kit':
         specifier: ^2.11.0
         version: 2.27.3
+      fflate:
+        specifier: 0.8.2
+        version: 0.8.2
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4

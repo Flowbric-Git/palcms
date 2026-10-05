@@ -1,6 +1,6 @@
 import { Component, type ComponentType, type ReactNode } from 'react';
 import type { BootExtensions, ExtensionSettingValues, Permission } from '@palcms/shared';
-import { api, url } from './api';
+import { api, isDemo, url } from './api';
 import { t } from './i18n';
 
 /** Slots where plugins and themes add blocks. */
@@ -10,6 +10,13 @@ export type WidgetSlot = (typeof WIDGET_SLOTS)[number];
 /** Parts of the site a theme can replace. */
 export const OVERRIDE_SLOTS = ['header', 'footer', 'home', 'home.hero'] as const;
 export type OverrideSlot = (typeof OVERRIDE_SLOTS)[number];
+
+/**
+ * Files of an extension. In the online demo they come from the market package unzipped in the browser
+ * (blob: addresses filled by demo/packages.ts), otherwise from the server.
+ */
+export const demoFiles = new Map<string, string>();
+const fileUrl = (id: string, file: string, rev: string) => demoFiles.get(`${id}/${file}`) ?? url(`extensions/${id}/${file}?v=${rev}`);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = ComponentType<any>;
@@ -76,7 +83,7 @@ function registrar(ext: { id: string; version: string; rev: string }, type: 'plu
       put: (path, body) => api.put(p(path), body),
       del: (path) => api.del(p(path)),
     },
-    asset: (path) => url(`extensions/${ext.id}/assets/${path.replace(/^\/+|^assets\//g, '')}?v=${ext.rev}`),
+    asset: (path) => fileUrl(ext.id, `assets/${path.replace(/^\/+|^assets\//g, '')}`, ext.rev),
     page: ({ path, component, layout = true }) => {
       registry.pages.push({ ext: ext.id, path: path.replace(/^\/+/, ''), component, layout });
     },
@@ -101,7 +108,7 @@ function registrar(ext: { id: string; version: string; rev: string }, type: 'plu
 function addStylesheet(id: string, rev: string, theme: boolean) {
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = url(`extensions/${id}/style.css?v=${rev}`);
+  link.href = fileUrl(id, 'style.css', rev);
   link.dataset.palcmsExt = id;
   if (theme) link.dataset.palcmsTheme = '';
   document.head.appendChild(link);
@@ -130,6 +137,7 @@ export function loadExtensions(boot: BootExtensions | undefined): Promise<void> 
 async function load(boot: BootExtensions): Promise<void> {
   const { installSdk } = await import('./sdk');
   installSdk();
+  if (isDemo) await (await import('../demo/packages')).prepareFiles();
 
   const list = [
     ...(boot.theme ? [{ ...boot.theme, type: 'theme' as const }] : []),
@@ -147,7 +155,7 @@ async function load(boot: BootExtensions): Promise<void> {
       .filter((e) => e.web)
       .map(async (ext) => {
         try {
-          const mod = (await import(/* @vite-ignore */ url(`extensions/${ext.id}/web.js?v=${ext.rev}`))) as { default?: unknown };
+          const mod = (await import(/* @vite-ignore */ fileUrl(ext.id, 'web.js', ext.rev))) as { default?: unknown };
           if (typeof mod.default !== 'function') throw new Error('web.js must export a default function');
           await (mod.default as (r: ExtensionRegistrar) => unknown)(registrar(ext, ext.type, ext.settings));
         } catch (e) {

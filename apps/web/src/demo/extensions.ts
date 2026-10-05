@@ -1,9 +1,19 @@
-// Demo: market, plugins and themes. The example extensions (sdk/examples) are copied into the demo
-// at build time (dist-demo/extensions/<id>/): they can really be installed, turned on and configured.
+// Demo: market, plugins and themes. The catalog is the real market (palcms.online): a package is
+// downloaded by the browser, checked (SHA-256), kept in IndexedDB and runs as on a real site.
+// The server part of a plugin (server.js) cannot run in the browser: only the example plugin "bandeau" has its routes simulated.
 
-import type { BootExtensions, ExtensionManifest, ExtensionSettingValues, InstalledExtension, MarketEntry } from '@palcms/shared';
-import bandeau from '../../../../sdk/examples/plugin-bandeau/palcms.json';
-import aurora from '../../../../sdk/examples/theme-aurora/palcms.json';
+import {
+  compareVersions,
+  satisfiesVersion,
+  type BootExtensions,
+  type ExtensionSettingValues,
+  type InstalledExtension,
+  type MarketEntry,
+  type MarketResource,
+} from '@palcms/shared';
+import { demoFiles } from '../lib/extensions';
+import { lang } from '../lib/i18n';
+import { deletePackage, readPackage, savePackage, sha256, type DemoPackage } from './packages';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -15,20 +25,55 @@ interface DemoExtensionsContext {
   fail: (status: number, message: string) => never;
 }
 
+interface Installed extends DemoPackage {
+  enabled: boolean;
+  installedAt: number;
+  settings: ExtensionSettingValues;
+  source: 'market' | 'upload';
+  verified: boolean;
+  iconUrl: string | null;
+}
+
 interface ExtState {
-  installed: Record<string, { enabled: boolean; installedAt: number; settings: ExtensionSettingValues }>;
+  installed: Record<string, Installed>;
   theme: string | null;
   allowUnverified: boolean;
   clicks: Record<string, number>;
 }
 
-const CATALOG: { manifest: ExtensionManifest; downloads: number; hasServer: boolean; hasWeb: boolean; hasCss: boolean }[] = [
-  { manifest: bandeau as ExtensionManifest, downloads: 128, hasServer: true, hasWeb: true, hasCss: true },
-  { manifest: aurora as ExtensionManifest, downloads: 96, hasServer: false, hasWeb: true, hasCss: true },
-];
+const MARKET_URL = (import.meta.env.VITE_MARKET_URL || 'https://palcms.online/api/market').replace(/\/+$/, '');
+const MAX_BYTES = 20 * 1024 * 1024;
+const CACHE_MS = 60_000;
+let catalog: { at: number; resources: MarketResource[] } | null = null;
 
-const base = import.meta.env.BASE_URL;
-const iconOf = (m: ExtensionManifest) => (m.icon ? `extensions/${m.id}/${m.icon}` : null);
+async function fetchCatalog(force = false): Promise<MarketResource[]> {
+  if (!force && catalog && Date.now() - catalog.at < CACHE_MS) return catalog.resources;
+  let res: Response;
+  try {
+    res = await fetch(`${MARKET_URL}/resources`, { signal: AbortSignal.timeout(10_000) });
+  } catch {
+    throw new Error('The market cannot be reached right now');
+  }
+  if (!res.ok) throw new Error(`The market answered ${res.status}`);
+  const json = (await res.json()) as { resources?: MarketResource[] };
+  const resources = (json.resources ?? []).filter((r) => r && typeof r.id === 'string' && typeof r.download === 'string');
+  catalog = { at: Date.now(), resources };
+  return resources;
+}
+
+async function download(u: string): Promise<Uint8Array> {
+  let res: Response;
+  try {
+    res = await fetch(u, { signal: AbortSignal.timeout(60_000) });
+  } catch {
+    throw new Error('The market cannot be reached right now');
+  }
+  if (!res.ok) throw new Error(`The market answered ${res.status}`);
+  const buf = new Uint8Array(await res.arrayBuffer());
+  if (buf.byteLength > MAX_BYTES) throw new Error('Package too large (20 MB maximum)');
+  return buf;
+}
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 // Extensions load when the site starts: reload the page to apply a change.
@@ -38,25 +83,27 @@ export function createExtensionsDemo(ctx: DemoExtensionsContext) {
   const ext = (): ExtState => {
     const s = ctx.state();
     s.extensions ??= { installed: {}, theme: null, allowUnverified: false, clicks: {} };
-    return s.extensions;
+    const e = s.extensions as ExtState;
+    // Before the real market, the demo had its own copies of the examples (no package kept): forget them.
+    for (const [id, i] of Object.entries(e.installed)) if (!i.manifest) delete e.installed[id];
+    if (e.theme && !e.installed[e.theme]) e.theme = null;
+    return e;
   };
-  const find = (id: string) => CATALOG.find((c) => c.manifest.id === id);
+  const get = (id: string) => ext().installed[id];
 
   const values = (id: string): ExtensionSettingValues => {
-    const c = find(id)!;
-    const saved = ext().installed[id]?.settings ?? {};
+    const i = get(id);
     const out: ExtensionSettingValues = {};
-    for (const d of c.manifest.settings ?? []) {
-      const v = saved[d.key] ?? d.default;
+    for (const d of i?.manifest.settings ?? []) {
+      const v = i.settings[d.key] ?? d.default;
       if (v !== undefined) out[d.key] = v;
     }
     return out;
   };
 
   const installed = (id: string): InstalledExtension => {
-    const c = find(id)!;
-    const i = ext().installed[id];
-    const m = c.manifest;
+    const i = get(id);
+    const m = i.manifest;
     return {
       id,
       type: m.type,
@@ -65,28 +112,53 @@ export function createExtensionsDemo(ctx: DemoExtensionsContext) {
       description: m.description ?? '',
       author: m.author ?? '',
       homepage: m.homepage ?? null,
-      iconUrl: iconOf(m),
+      iconUrl: (m.icon && demoFiles.get(`${id}/${m.icon}`)) || i.iconUrl,
       enabled: i.enabled,
       active: m.type === 'theme' && ext().theme === id,
-      verified: true,
-      source: 'market',
+      verified: i.verified,
+      source: i.source,
       installedAt: i.installedAt,
-      compatible: true,
+      compatible: satisfiesVersion(ctx.version, m.palcms),
       palcms: m.palcms ?? null,
-      hasServer: c.hasServer,
-      hasWeb: c.hasWeb,
-      hasCss: c.hasCss,
+      hasServer: i.hasServer,
+      hasWeb: i.hasWeb,
+      hasCss: i.hasCss,
       settings: m.settings ?? [],
       error: null,
     };
   };
 
-  const list = () => Object.keys(ext().installed).filter(find).map(installed);
+  const list = () => Object.keys(ext().installed).map(installed);
   const mustExist = (id: string) => {
-    if (!ext().installed[id] || !find(id)) ctx.fail(404, 'Extension not found');
+    if (!get(id)) ctx.fail(404, 'Extension not found');
   };
 
-  function handle(method: string, seg: string[], body: Any, q: URLSearchParams): Any {
+  const keep = async (pkg: DemoPackage, zip: Uint8Array, source: Installed['source'], verified: boolean, iconUrl: string | null) => {
+    if (!satisfiesVersion(ctx.version, pkg.manifest.palcms)) {
+      ctx.fail(400, `This resource requires PalCMS ${pkg.manifest.palcms} (installed version: ${ctx.version})`);
+    }
+    try {
+      await savePackage(pkg.manifest.id, zip);
+    } catch {
+      ctx.fail(400, 'Your browser does not let the demo keep the package (private browsing?)');
+    }
+    const before = get(pkg.manifest.id);
+    ext().installed[pkg.manifest.id] = {
+      ...pkg,
+      enabled: before?.enabled ?? false,
+      installedAt: Date.now(),
+      settings: before?.settings ?? {},
+      source,
+      verified,
+      iconUrl,
+    };
+    ctx.record(before ? 'extensions.update' : 'extensions.install', pkg.manifest.id);
+    // Files of the new version are unzipped when the site starts again.
+    if (before?.enabled || ext().theme === pkg.manifest.id) reloadSoon();
+    return installed(pkg.manifest.id);
+  };
+
+  async function handle(method: string, seg: string[], body: Any, q: URLSearchParams): Promise<Any> {
     const [, , a, b, c] = seg;
     const route = `${method} ${[a, b, c].filter(Boolean).join('/')}`;
 
@@ -96,58 +168,79 @@ export function createExtensionsDemo(ctx: DemoExtensionsContext) {
       return { allowUnverified: ext().allowUnverified };
     }
     if (route === 'GET market') {
-      void q;
-      const resources: MarketEntry[] = CATALOG.map(({ manifest: m, downloads }) => ({
-        id: m.id,
-        type: m.type,
-        name: m.name,
-        summary: m.description ?? '',
-        author: m.author ?? '',
-        version: m.version,
-        iconUrl: `${location.origin}${base}${iconOf(m)}`,
-        downloads,
-        palcms: m.palcms,
-        download: '',
-        sha256: '',
-        signature: '',
-        installed: ext().installed[m.id] ? m.version : null,
-        update: false,
-        compatible: true,
-      }));
-      return { resources, error: null };
+      try {
+        const resources: MarketEntry[] = (await fetchCatalog(q.get('refresh') === '1')).map((r) => {
+          const inst = get(r.id);
+          return {
+            ...r,
+            installed: inst?.manifest.version ?? null,
+            update: !!inst && compareVersions(r.version, inst.manifest.version) > 0,
+            compatible: satisfiesVersion(ctx.version, r.palcms),
+          };
+        });
+        return { resources, error: null };
+      } catch (e) {
+        return { resources: [], error: (e as Error).message };
+      }
     }
     if (method === 'POST' && a === 'market' && c === 'install') {
-      if (!find(b)) ctx.fail(404, 'Resource not found on the market');
-      ext().installed[b] = { enabled: false, installedAt: Date.now(), settings: {} };
-      ctx.record('extensions.install', b);
-      return installed(b);
+      const r = (await fetchCatalog()).find((x) => x.id === b);
+      if (!r) ctx.fail(404, 'Resource not found on the market');
+      const zip = await download(r.download);
+      if ((await sha256(zip)) !== r.sha256.toLowerCase()) ctx.fail(400, 'The downloaded file is corrupted (checksum mismatch)');
+      const pkg = readPackage(zip);
+      if (pkg.manifest.id !== r.id || pkg.manifest.type !== r.type) ctx.fail(400, 'The package does not match the listed resource');
+      return keep(pkg, zip, 'market', true, r.iconUrl ?? null);
     }
     if (method === 'POST' && a === 'upload') {
-      ctx.fail(400, 'Uploading a .zip file is not available in the demo: install the examples from the Market.');
+      // The engine turns the uploaded file into a data: address.
+      const dataUrl = String(body?.dataUrl ?? '');
+      if (!dataUrl.startsWith('data:')) ctx.fail(400, 'No file received');
+      const zip = new Uint8Array(await (await fetch(dataUrl)).arrayBuffer());
+      if (zip.byteLength > MAX_BYTES) ctx.fail(400, 'Package too large (20 MB maximum)');
+      let pkg: DemoPackage;
+      try {
+        pkg = readPackage(zip);
+      } catch (e) {
+        return ctx.fail(400, (e as Error).message);
+      }
+      // A file is "verified" when it is the exact package published on the market.
+      const hash = await sha256(zip);
+      const listed = await fetchCatalog().catch(() => [] as MarketResource[]);
+      const verified = listed.some((r) => r.id === pkg.manifest.id && r.sha256.toLowerCase() === hash);
+      if (!verified && !ext().allowUnverified) {
+        ctx.fail(403, 'This package is not signed by the market. Turn on "Allow unverified extensions" if you trust its source.');
+      }
+      return keep(pkg, zip, 'upload', verified, null);
     }
     if (route === 'GET themes') {
       return { items: list().filter((e) => e.type === 'theme'), active: ext().theme, allowUnverified: ext().allowUnverified };
     }
     if (route === 'PUT themes/active') {
       const id = body?.id ?? null;
-      if (id) mustExist(id);
+      if (id) {
+        mustExist(id);
+        if (!get(id).verified && !ext().allowUnverified) ctx.fail(403, 'Unverified theme: allow unverified extensions to use it');
+      }
       ext().theme = id;
       ctx.record('theme.activate', id ?? 'default');
       return { active: id };
     }
     if (method === 'GET' && b === 'settings') {
       mustExist(a);
-      return { settings: find(a)!.manifest.settings ?? [], values: values(a) };
+      return { settings: get(a).manifest.settings ?? [], values: values(a) };
     }
     if (method === 'PUT' && b === 'settings') {
       mustExist(a);
-      ext().installed[a].settings = { ...(body ?? {}) };
+      get(a).settings = { ...(body ?? {}) };
       ctx.record('extensions.settings', a);
       return { values: values(a) };
     }
     if (method === 'PUT' && a && !b) {
       mustExist(a);
-      ext().installed[a].enabled = body?.enabled === true;
+      if (get(a).manifest.type !== 'plugin') ctx.fail(400, 'A theme is enabled from the Themes page');
+      if (body?.enabled && !get(a).verified && !ext().allowUnverified) ctx.fail(403, 'Unverified extension: allow unverified extensions to enable it');
+      get(a).enabled = body?.enabled === true;
       ctx.record(body?.enabled ? 'extensions.enable' : 'extensions.disable', a);
       reloadSoon();
       return installed(a);
@@ -156,6 +249,7 @@ export function createExtensionsDemo(ctx: DemoExtensionsContext) {
       mustExist(a);
       delete ext().installed[a];
       if (ext().theme === a) ext().theme = null;
+      await deletePackage(a).catch(() => {});
       ctx.record('extensions.remove', a);
       reloadSoon();
       return { ok: true };
@@ -166,7 +260,8 @@ export function createExtensionsDemo(ctx: DemoExtensionsContext) {
   /** Routes of the "bandeau" example plugin (those of its server.js, simulated in the browser). */
   function plugin(method: string, seg: string[]): Any {
     const [, id, path] = seg;
-    if (id !== 'bandeau' || !ext().installed.bandeau?.enabled) ctx.fail(404, 'Plugin not found or turned off');
+    if (!get(id)?.enabled) ctx.fail(404, 'Plugin not found or turned off');
+    if (id !== 'bandeau') ctx.fail(501, 'The server part of this plugin does not run in the demo');
     const c = values('bandeau');
     if (method === 'GET' && path === 'config') {
       const message = String(c.message ?? '').trim();
@@ -189,13 +284,28 @@ export function createExtensionsDemo(ctx: DemoExtensionsContext) {
 
   function boot(): BootExtensions {
     const e = ext();
-    const rev = (id: string) => `${find(id)!.manifest.version}-${e.installed[id].installedAt.toString(36)}`;
-    const theme = e.theme && e.installed[e.theme] && find(e.theme) ? e.theme : null;
+    const usable = (id: string) => {
+      const i = e.installed[id];
+      return !!i && satisfiesVersion(ctx.version, i.manifest.palcms) && (i.verified || e.allowUnverified);
+    };
+    const rev = (id: string) => `${e.installed[id].manifest.version}-${e.installed[id].installedAt.toString(36)}`;
+    const theme = e.theme && usable(e.theme) ? e.installed[e.theme] : null;
+    const fr = lang() === 'fr';
     return {
-      theme: theme ? { id: theme, version: find(theme)!.manifest.version, rev: rev(theme), web: true, css: true, settings: values(theme) } : null,
+      theme: theme
+        ? {
+            id: theme.manifest.id,
+            version: theme.manifest.version,
+            rev: rev(theme.manifest.id),
+            web: theme.hasWeb,
+            css: theme.hasCss,
+            settings: values(theme.manifest.id),
+            menuFixed: (theme.manifest.menu?.fixed ?? []).map((l) => ({ url: l.url, label: (fr && l.labelFr) || l.label })),
+          }
+        : null,
       plugins: Object.entries(e.installed)
-        .filter(([id, i]) => i.enabled && find(id)?.manifest.type === 'plugin')
-        .map(([id]) => ({ id, version: find(id)!.manifest.version, rev: rev(id), web: find(id)!.hasWeb, css: find(id)!.hasCss })),
+        .filter(([id, i]) => i.enabled && i.manifest.type === 'plugin' && usable(id))
+        .map(([id, i]) => ({ id, version: i.manifest.version, rev: rev(id), web: i.hasWeb, css: i.hasCss })),
     };
   }
 

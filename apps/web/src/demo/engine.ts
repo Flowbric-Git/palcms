@@ -6,6 +6,7 @@ import seed from './data.json';
 import { version } from '../../package.json';
 import { createWorldDemo } from './world';
 import { createExtensionsDemo } from './extensions';
+import { clearPackages } from './packages';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -207,12 +208,13 @@ function save() {
   }
 }
 
-export function resetDemo() {
+export async function resetDemo() {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
     // nothing to do
   }
+  await clearPackages().catch(() => {});
   location.href = import.meta.env.BASE_URL;
 }
 
@@ -359,11 +361,19 @@ const slugify = (s: string) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 60) || `article-${state.nextId}`;
 
+// The active theme's locked links come first in the menu (as applyFixedMenu on the server).
+const withFixedMenu = (site: Any, fixed: { url: string; label: string }[] = []) => {
+  if (fixed.length === 0) return site;
+  const urls = new Set(fixed.map((f) => f.url));
+  const locked = fixed.map((f) => ({ label: site.menu.find((m: Any) => m.url === f.url)?.label ?? f.label, url: f.url }));
+  return { ...site, menu: [...locked, ...site.menu.filter((m: Any) => !urls.has(m.url))].slice(0, 20) };
+};
+
 const bootstrap = () => ({
   setupDone: true,
   version,
   serverMode: 'managed',
-  site: state.site,
+  site: withFixedMenu(state.site, extensions.boot().theme?.menuFixed),
   modules: Object.fromEntries(state.modules.map((m: Any) => [m.id, m.enabled])),
   // In the demo, the visitor has every panel permission.
   user: state.user ? { ...state.user, permissions: ALL_PERMISSIONS } : null,
@@ -850,7 +860,7 @@ export async function demoRequest<T>(method: string, path: string, body?: unknow
     body = file instanceof File ? { dataUrl: await readAsDataUrl(file) } : {};
   }
   try {
-    const result = handle(method, path, body);
+    const result = await handle(method, path, body);
     if (method !== 'GET') save();
     return structuredClone(result) as T;
   } catch (e) {
