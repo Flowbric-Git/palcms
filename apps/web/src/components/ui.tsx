@@ -47,20 +47,23 @@ export function Button({
   );
 }
 
-const fieldClass =
-  'block w-full rounded-lg border-0 bg-white px-3 py-2 text-sm text-slate-900 ring-1 ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-accent dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700';
+// Full width unless the caller gives its own width (w-40, w-56…): both in the same class list, CSS order would pick w-full.
+const fieldClass = (className?: string) =>
+  cx(/(^|\s)w-/.test(className ?? '') ? 'block' : 'block w-full', FIELD, className);
+const FIELD =
+  'rounded-lg border-0 bg-white px-3 py-2 text-sm text-slate-900 ring-1 ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-accent dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700';
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...rest }, ref) {
-  return <input ref={ref} {...rest} className={cx(fieldClass, className)} />;
+  return <input ref={ref} {...rest} className={fieldClass(className)} />;
 });
 
 export function Textarea({ className, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...rest} className={cx(fieldClass, 'min-h-24', className)} />;
+  return <textarea {...rest} className={fieldClass(cx('min-h-24', className))} />;
 }
 
 export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select {...rest} className={cx(fieldClass, className)}>
+    <select {...rest} className={fieldClass(className)}>
       {children}
     </select>
   );
