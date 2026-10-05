@@ -1,6 +1,6 @@
 import { StrictMode, Suspense, lazy, useEffect, type ComponentType, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
 import './index.css';
 import { api, basePath, isDemo } from './lib/api';
 import { AppProvider, useApp } from './lib/app';
@@ -58,6 +58,22 @@ const extensionPage = (ext: string, Page: ComponentType) => (
   </ExtensionBoundary>
 );
 
+/**
+ * A click on a link opens the new page at its top (or at its #anchor), and so does moving to another page of a list (?page=2).
+ * Back/forward keep the browser's own scroll.
+ */
+function ScrollToTop() {
+  const { pathname, hash, search } = useLocation();
+  const navigationType = useNavigationType();
+  const listPage = new URLSearchParams(search).get('page');
+  useEffect(() => {
+    if (navigationType === 'POP') return;
+    if (hash) document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView();
+    else window.scrollTo(0, 0);
+  }, [pathname, hash, listPage, navigationType]);
+  return null;
+}
+
 /** Applies the advanced theme (font, background, custom CSS) chosen in the panel. */
 function ThemeLoader() {
   const { boot } = useApp();
@@ -85,6 +101,7 @@ function AppRoutes() {
   return (
     <>
       <ThemeLoader />
+      <ScrollToTop />
       <Routes>
         <Route element={<PublicLayout />}>
           <Route index element={<Home />} />

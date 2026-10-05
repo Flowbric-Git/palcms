@@ -668,6 +668,8 @@ export function AuditPage() {
   const [page, setPage] = useState(1);
   const [q, setQ] = useState('');
   const [query, setQuery] = useState('');
+  // The page number is not in the address here: go back to the top of the list by hand.
+  useEffect(() => window.scrollTo(0, 0), [page]);
   const { data, error } = useLoad<{ items: { id: number; ts: number; username: string | null; action: string; target: string | null; details: string | null }[]; pages: number }>(
     `features/audit?page=${page}&q=${encodeURIComponent(query)}`,
   );
