@@ -2,6 +2,11 @@
 
 🇫🇷 [Version française](CHANGELOG.fr.md)
 
+## 1.2.1
+
+**Fixes**
+- Leaving the audit log page could crash the panel ("destroy is not a function") in recent browsers, where scrolling returns a Promise. The RCON console had the same issue since 1.1.x
+
 ## 1.2.0
 
 **Themes**

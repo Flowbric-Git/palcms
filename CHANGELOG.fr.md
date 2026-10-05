@@ -2,6 +2,11 @@
 
 🇬🇧 [English version](CHANGELOG.md)
 
+## 1.2.1
+
+**Corrections**
+- Quitter la page du journal d’audit pouvait faire planter le panel (« destroy is not a function ») dans les navigateurs récents, où le défilement renvoie une Promise. La console RCON avait le même défaut depuis la 1.1.x
+
 ## 1.2.0
 
 **Thèmes**
