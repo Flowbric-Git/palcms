@@ -594,7 +594,10 @@ export function RconPage() {
   const [busy, setBusy] = useState(false);
   const a = useAction();
   const ref = useRef<HTMLPreElement>(null);
-  useEffect(() => ref.current?.scrollTo({ top: ref.current.scrollHeight }), [history]);
+  // Braces: scrollTo returns a Promise in recent browsers, and an effect must not return one.
+  useEffect(() => {
+    ref.current?.scrollTo({ top: ref.current.scrollHeight });
+  }, [history]);
 
   const exec = async (cmd: string) => {
     if (!cmd.trim()) return;
