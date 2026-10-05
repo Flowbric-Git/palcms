@@ -2,6 +2,20 @@
 
 🇫🇷 [Version française](CHANGELOG.fr.md)
 
+## Unreleased
+
+**Themes**
+- A theme can lock some links of the site menu (`menu.fixed` in `palcms.json`): they stay first, in the theme's order, and cannot be moved or deleted in *Website > Menu*. The other links stay editable (see sdk/README.md)
+
+**Site**
+- Deleting a page also removes its menu link, and the "Join" button address of the home page when it pointed to it; renaming a page's address updates them
+- A click on a link now opens the new page at its top (or at its #anchor); the next page of a list (?page=2) also goes back to the top. Back/forward keep their own scroll
+
+**Admin panel**
+- The side menu is shorter: Server and Website have drop-down groups (Management, Players, Design, Community), open on their own when the current page is inside and remembered
+- The panel is always dark, whatever the visitor chose for the public site (the light/dark button is removed from the panel; the site keeps the visitor's choice)
+- The site logo replaces the paw emoji in the side menu
+
 ## 1.1.1
 
 **World data**

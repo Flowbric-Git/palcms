@@ -2,6 +2,20 @@
 
 🇬🇧 [English version](CHANGELOG.md)
 
+## Non publié
+
+**Thèmes**
+- Un thème peut verrouiller certains liens du menu du site (`menu.fixed` dans `palcms.json`) : ils restent en premier, dans l'ordre du thème, et ne peuvent être ni déplacés ni supprimés dans *Site web > Menu*. Les autres liens restent modifiables (voir sdk/README.fr.md)
+
+**Site**
+- Supprimer une page retire aussi son lien du menu, et l'adresse du bouton « Rejoindre » de l'accueil si elle y menait ; changer l'adresse d'une page les met à jour
+- Un clic sur un lien ouvre maintenant la nouvelle page en haut (ou à son #ancre) ; passer à la page suivante d'une liste (?page=2) remonte aussi en haut. Précédent/suivant gardent leur propre défilement
+
+**Panneau d'administration**
+- Le menu latéral est plus court : Serveur et Site web ont des groupes déroulants (Gestion, Joueurs, Design, Communauté), ouverts d'eux-mêmes quand la page courante est dedans et mémorisés
+- Le panneau est toujours en sombre, quel que soit le choix du visiteur sur le site public (le bouton clair/sombre est retiré du panneau ; le site garde le choix du visiteur)
+- Le logo du site remplace la patte en emoji dans le menu latéral
+
 ## 1.1.1
 
 **Données du monde**
