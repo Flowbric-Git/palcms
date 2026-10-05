@@ -2,7 +2,7 @@
 
 🇫🇷 [Version française](CHANGELOG.fr.md)
 
-## Unreleased
+## 1.2.0
 
 **Themes**
 - A theme can lock some links of the site menu (`menu.fixed` in `palcms.json`): they stay first, in the theme's order, and cannot be moved or deleted in *Website > Menu*. The other links stay editable (see sdk/README.md)
@@ -15,6 +15,7 @@
 - The side menu is shorter: Server and Website have drop-down groups (Management, Players, Design, Community), open on their own when the current page is inside and remembered
 - The panel is always dark, whatever the visitor chose for the public site (the light/dark button is removed from the panel; the site keeps the visitor's choice)
 - The site logo replaces the paw emoji in the side menu
+- Fixed-width fields of the panel (labels on the *Menu* page, filters, audit log search) no longer take the whole line
 
 ## 1.1.1
 
