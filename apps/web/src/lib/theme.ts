@@ -30,12 +30,21 @@ export function resolveTheme(site: Pick<SiteSettings, 'defaultTheme' | 'allowThe
   return site.defaultTheme;
 }
 
+// Mode of the public site; the admin panel is always dark whatever it is (see AdminLayout).
+let siteTheme: ThemeChoice | null = null;
+
 export function applyTheme(site: Pick<SiteSettings, 'defaultTheme' | 'allowThemeToggle' | 'accentColor'>, force?: ThemeChoice) {
   const theme = force ?? resolveTheme(site);
-  document.documentElement.classList.toggle('dark', theme === 'dark');
+  siteTheme = theme;
+  document.documentElement.classList.toggle('dark', theme === 'dark' || document.body.classList.contains('palcms-admin'));
   document.documentElement.style.setProperty('--accent', site.accentColor);
   document.documentElement.style.setProperty('--accent-fg', contrastColor(site.accentColor));
   return theme;
+}
+
+/** Back on the public site: puts back the visitor's mode. */
+export function restoreSiteTheme() {
+  if (siteTheme) document.documentElement.classList.toggle('dark', siteTheme === 'dark');
 }
 
 export function saveThemeChoice(theme: ThemeChoice) {

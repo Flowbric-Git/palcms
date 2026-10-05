@@ -6,6 +6,7 @@ import {
   BarChart3,
   Blocks,
   CalendarClock,
+  ChevronDown,
   Download,
   ExternalLink,
   Flag,
@@ -39,7 +40,7 @@ import {
 import type { Permission } from '@palcms/shared';
 import { api } from '../lib/api';
 import { useApp } from '../lib/app';
-import { ThemeToggle } from '../components/ThemeToggle';
+import { restoreSiteTheme } from '../lib/theme';
 import { Badge, cx } from '../components/ui';
 import { registry } from '../lib/extensions';
 import { t } from '../lib/i18n';
@@ -86,6 +87,52 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+const NAV_KEY = 'palcms-admin-nav';
+
+function readOpenGroups(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(NAV_KEY) ?? '{}') as Record<string, boolean>;
+  } catch {
+    return {};
+  }
+}
+
+/** Drop-down group of the side menu: opens on its own when the current page is inside, and remembers the choice. */
+function Group({ id, title, icon: Icon, active, alert, children }: { id: string; title: string; icon: typeof Gauge; active: boolean; alert?: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(() => readOpenGroups()[id] ?? false);
+  useEffect(() => {
+    if (active) setOpen(true);
+  }, [active]);
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    try {
+      localStorage.setItem(NAV_KEY, JSON.stringify({ ...readOpenGroups(), [id]: next }));
+    } catch {
+      /* storage unavailable: the choice is not remembered */
+    }
+  };
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        className={cx(
+          'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
+          active ? 'text-accent' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800',
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        <span className="flex-1 text-left">{title}</span>
+        {alert && !open && <span className="h-2 w-2 rounded-full bg-amber-500" />}
+        <ChevronDown className={cx('h-4 w-4 transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && <div className="mt-0.5 ml-4 space-y-0.5 border-l border-slate-200 pl-2 dark:border-slate-800">{children}</div>}
+    </div>
+  );
+}
+
 export function AdminLayout() {
   const { boot, isAdmin } = useApp();
   const [open, setOpen] = useState(false);
@@ -100,9 +147,12 @@ export function AdminLayout() {
     // Nor does the installed theme's CSS.
     const links = [...document.querySelectorAll<HTMLLinkElement>('link[data-palcms-theme]')];
     links.forEach((link) => (link.disabled = true));
+    // The panel is always dark, whatever the visitor chose for the public site (restored when leaving).
+    document.documentElement.classList.add('dark');
     return () => {
       document.body.classList.remove('palcms-admin');
       links.forEach((link) => (link.disabled = false));
+      restoreSiteTheme();
     };
   }, []);
   useEffect(() => {
@@ -195,13 +245,40 @@ export function AdminLayout() {
     ...registry.adminPages.filter((p) => !p.path.includes(':')).map((p) => ({ to: `/admin/plugins/${p.ext}/${p.path}`, label: p.label, icon: Puzzle, permission: p.permission })),
   ]);
 
+  // Pages that live in a drop-down group of the side menu instead of the top level.
+  const GROUPED = new Set([
+    ...['connection', 'config', 'events', 'schedules', 'backups', 'logs', 'rcon', 'players', 'world', 'announcements', 'moderation', 'sanctions', 'anti-cheat'].map((p) => `/admin/server/${p}`),
+    ...['menu', 'appearance', 'themes', 'map', 'members', 'reports', 'discord'].map((p) => `/admin/site/${p}`),
+  ]);
+  const grouped = (to: string) => GROUPED.has(to);
+  const group = (id: string, label: string, icon: typeof Gauge, list: NavEntry[], paths: string[]) => {
+    const entries = list.filter((e) => paths.includes(e.to));
+    if (entries.length === 0) return null;
+    const active = entries.some((e) => location.pathname === e.to || location.pathname.startsWith(`${e.to}/`));
+    return (
+      <Group key={id} id={id} title={t(label)} icon={icon} active={active} alert={entries.some((e) => e.badge)}>
+        {entries.map(render)}
+      </Group>
+    );
+  };
+
   const nav = (
     <nav className="flex h-full flex-col gap-6 p-4">
       <Link to="/admin" className="flex items-center gap-2 px-3 text-lg font-bold">
-        <span className="text-2xl">🐾</span> {t('Admin panel')}
+        {boot.site.logoUrl ? <img src={boot.site.logoUrl} alt="" className="h-8 w-auto" /> : <span className="text-2xl">🐾</span>} {t('Admin panel')}
       </Link>
-      <Section title={t('Server')}>{server.map(render)}</Section>
-      {site.length > 0 && <Section title={t('Website')}>{site.map(render)}</Section>}
+      <Section title={t('Server')}>
+        {server.filter((e) => !grouped(e.to)).map(render)}
+        {group('server-manage', 'Management', Settings2, server, ['connection', 'config', 'events', 'schedules', 'backups', 'logs', 'rcon'].map((p) => `/admin/server/${p}`))}
+        {group('server-players', 'Players', Users, server, ['players', 'world', 'announcements', 'moderation', 'sanctions', 'anti-cheat'].map((p) => `/admin/server/${p}`))}
+      </Section>
+      {site.length > 0 && (
+        <Section title={t('Website')}>
+          {site.filter((e) => !grouped(e.to)).map(render)}
+          {group('site-design', 'Design', Palette, site, ['menu', 'appearance', 'themes', 'map'].map((p) => `/admin/site/${p}`))}
+          {group('site-community', 'Community', UsersRound, site, ['members', 'reports', 'discord'].map((p) => `/admin/site/${p}`))}
+        </Section>
+      )}
       {extensions.length > 0 && <Section title={t('Extensions')}>{extensions.map(render)}</Section>}
       <div className="mt-auto space-y-0.5 border-t border-slate-200 pt-4 dark:border-slate-800">
         {admin.map(render)}
@@ -234,7 +311,6 @@ export function AdminLayout() {
           <span className="truncate text-sm text-slate-500">{boot.site.name}</span>
           <div className="ml-auto flex items-center gap-2">
             <LanguageSwitch />
-            <ThemeToggle />
             <span className="hidden text-sm font-medium sm:inline">{boot.user.displayName}</span>
           </div>
         </header>
