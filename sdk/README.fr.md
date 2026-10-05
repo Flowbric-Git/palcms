@@ -78,6 +78,8 @@ mon-plugin/
 | `icon` | image carrée (PNG, JPG ou WebP) dans `assets/` |
 | `settings` | réglages modifiables dans le panel (voir plus bas) |
 
+**Liens de menu verrouillés (thèmes)** : un thème qui met lui-même en page certains liens du menu du site peut les verrouiller avec `"menu": { "fixed": [{ "url": "/news", "label": "News", "labelFr": "Actualités" }] }` (adresses internes, 8 au maximum). Tant que le thème est actif, ces liens sont toujours en tête du menu, dans cet ordre, et le panel (*Site > Menu*) les affiche verrouillés : impossible de les déplacer ou de les supprimer. Tous les autres liens restent modifiables, et le thème choisit où les afficher (par exemple dans un menu « Plus »).
+
 **Types de réglages** : `text`, `textarea`, `number`, `toggle`, `color`, `image`, `select`. Un `select` prend `"options": [{ "value": "a", "label": "Choix A" }]`.
 
 ## Code serveur (plugins)
